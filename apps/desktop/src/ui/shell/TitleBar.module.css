@@ -1,0 +1,19 @@
+.bar {
+  grid-area: title;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--titlebar-h);
+  padding: 0 16px;
+  background: var(--bg-app);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.left, .right { width: 300px; display: flex; align-items: center; }
+.left { padding-left: 68px; }
+.right { justify-content: flex-end; gap: 6px; }
+.app { font-size: var(--fs-body); font-weight: 500; color: var(--text-secondary); }
+.crumbs { display: flex; align-items: center; gap: 8px; font-size: var(--fs-body); white-space: nowrap; }
+.project { font-weight: 500; color: var(--text-primary); }
+.slash { color: var(--text-muted); }
+.phase { color: var(--text-secondary); }
+.saved { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }

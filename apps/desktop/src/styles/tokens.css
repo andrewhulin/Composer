@@ -1,0 +1,89 @@
+/* Design tokens from Figma "Design Harness" variables (01 · Workspace).
+   Names mirror the Figma collection: bg/app -> --bg-app, phase/define -> --phase-define. */
+:root {
+  /* surfaces */
+  --bg-app: #0a0a0b;
+  --bg-canvas: #0d0d0f;
+  --bg-panel: #121214;
+  --bg-raised: #19191c;
+  --bg-hover: #232327;
+  --bg-wash: rgba(238, 237, 234, 0.03);
+  --bg-wash-2: rgba(238, 237, 234, 0.05);
+  --bg-wash-3: rgba(238, 237, 234, 0.06);
+
+  /* borders */
+  --border-subtle: #202024;
+  --border-strong: #34343a;
+  --border-wash: rgba(238, 237, 234, 0.12);
+
+  /* text */
+  --text-primary: #eeedea;
+  --text-secondary: #a29e94;
+  --text-muted: #69665e;
+  --text-inverse: #0b0b0a;
+  --text-faint: rgba(238, 237, 234, 0.3);
+
+  /* phases */
+  --phase-understand: #de8a45;
+  --phase-define: #e05a4e;
+  --phase-build: #9887e3;
+  --phase-validate: #52acd9;
+  --phase-share: #55c98e;
+
+  /* signals */
+  --signal-live: #55c98e;
+  --signal-hypothesis: #e3c25a;
+  --signal-retired: #5a5852;
+  --signal-hypothesis-tint: rgba(227, 194, 90, 0.14);
+
+  /* paper: rendered output previews */
+  --paper-bg: #f2efe8;
+  --paper-ink: #19191c;
+  --paper-ink-2: #4a4741;
+  --paper-ink-muted: #8a857a;
+
+  /* type */
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --fs-micro: 9px;
+  --fs-meta: 10px;
+  --fs-small: 10.5px;
+  --fs-chip: 11px;
+  --fs-note: 11.5px;
+  --fs-body: 12px;
+  --fs-slot: 12.5px;
+  --fs-phase: 14px;
+  --fs-header: 19px;
+  --fs-display: 22px;
+  --tracking-caps: 0.08em;
+  --tracking-micro: 0.04em;
+
+  /* radii */
+  --r-xs: 4px;
+  --r-sm: 5px;
+  --r-md: 6px;
+  --r-lg: 8px;
+  --r-xl: 10px;
+  --r-pill: 999px;
+
+  /* layout (01 Workspace at 1728 × 1080) */
+  --titlebar-h: 44px;
+  --rail-h: 56px;
+  --sidebar-w: 248px;
+  --inspector-w: 344px;
+  --history-h: 150px;
+  --grid: 28px;
+  --snap: 8px;
+
+  /* motion (05 Interaction patterns: settle 180ms ease-out) */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-settle: 180ms;
+  --t-fast: 120ms;
+}
+
+/* Per-phase accent, set with data-phase on any container. */
+[data-phase="understand"] { --phase: var(--phase-understand); --phase-rgb: 222, 138, 69; }
+[data-phase="define"] { --phase: var(--phase-define); --phase-rgb: 224, 90, 78; }
+[data-phase="build"] { --phase: var(--phase-build); --phase-rgb: 152, 135, 227; }
+[data-phase="validate"] { --phase: var(--phase-validate); --phase-rgb: 82, 172, 217; }
+[data-phase="share"] { --phase: var(--phase-share); --phase-rgb: 85, 201, 142; }

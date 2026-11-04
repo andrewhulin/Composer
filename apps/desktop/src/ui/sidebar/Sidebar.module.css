@@ -1,0 +1,91 @@
+.sidebar {
+  grid-area: sidebar;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 14px 12px;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 7px 10px;
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+}
+.searchText { flex: 1; font-size: var(--fs-body); color: var(--text-muted); }
+.kbd { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.section { display: flex; flex-direction: column; gap: 4px; flex: none; }
+.foundations { gap: 6px; }
+.heading { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+.add { display: flex; opacity: 0.9; }
+.add:hover { opacity: 1; }
+.memoryRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: var(--r-md);
+}
+.memoryActive { background: var(--bg-raised); }
+.memoryLabel { flex: 1; min-width: 0; font-size: var(--fs-body); color: var(--text-primary); }
+.retired { color: var(--text-muted); text-decoration: line-through; }
+.meta { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.slot {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+  background: var(--bg-wash);
+  border: 1px solid var(--border-subtle);
+}
+.tile {
+  position: relative;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  background: var(--bg-wash-3);
+  border: 1px solid var(--border-wash);
+}
+.tile i { position: absolute; width: 6px; height: 6px; border-radius: 1.5px; }
+.glyphTile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-phase);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.slotText { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; flex: 1; }
+.slotTitle { font-size: var(--fs-slot); font-weight: 500; color: var(--text-primary); }
+.slotMeta { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.badge {
+  padding: 2px 6px;
+  border-radius: var(--r-xs);
+  background: var(--bg-wash-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--text-secondary);
+}
+.badgeReview { background: var(--signal-hypothesis-tint); color: var(--signal-hypothesis); font-weight: 500; }
+.health {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: none;
+  margin-top: auto;
+  padding: 12px;
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+}
+.healthTitle { font-size: var(--fs-body); color: var(--text-primary); }
+.healthBody { font-size: var(--fs-chip); line-height: 16px; color: var(--text-secondary); }

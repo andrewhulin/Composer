@@ -1,0 +1,90 @@
+.history {
+  grid-area: history;
+  position: relative;
+  height: var(--history-h);
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border-subtle);
+}
+.transport { position: absolute; left: 16px; top: 13px; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.play {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--text-primary);
+}
+.step { display: flex; opacity: 0.85; }
+.step:hover { opacity: 1; }
+.speed {
+  padding: 3px 6px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--border-strong);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--text-secondary);
+}
+.position { font-size: var(--fs-body); color: var(--text-primary); }
+.when { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.actions { position: absolute; right: 16px; top: 13px; display: flex; gap: 8px; }
+.action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-strong);
+  font-size: var(--fs-chip);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.action:hover { background: var(--bg-raised); }
+.action span { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.timeline { position: absolute; left: 16px; right: 16px; top: 0; bottom: 0; }
+.track, .segment { position: absolute; top: 103px; height: 4px; border-radius: 2px; }
+.track { left: 0; right: 0; background: var(--border-subtle); }
+.segment { background: var(--phase); }
+.segmentLabel { position: absolute; top: 115px; font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-muted); }
+.tick { position: absolute; top: 100px; width: 2px; height: 10px; border-radius: 1px; background: var(--text-secondary); }
+.bookmark { position: absolute; top: 69px; }
+.flag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: -8px;
+  padding: 3px 7px 3px 5px;
+  border-radius: var(--r-xs);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  font-size: var(--fs-meta);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.stem { position: absolute; left: 0; top: 22px; width: 1px; height: 12px; background: var(--signal-hypothesis); }
+.branch { position: absolute; top: 71px; height: 32px; }
+.branchCurve { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.branchCurve path { fill: none; stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.branchLabel {
+  position: absolute;
+  left: 29%;
+  top: -14px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.branchX { position: absolute; right: -12px; top: -8px; font-family: var(--font-mono); font-size: var(--fs-body); color: var(--text-muted); }
+.playhead { position: absolute; top: 57px; width: 2px; height: 74px; margin-left: -1px; background: var(--text-primary); }
+.knob { position: absolute; left: -4px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--text-primary); }
+.time {
+  position: absolute;
+  left: 9px;
+  top: 66px;
+  padding: 2px 6px;
+  border-radius: var(--r-xs);
+  background: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-inverse);
+}

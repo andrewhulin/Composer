@@ -1,0 +1,12 @@
+.shell {
+  display: grid;
+  grid-template-rows: var(--titlebar-h) var(--rail-h) minmax(0, 1fr) var(--history-h);
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--inspector-w);
+  grid-template-areas:
+    "title title title"
+    "rail rail rail"
+    "sidebar canvas inspector"
+    "history history history";
+  height: 100vh;
+  width: 100vw;
+}

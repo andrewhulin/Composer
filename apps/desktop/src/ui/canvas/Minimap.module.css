@@ -1,0 +1,22 @@
+.minimap {
+  position: absolute;
+  right: 44px;
+  bottom: 16px;
+  width: 150px;
+  height: 96px;
+  border-radius: var(--r-lg);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  overflow: hidden;
+  z-index: 4;
+}
+.minimap span { position: absolute; border-radius: 2px; }
+.minimap .viewport {
+  left: 4px;
+  top: 4px;
+  width: 140px;
+  height: 86px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--text-secondary);
+  background: transparent;
+}

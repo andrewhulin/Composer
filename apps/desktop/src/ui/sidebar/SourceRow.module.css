@@ -1,0 +1,42 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--r-md);
+  transition: background var(--t-fast) var(--ease-out);
+}
+.row:hover, .dragging { background: var(--bg-hover); }
+.tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-sm);
+  background: var(--bg-wash-3);
+  border: 1px solid var(--border-wash);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  font-weight: 500;
+  color: #a19e94;
+}
+.wired {
+  background: rgba(var(--phase-rgb), 0.14);
+  border-color: rgba(var(--phase-rgb), 0.55);
+  color: var(--phase);
+}
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-body);
+  color: var(--text-primary);
+}
+.count { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.countWired { color: var(--text-primary); }
+.countDragging { color: var(--phase); }

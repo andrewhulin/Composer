@@ -1,0 +1,24 @@
+.toggle {
+  position: relative;
+  flex: none;
+  border-radius: var(--r-pill);
+  background: var(--border-strong);
+  transition: background var(--t-fast) var(--ease-out);
+}
+.sm { width: 22px; height: 12px; }
+.md { width: 24px; height: 14px; }
+.knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform var(--t-settle) var(--ease-out), background var(--t-fast);
+}
+.sm .knob { width: 8px; height: 8px; }
+.md .knob { width: 10px; height: 10px; }
+.on.live { background: var(--signal-live); }
+.on.phase { background: var(--phase, var(--phase-define)); }
+.on .knob { background: var(--text-primary); }
+.on.sm .knob { transform: translateX(10px); }
+.on.md .knob { transform: translateX(10px); }

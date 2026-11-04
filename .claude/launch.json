@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "composer-web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@composer/desktop", "dev"],
+      "port": 1420
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+.rail {
+  grid-area: rail;
+  display: flex;
+  align-items: center;
+  height: var(--rail-h);
+  padding: 0 16px;
+  background: var(--bg-app);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.phase {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--r-lg);
+  transition: background var(--t-fast) var(--ease-out);
+}
+.phase:hover { background: var(--bg-raised); }
+.active { background: var(--bg-raised); border-color: var(--phase); }
+.index { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.name { font-size: var(--fs-phase); font-weight: 500; color: var(--text-muted); }
+.done .name, .active .name { color: var(--text-primary); }
+.output { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.done .output { color: var(--text-secondary); }
+.active .output { color: var(--phase); }
+.connector { display: flex; align-items: center; width: 28px; height: 20px; padding: 0 4px; flex: none; }
+.connector span { flex: 1; height: 1px; background: var(--border-strong); }
+.loop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 16px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--text-muted);
+}
+.spacer { flex: 1 0 12px; }
+.focus {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+}
+
+/* Narrower windows: drop pending phases' output labels before anything else clips. */
+@media (max-width: 1560px) {
+  .pending .output { display: none; }
+}

@@ -11,3 +11,5 @@ export * from "./assembly/salience";
 export * from "./assembly/template";
 export * from "./assembly/trim";
 export * from "./assembly/units";
+export * from "./memory";
+export * from "./history";

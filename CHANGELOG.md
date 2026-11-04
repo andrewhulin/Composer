@@ -2,6 +2,36 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## M5 · History, playback and the memory chain · 2026-11-04
+
+### Added
+- **Swap a variable** (Figma 05):
+  - ⇄ on a hypothesis variable opens candidates from the memory chain plus anything typed, ranked by how many sources back them.
+  - While the popover is open, the blast radius is painted before anything runs: Claude nodes read "Would rerun after the swap", and outputs read "would need relock".
+  - **Fork and rerun** snapshots the fork point, then creates the next block (H2) with the variable changed and the statement rewritten. It retires H1 (kept, never edited) and starts a new branch. The old line is marked retired, and every Claude node in the blast radius reruns.
+- **Undo:** ⌘Z and ⇧⌘Z cover canvas edits, with a drag coalesced into one step. Undo never deletes runs or snapshots, and restored graphs keep their latest outputs, so the cache keys decide what's stale. ⌘Z right after a fork merges it back: the old branch and H1 become active again, and H2 is retired as "merged back".
+- **Playback** (Figma 04):
+  - ← and → step through the current branch's line from root to head. The canvas goes read-only, and the banner reads "PLAYBACK · Snapshot 9 of 22 · read-only" with Branch from here and Exit (esc).
+  - Stepping forward rebuilds the frame node by node in creation order.
+  - Play is paced by the real gaps between snapshots, capped at 1.5s. Speeds are 0.5×, 1× and 2×, Space plays at 2×, and Runs only skips everything but runs.
+  - A filmstrip of snapshot thumbnails, with bookmark flags.
+  - **Branch from here** starts a branch at the frame on screen. The old line is kept.
+- **Timeline:**
+  - Ticks open playback, and hovering one shows that snapshot's canvas thumbnail.
+  - Branch curves are labelled with name and state ("H2 branch · merged back").
+  - Bookmarks and Branches menus (switch branch), and Compare.
+- **Bookmarks:** ⌘B drops a field at the playhead with a name suggested from the last snapshot or run. ⇧← and ⇧→ jump between bookmarks.
+- **Compare** (Figma 04): any two snapshots on the line, each shown with its phase output, hypothesis and context, and a "What changed" list between them (swaps with the variable that changed, nodes added and wired, weights, reruns, inlet versions).
+- **Memory:** clicking a hypothesis in the sidebar's Memory section places that chain block on the canvas, wired into the phase's Claude node.
+- **Engine:** `swapVariable`, `nextLabel`, `evidenceFor`, `swapCandidates`, `repointHypothesis`, `playbackFrames`, `frameDelay`, `revealOrder`, `describeChanges`.
+- **Data:** `Repo.switchBranch`.
+- **Tests:** 81 in total.
+
+### Decisions
+- **Swap candidates:** in v1 they come from values other blocks in the chain have used, plus anything you type. Evidence is the number of source items that mention every content word. A Claude-suggested candidate list can come later, if typed swaps prove too manual.
+- **The timeline and playback follow the current branch's lineage,** so branches never interleave. Other branches show as labelled curves at their fork point.
+- **A locked draft can't be swapped:** ⇄ is enabled once a hypothesis is testing, held or failed. Drafts are edited directly.
+
 ## M4 · Direct API connectors · 2026-11-04
 
 ### Added

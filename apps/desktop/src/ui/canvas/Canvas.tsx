@@ -10,6 +10,8 @@ import { Rulers } from "./Rulers";
 import { PhaseRails } from "./PhaseRails";
 import { FlowCanvas } from "./FlowCanvas";
 import { AddNodeMenu } from "./AddNodeMenu";
+import { PlaybackBanner } from "./PlaybackBanner";
+import { usePlayback } from "../../store/playback";
 import styles from "./Canvas.module.css";
 
 const TOOLS: { id: CanvasTool; label: string; key: string }[] = [
@@ -50,6 +52,7 @@ export function Canvas() {
   const info = PHASE_INFO[phase];
   const n = PHASES.indexOf(phase) + 1;
   const output = useOutputLabel(phase);
+  const playing = usePlayback((s) => s.active);
 
   const onMove = (e: PointerEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -57,7 +60,7 @@ export function Canvas() {
   };
 
   return (
-    <main ref={ref} className={styles.canvas} data-phase={phase} onPointerMove={onMove} onPointerLeave={() => setCursor(null)}>
+    <main ref={ref} className={cx(styles.canvas, playing && styles.playback)} data-phase={phase} onPointerMove={onMove} onPointerLeave={() => setCursor(null)}>
       <div className={styles.grid} aria-hidden />
       <span className={styles.watermark} style={{ fontSize: watermarkSize(info.name, size.width) }} aria-hidden>
         {focus ? info.name.toUpperCase() : ""}
@@ -85,6 +88,7 @@ export function Canvas() {
       </ReactFlowProvider>
 
       {focus && <PhaseRails phase={phase} />}
+      {playing && <PlaybackBanner />}
       {focus && (
         <header className={styles.header}>
           <span className={styles.headerIndex}>{info.index}</span>
@@ -93,7 +97,7 @@ export function Canvas() {
         </header>
       )}
 
-      <div className={styles.toolbar} role="toolbar" aria-label="Canvas tools">
+      <div className={styles.toolbar} role="toolbar" aria-label="Canvas tools" hidden={playing}>
         {TOOLS.map((t) => (
           <button key={t.id} type="button" className={cx(styles.tool, tool === t.id && styles.toolActive)} onClick={() => setTool(t.id)}>
             <span>{t.label}</span>

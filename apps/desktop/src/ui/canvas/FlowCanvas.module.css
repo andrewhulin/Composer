@@ -18,3 +18,7 @@
 /* React Flow's attribution, kept as its authors ask, made quiet to fit the canvas. */
 .flow :global(.react-flow__attribution) { background: transparent; padding: 0 6px; font-family: var(--font-mono); font-size: 8px; }
 .flow :global(.react-flow__attribution a) { color: var(--text-muted); text-decoration: none; }
+
+/* Playback rebuild: things made in this frame fade in, node by node. */
+.pending { opacity: 0 !important; transform: scale(0.96); }
+.flow :global(.react-flow__node), .flow :global(.react-flow__edge) { transition: opacity 220ms var(--ease-out); }

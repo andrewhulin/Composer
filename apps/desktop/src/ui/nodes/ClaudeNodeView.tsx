@@ -3,6 +3,7 @@ import type { NodeProps } from "@xyflow/react";
 import type { ClaudeNode } from "@composer/core";
 import { incoming } from "@composer/engine";
 import { useProject, statusesOf, previewPrompt } from "../../store/project";
+import { useDisplayGraph, usePlaybackActive } from "../../store/display";
 import { useDebounced } from "../../hooks/useDebounced";
 import { ago, useNow } from "../../hooks/useNow";
 import { formatTokens } from "../primitives/format";
@@ -24,10 +25,13 @@ const MODE: Record<string, string> = {
 
 /** Node/Claude: one prompt step, with its run state on the bar (idle, running, stale, over budget). */
 export const ClaudeNodeView = memo(function ClaudeNodeView({ id, selected }: NodeProps) {
-  const node = useProject((s) => s.graph.nodes[id]) as ClaudeNode | undefined;
-  const graph = useProject((s) => s.graph);
+  const graph = useDisplayGraph();
+  const playing = usePlaybackActive();
+  const node = graph.nodes[id] as ClaudeNode | undefined;
   const env = useProject((s) => s.env);
-  const live = useProject((s) => s.live[id]);
+  const liveRun = useProject((s) => s.live[id]);
+  const live = playing ? undefined : liveRun;
+  const previewed = useProject((s) => !playing && !!s.preview?.stale.includes(id));
   const lastRun = useProject((s) => s.lastRuns[id]);
   const hypotheses = useProject((s) => s.hypotheses);
   const shake = useProject((s) => (s.shake?.id === id ? s.shake.at : 0));
@@ -53,6 +57,10 @@ export const ClaudeNodeView = memo(function ClaudeNodeView({ id, selected }: Nod
   } else if (live?.status === "failed") {
     tone = "failed";
     line = `Failed · ${live.error ?? "error"}`;
+    fill = 1;
+  } else if (previewed) {
+    tone = "stale";
+    line = "Would rerun after the swap";
     fill = 1;
   } else if (over) {
     tone = "over";

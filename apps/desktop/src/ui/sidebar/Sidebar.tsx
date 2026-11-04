@@ -80,7 +80,14 @@ export function Sidebar() {
           <span className="caps">Memory</span>
         </header>
         {chain.map((h) => (
-          <div key={h.id} className={cx(styles.memoryRow, (h.status === "testing" || h.status === "draft") && styles.memoryActive)}>
+          <div
+            key={h.id}
+            role="button"
+            tabIndex={0}
+            title="Place on the canvas"
+            className={cx(styles.memoryRow, styles.clickable, (h.status === "testing" || h.status === "draft") && styles.memoryActive)}
+            onClick={() => actions.placeHypothesis(h.id)}
+          >
             <Dot color={HYP_DOT[h.status]} size={7} />
             <span className={cx(styles.memoryLabel, h.status === "retired" && styles.retired)}>
               {h.label} · {h.statement.length > 32 ? `${h.statement.slice(0, 30)}…` : h.statement}

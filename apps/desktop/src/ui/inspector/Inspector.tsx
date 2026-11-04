@@ -1,8 +1,9 @@
 import { useMemo } from "react";
-import { PHASE_INFO, type ClaudeNode, type GraphNode, type HypothesisNode, type Id, type OutputNode, type SourceContent, type SourceNode, type TextArtifact } from "@composer/core";
+import { PHASE_INFO, type Graph, type ClaudeNode, type GraphNode, type HypothesisNode, type Id, type OutputNode, type SourceContent, type SourceNode, type TextArtifact } from "@composer/core";
 import { incoming, templateRefs, type AssembledPrompt, type Frame, type InsightsData, type StatementData } from "@composer/engine";
 import { actions, latestVersionOf, previewPrompt, useProject } from "../../store/project";
 import { useUi, type InspectorTab } from "../../store/ui";
+import { useDisplayGraph, usePlaybackActive } from "../../store/display";
 import { useDebounced } from "../../hooks/useDebounced";
 import { ago, useNow } from "../../hooks/useNow";
 import { Dot } from "../primitives/Dot";
@@ -24,10 +25,10 @@ const TABS: { id: InspectorTab; label: string }[] = [
 ];
 
 /** The artifact a node shows: a Claude node's latest output, or an Output node's draft or lock. */
-function artifactFor(node: GraphNode | undefined, s: ReturnType<typeof useProject.getState>): { artifact?: TextArtifact; versionLabel?: string; at?: string } {
+function artifactFor(node: GraphNode | undefined, s: ReturnType<typeof useProject.getState>, graph: Graph): { artifact?: TextArtifact; versionLabel?: string; at?: string } {
   if (!node) return {};
   if (node.kind === "claude") {
-    const out = s.graph.outputs[node.id];
+    const out = graph.outputs[node.id];
     return { artifact: out ? (s.blobs.get(out.hash) as TextArtifact | undefined) : undefined, at: s.lastRuns[node.id]?.endedAt ?? undefined };
   }
   if (node.kind === "output") {
@@ -35,8 +36,8 @@ function artifactFor(node: GraphNode | undefined, s: ReturnType<typeof useProjec
       const v = node.versionId ? s.versions[node.versionId] : undefined;
       return { artifact: v ? (s.blobs.get(v.contentHash) as TextArtifact) : undefined, versionLabel: v ? `v${v.version}` : undefined };
     }
-    const edge = incoming(s.graph, node.id)[0];
-    const out = edge ? s.graph.outputs[edge.from] : undefined;
+    const edge = incoming(graph, node.id)[0];
+    const out = edge ? graph.outputs[edge.from] : undefined;
     const latest = latestVersionOf(node.familyId);
     if (out && out.hash !== latest?.contentHash) return { artifact: s.blobs.get(out.hash) as TextArtifact, versionLabel: "draft", at: s.lastRuns[edge!.from]?.endedAt ?? undefined };
     return { artifact: latest ? (s.blobs.get(latest.contentHash) as TextArtifact) : undefined, versionLabel: latest ? `v${latest.version}` : undefined };
@@ -48,7 +49,8 @@ function artifactFor(node: GraphNode | undefined, s: ReturnType<typeof useProjec
 export function Inspector() {
   const phase = useProject((s) => s.activePhase);
   const selection = useProject((s) => s.selection);
-  const graph = useProject((s) => s.graph);
+  const graph = useDisplayGraph();
+  const playing = usePlaybackActive();
   const node = selection ? graph.nodes[selection] : undefined;
   const tab = useUi((s) => s.inspectorTab);
   const setTab = useUi((s) => s.setInspectorTab);
@@ -72,14 +74,14 @@ export function Inspector() {
       <div className={styles.scroll}>
         {tab === "preview" && (
           <>
-            <Preview node={node} />
-            {claude && prompt && <ContextSection claude={claude} prompt={prompt} />}
+            <Preview node={node} graph={graph} />
+            {claude && prompt && !playing && <ContextSection claude={claude} prompt={prompt} />}
           </>
         )}
         {tab === "prompt" && (claude && prompt ? <PromptTab prompt={prompt} /> : <Empty text="Select a Claude node to see the exact prompt it sends." />)}
         {tab === "node" && (node ? <NodeTab node={node} /> : <Empty text="Select a node to edit it." />)}
       </div>
-      <Actions node={node} running={live?.status === "running"} claudeId={claudeId} />
+      {!playing && <Actions node={node} running={live?.status === "running"} claudeId={claudeId} />}
     </aside>
   );
 }
@@ -88,9 +90,10 @@ function Empty({ text }: { text: string }) {
   return <p className={styles.emptyText}>{text}</p>;
 }
 
-function Preview({ node }: { node: GraphNode | undefined }) {
+function Preview({ node, graph }: { node: GraphNode | undefined; graph: Graph }) {
   const s = useProject();
-  const live = node ? s.live[node.id] : undefined;
+  const playing = usePlaybackActive();
+  const live = node && !playing ? s.live[node.id] : undefined;
   const now = useNow(true, 5000);
 
   if (!node) {
@@ -110,12 +113,12 @@ function Preview({ node }: { node: GraphNode | undefined }) {
   if (node.kind === "source") return <SourcePreview node={node} />;
   if (node.kind === "hypothesis") return <HypothesisPreview node={node} />;
 
-  const { artifact, versionLabel, at } = artifactFor(node, s);
+  const { artifact, versionLabel, at } = artifactFor(node, s, graph);
   const claude = node.kind === "claude" ? node : undefined;
   const outputNode = node.kind === "output" ? (node as OutputNode) : undefined;
-  const feeding = outputNode && outputNode.mode === "output" ? (s.graph.nodes[incoming(s.graph, outputNode.id)[0]?.from ?? ""] as ClaudeNode | undefined) : undefined;
+  const feeding = outputNode && outputNode.mode === "output" ? (graph.nodes[incoming(graph, outputNode.id)[0]?.from ?? ""] as ClaudeNode | undefined) : undefined;
   const recipeNode = claude ?? feeding;
-  const outputFor = claude ? Object.values(s.graph.nodes).find((n) => n.kind === "output" && n.mode === "output" && incoming(s.graph, n.id)[0]?.from === claude.id)?.id : outputNode?.mode === "output" ? outputNode.id : undefined;
+  const outputFor = playing ? undefined : claude ? Object.values(graph.nodes).find((n) => n.kind === "output" && n.mode === "output" && incoming(graph, n.id)[0]?.from === claude.id)?.id : outputNode?.mode === "output" ? outputNode.id : undefined;
   const title = node.kind === "output" ? `${node.mode === "inlet" ? "Inlet" : "Output"} · ${node.title}${versionLabel ? ` ${versionLabel}` : ""}` : `Claude · ${node.title}`;
 
   return (
@@ -326,7 +329,7 @@ function Actions({ node, running, claudeId }: { node: GraphNode | undefined; run
           <span className={styles.runKey}>esc</span>
         </button>
       )}
-      <button type="button" className={styles.snapshot} onClick={() => void actions.snapshot()}>
+      <button type="button" className={styles.snapshot} onClick={() => useUi.getState().setBookmarkOpen(true)}>
         <span>Snapshot</span>
         <span className={styles.snapshotKey}>⌘B</span>
       </button>

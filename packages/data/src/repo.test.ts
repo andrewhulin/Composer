@@ -78,6 +78,20 @@ describe("Repo", () => {
     expect(await repo.getSnapshot(s2.id)).toBeDefined();
   });
 
+  it("switches back to an earlier branch: its head becomes the working graph", async () => {
+    const { db, repo } = setup();
+    await migrate(db);
+    const p = await repo.createProject("P");
+    const g = g1();
+    const s1 = await repo.snapshot({ projectId: p.id, graph: g, kind: "run", phase: "define" });
+    const main = p.branchId;
+    await repo.branchFrom(p.id, s1.id, "H2");
+    await repo.snapshot({ projectId: p.id, graph: graphOf([source("other")]), kind: "swap", phase: "define" });
+    await repo.switchBranch(p.id, main);
+    expect((await repo.getProject(p.id))!.branchId).toBe(main);
+    expect(await repo.loadWorking(p.id)).toEqual(g);
+  });
+
   it("versions locked outputs and logs each lock as a decision", async () => {
     const { db, repo } = setup();
     await migrate(db);

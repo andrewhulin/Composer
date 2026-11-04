@@ -2,6 +2,7 @@ import { memo } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { SourceContent, SourceNode } from "@composer/core";
 import { useProject } from "../../store/project";
+import { useDisplayGraph, usePlaybackActive } from "../../store/display";
 import { ago, useNow } from "../../hooks/useNow";
 import { cx } from "../primitives/cx";
 import { KIND_BADGE, PLATFORM_LABEL } from "./kinds";
@@ -34,7 +35,8 @@ function bars(seed: string, n = 56): number[] {
  * elsewhere it is the full source node with a visual preview when it has one.
  */
 export const SourceNodeView = memo(function SourceNodeView({ id, selected }: NodeProps) {
-  const node = useProject((s) => s.graph.nodes[id]) as SourceNode | undefined;
+  const node = useDisplayGraph().nodes[id] as SourceNode | undefined;
+  const playing = usePlaybackActive();
   const content = useProject((s) => (node?.contentHash ? (s.blobs.get(node.contentHash) as SourceContent | undefined) : undefined));
   const shake = useProject((s) => (s.shake?.id === id ? s.shake.at : 0));
   const now = useNow(true, 60_000);
@@ -73,7 +75,7 @@ export const SourceNodeView = memo(function SourceNodeView({ id, selected }: Nod
           {node.why ? ` · ${node.why}` : ""}
         </span>
         <Port nodeId={id} port="out" type="context" side="out" top={14} />
-        {selected && <WeightPopover id={id} weight={node.weight} pinned={node.pinned} {...(node.why ? { why: node.why } : {})} />}
+        {selected && !playing && <WeightPopover id={id} weight={node.weight} pinned={node.pinned} {...(node.why ? { why: node.why } : {})} />}
       </div>
     );
   }

@@ -1,6 +1,7 @@
 import { BaseEdge, getBezierPath, type EdgeProps } from "@xyflow/react";
 import type { GraphNode } from "@composer/core";
 import { useProject } from "../../store/project";
+import { useDisplayGraph, usePlaybackActive } from "../../store/display";
 
 function colorFor(from: GraphNode | undefined): string {
   if (!from) return "var(--text-muted)";
@@ -18,13 +19,14 @@ function colorFor(from: GraphNode | undefined): string {
 
 /** A wire colored by what it carries; dashed and moving while its target runs. */
 export function WireEdge({ id, source, target, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, selected }: EdgeProps) {
-  const from = useProject((s) => s.graph.nodes[source]);
+  const graph = useDisplayGraph();
+  const playing = usePlaybackActive();
+  const from = graph.nodes[source];
   const versions = useProject((s) => s.versions);
-  const running = useProject((s) => s.live[target]?.status === "running");
-  const disabled = useProject((s) => {
-    const t = s.graph.nodes[target];
-    return t?.kind === "claude" && t.disabledInputs.includes(source);
-  });
+  const runningLive = useProject((s) => s.live[target]?.status === "running");
+  const running = !playing && runningLive;
+  const t = graph.nodes[target];
+  const disabled = t?.kind === "claude" && t.disabledInputs.includes(source);
   const [path] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, curvature: 0.35 });
   let stroke = colorFor(from);
   if (from?.kind === "output" && from.versionId) {

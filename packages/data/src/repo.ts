@@ -264,6 +264,15 @@ export class Repo {
     ]);
   }
 
+  /** Makes another branch current: the working graph becomes that branch's head. */
+  async switchBranch(projectId: Id, branchId: Id): Promise<void> {
+    const b = await this.getBranch(branchId);
+    const head = b?.headSnapshotId ? await this.getSnapshot(b.headSnapshotId) : undefined;
+    await this.db.tx([
+      { sql: "UPDATE project SET branch_id = ?, working_manifest = COALESCE(?, working_manifest), updated_at = ? WHERE id = ?", params: [branchId, head?.manifestHash ?? null, this.clock.now(), projectId] },
+    ]);
+  }
+
   /** Moves the current branch head back to an earlier snapshot without deleting anything (undo of a fork). */
   async moveHead(projectId: Id, snapshotId: Id): Promise<void> {
     const p = await this.getProject(projectId);

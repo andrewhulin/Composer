@@ -7,6 +7,9 @@
 .var { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: var(--r-md); background: var(--bg-hover); white-space: nowrap; }
 .varKey { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
 .varValue { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-chip); color: var(--text-primary); }
-.swap { font-family: var(--font-mono); font-size: var(--fs-chip); color: var(--signal-hypothesis); }
+.swap { font-family: var(--font-mono); font-size: var(--fs-chip); color: var(--signal-hypothesis); padding: 0 2px; border-radius: 3px; }
+.swap:hover:not(:disabled) { background: rgba(227, 194, 90, 0.16); }
+.swap:disabled { opacity: 0.4; }
+.hyp { position: relative; }
 .footer { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
 .status { color: var(--signal-hypothesis); }

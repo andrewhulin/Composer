@@ -103,3 +103,6 @@
 .toolKey { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-muted); }
 .zoom { padding: 6px 10px; font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-secondary); }
 
+
+.playback { box-shadow: inset 0 0 0 1.5px rgba(82, 172, 217, 0.55); }
+.toolbar[hidden] { display: none; }

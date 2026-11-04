@@ -89,3 +89,80 @@
   color: var(--text-inverse);
 }
 .play:disabled, .step:disabled { opacity: 0.5; }
+.actionOn { background: var(--bg-raised); color: var(--text-primary); }
+.action:disabled { opacity: 0.4; }
+.step:disabled { opacity: 0.35; }
+.menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 260px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  border-radius: var(--r-xl);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+.menu button { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: var(--r-md); font-size: var(--fs-body); color: var(--text-primary); text-align: left; }
+.menu button:hover:not(:disabled) { background: var(--bg-hover); }
+.menu button:disabled { opacity: 0.7; }
+.menu button span { flex: 1; }
+.menu em { font-style: normal; font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.menuEmpty { padding: 6px 8px; font-size: var(--fs-chip); line-height: 16px; color: var(--text-muted); }
+.branchDot { flex: none !important; width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
+.branchCurrent { background: var(--signal-live); }
+.tickHit { position: absolute; top: 92px; width: 12px; height: 26px; margin-left: -5px; display: flex; justify-content: center; }
+.tickHit .tick { position: static; margin-top: 8px; }
+.tickHit:hover .tick { background: var(--text-primary); }
+.hoverThumb {
+  position: absolute;
+  bottom: 52px;
+  transform: translateX(-50%);
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+.hoverThumb svg { background: var(--bg-canvas); border-radius: var(--r-xs); }
+.hoverThumb span { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-muted); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.bookmarkField {
+  position: absolute;
+  top: 60px;
+  transform: translateX(-50%);
+  z-index: 26;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  border: 1px solid var(--signal-hypothesis);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.bookmarkField input { width: 220px; border: 0; outline: 0; background: transparent; font-size: var(--fs-body); color: var(--text-primary); user-select: text; }
+.bookmarkField span { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+/* Playback (Figma 04): controls row and filmstrip */
+.playback { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; }
+.controls { display: flex; align-items: center; gap: 8px; }
+.pause { width: 10px; height: 10px; border-left: 3px solid var(--text-inverse); border-right: 3px solid var(--text-inverse); }
+.chip { padding: 3px 8px; border-radius: var(--r-xs); border: 1px solid var(--border-strong); font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.chipOn { border-color: var(--text-primary); color: var(--text-primary); }
+.hint { margin-left: 6px; font-size: var(--fs-chip); color: var(--text-muted); }
+.strip { display: flex; gap: 8px; overflow: hidden; }
+.frame { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: var(--r-md); border: 1px solid var(--border-subtle); background: var(--bg-raised); }
+.frameOn { border: 1.5px solid var(--phase-validate); }
+.frameThumb { border-radius: var(--r-xs); background: var(--bg-canvas); }
+.frameMeta { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-muted); }
+.frameMark { display: flex; align-items: center; gap: 4px; font-size: var(--fs-micro); color: var(--signal-hypothesis); white-space: nowrap; overflow: hidden; max-width: 118px; }

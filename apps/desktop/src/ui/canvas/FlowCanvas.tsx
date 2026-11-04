@@ -15,6 +15,8 @@ import { PHASES, type GraphNode, type Id } from "@composer/core";
 import { canConnect } from "@composer/engine";
 import { actions, toast, useProject } from "../../store/project";
 import { useUi } from "../../store/ui";
+import { useDisplayGraph } from "../../store/display";
+import { usePlayback } from "../../store/playback";
 import { ingestFile, ingestText, ingestUrl, isUrl } from "../../app/ingest";
 import { ClaudeNodeView } from "../nodes/ClaudeNodeView";
 import { SourceNodeView } from "../nodes/SourceNodeView";
@@ -45,7 +47,9 @@ const MINIMAP_COLOR: Record<string, string> = {
 };
 
 export function FlowCanvas() {
-  const graph = useProject((s) => s.graph);
+  const graph = useDisplayGraph();
+  const playing = usePlayback((s) => s.active);
+  const pending = usePlayback((s) => s.pending);
   const selection = useProject((s) => s.selection);
   const activePhase = useProject((s) => s.activePhase);
   const loop = useProject((s) => s.loop);
@@ -78,22 +82,33 @@ export function FlowCanvas() {
         data: {},
         selected: n.id === selection,
         zIndex: n.id === selection ? 10 : 1,
+        ...(pending.nodes.has(n.id) ? { className: styles.pending } : {}),
+        draggable: !playing,
       });
     }
     return out;
-  }, [graph.nodes, selection, focus, activePhase, loop, offset, visible]);
+  }, [graph.nodes, selection, focus, activePhase, loop, offset, visible, pending, playing]);
 
   const edges = useMemo<FlowEdge[]>(
     () =>
       graph.edges
         .filter((e) => graph.nodes[e.from] && graph.nodes[e.to] && visible(graph.nodes[e.from]!) && visible(graph.nodes[e.to]!))
-        .map((e) => ({ id: e.id, source: e.from, target: e.to, sourceHandle: e.fromPort, targetHandle: e.toPort, type: "wire" })),
-    [graph.edges, graph.nodes, visible],
+        .map((e) => ({
+          id: e.id,
+          source: e.from,
+          target: e.to,
+          sourceHandle: e.fromPort,
+          targetHandle: e.toPort,
+          type: "wire",
+          ...(pending.edges.has(e.id) || pending.nodes.has(e.from) || pending.nodes.has(e.to) ? { className: styles.pending } : {}),
+        })),
+    [graph.edges, graph.nodes, visible, pending],
   );
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       for (const c of changes) {
+        if (usePlayback.getState().active && c.type !== "select") continue;
         if (c.type === "position" && c.position) {
           const n = useProject.getState().graph.nodes[c.id];
           if (n) actions.move(c.id, { x: Math.round(c.position.x - offset(n)), y: Math.round(c.position.y) });
@@ -107,6 +122,7 @@ export function FlowCanvas() {
   );
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
+    if (usePlayback.getState().active) return;
     for (const c of changes) if (c.type === "remove") actions.disconnect(c.id);
   }, []);
 
@@ -146,6 +162,7 @@ export function FlowCanvas() {
 
   const onDrop = async (e: DragEvent) => {
     e.preventDefault();
+    if (usePlayback.getState().active) return toast("Playback is read-only. Branch from here to edit.");
     const at = dropPoint(e);
     const files = [...e.dataTransfer.files];
     try {
@@ -205,6 +222,7 @@ export function FlowCanvas() {
         onSelectionChange={onSelectionChange}
         onPaneClick={() => actions.select(null)}
         onMove={(_, vp) => setZoom(vp.zoom)}
+        nodesConnectable={!playing}
         connectionRadius={24}
         snapToGrid
         snapGrid={[8, 8]}
@@ -214,7 +232,7 @@ export function FlowCanvas() {
         zoomOnPinch
         minZoom={0.2}
         maxZoom={2}
-        deleteKeyCode={["Backspace", "Delete"]}
+        deleteKeyCode={playing ? null : ["Backspace", "Delete"]}
         fitView
         fitViewOptions={{ padding: 0.18, maxZoom: 1 }}
         defaultEdgeOptions={{ type: "wire" }}

@@ -3,6 +3,7 @@ import type { NodeProps } from "@xyflow/react";
 import { PHASE_INFO, nextPhase, type OutputNode, type TextArtifact } from "@composer/core";
 import { incoming, outputLockState } from "@composer/engine";
 import { latestVersionOf, useProject } from "../../store/project";
+import { useDisplayGraph, usePlaybackActive } from "../../store/display";
 import { cx } from "../primitives/cx";
 import { Port } from "./Port";
 import styles from "./Node.module.css";
@@ -16,8 +17,10 @@ function firstLine(text: string | undefined): string | undefined {
 
 /** Node/Output: the one artifact a phase ships, or (as an inlet) the locked artifact it starts from. */
 export const OutputNodeView = memo(function OutputNodeView({ id, selected }: NodeProps) {
-  const node = useProject((s) => s.graph.nodes[id]) as OutputNode | undefined;
-  const graph = useProject((s) => s.graph);
+  const graph = useDisplayGraph();
+  const node = graph.nodes[id] as OutputNode | undefined;
+  const playing = usePlaybackActive();
+  const relock = useProject((s) => !playing && !!s.preview?.relock.includes(id));
   const versions = useProject((s) => s.versions);
   const blobs = useProject((s) => s.blobs);
   const shake = useProject((s) => (s.shake?.id === id ? s.shake.at : 0));
@@ -44,6 +47,9 @@ export const OutputNodeView = memo(function OutputNodeView({ id, selected }: Nod
       status = `v${version.version} · v${latest.version} available`;
       tone = "warn";
     }
+  } else if (relock) {
+    status = "would need relock";
+    tone = "warn";
   } else if (lockState === "locked") {
     status = `v${version!.version} · locked`;
     tone = "locked";

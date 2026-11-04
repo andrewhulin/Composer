@@ -39,13 +39,19 @@ import {
   Scheduler,
   updateNode as patchNode,
   addNode,
+  blastRadius,
+  nextLabel,
+  planPush,
+  repointHypothesis,
+  swapVariable,
   type AssembledPrompt,
+  type BlastRadius,
   type KeyEnv,
   type NodeStatus,
   type ProjectMemory,
   type RunDeps,
 } from "@composer/engine";
-import type { ProjectRow, Repo, RunRow, SnapshotRow } from "@composer/data";
+import type { BranchRow, ProjectRow, Repo, RunRow, SnapshotRow } from "@composer/data";
 import type { Booted } from "../app/boot";
 import { newClaude, newSource, nextSourcePosition, phaseHasNodes, primaryClaude, scaffoldPhase } from "../app/scaffold";
 import type { Ingested } from "../app/ingest";
@@ -90,6 +96,11 @@ interface ProjectState {
   toasts: Toast[];
   /** Node id that should shake (a bounced wire). */
   shake: { id: Id; at: number } | null;
+  branches: BranchRow[];
+  /** What a change would touch, painted amber before anything runs. */
+  preview: BlastRadius | null;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 export const useProject = create<ProjectState>(() => ({
@@ -108,6 +119,10 @@ export const useProject = create<ProjectState>(() => ({
   env: emptyEnv,
   toasts: [],
   shake: null,
+  branches: [],
+  preview: null,
+  canUndo: false,
+  canRedo: false,
 }));
 
 const get = useProject.getState;
@@ -127,8 +142,43 @@ function scheduleSave() {
   }, 500);
 }
 
-function setGraph(graph: Graph) {
+// ── undo ───────────────────────────────────────────────────────────────────
+// A stack of graphs, so ⌘Z never deletes runs or snapshots. Edits within 600ms (a drag) coalesce.
+// A swap pushes a fork entry: undoing it merges the fork back (Figma 05 · ⌘Z merges the fork back).
+
+type UndoEntry =
+  | { kind: "graph"; graph: Graph }
+  | { kind: "fork"; graph: Graph; fromBranch: Id; toBranch: Id; oldBlock: Id; newBlock: Id };
+
+const undoStack: UndoEntry[] = [];
+const redoStack: UndoEntry[] = [];
+let lastPush = 0;
+
+function syncUndoFlags() {
+  set({ canUndo: undoStack.length > 0, canRedo: redoStack.length > 0 });
+}
+
+function pushUndo(entry: UndoEntry) {
+  const now = Date.now();
+  const top = undoStack[undoStack.length - 1];
+  if (!(entry.kind === "graph" && top?.kind === "graph" && now - lastPush < 600)) undoStack.push(entry);
+  lastPush = now;
+  redoStack.length = 0;
+  if (undoStack.length > 100) undoStack.shift();
+  syncUndoFlags();
+}
+
+function setGraph(graph: Graph, record = true) {
+  if (record) pushUndo({ kind: "graph", graph: get().graph });
   set({ graph });
+  scheduleSave();
+}
+
+/** Restores nodes and wires from history but keeps the latest outputs; keys decide what's stale. */
+function restore(graph: Graph) {
+  const current = get().graph;
+  const outputs = Object.fromEntries(Object.entries({ ...graph.outputs, ...current.outputs }).filter(([id]) => graph.nodes[id]));
+  set({ graph: { ...graph, outputs, seq: Math.max(graph.seq, current.seq) } });
   scheduleSave();
 }
 
@@ -141,8 +191,8 @@ export function toast(text: string, tone: Toast["tone"] = "info") {
 async function refreshHistory() {
   const { repo, project } = get();
   if (!repo || !project) return;
-  const [snapshots, bookmarks] = await Promise.all([repo.listSnapshots(project.id), repo.listBookmarks(project.id)]);
-  set({ snapshots, bookmarks });
+  const [snapshots, bookmarks, branches] = await Promise.all([repo.listSnapshots(project.id), repo.listBookmarks(project.id), repo.listBranches(project.id)]);
+  set({ snapshots, bookmarks, branches });
 }
 
 async function takeSnapshot(kind: "run" | "lock" | "swap" | "manual", causeId?: Id, label?: string): Promise<SnapshotRow | undefined> {
@@ -186,7 +236,35 @@ export async function loadProject(booted: Booted) {
     loop: project.loop,
   });
   await refreshHistory();
+  set({ branches: await repo.listBranches(project.id) });
   if (booted.interrupted) toast(`${booted.interrupted} run${booted.interrupted === 1 ? " was" : "s were"} interrupted when Composer last closed.`);
+}
+
+/** Makes sure every blob a graph's nodes render from is in the cache (for history and branches). */
+export async function ensureBlobs(graph: Graph) {
+  const { repo, blobs } = get();
+  if (!repo) return;
+  const want = [
+    ...Object.values(graph.nodes).flatMap((n) => (n.kind === "source" && n.contentHash ? [n.contentHash] : [])),
+    ...Object.values(graph.outputs).map((o) => o.hash),
+  ].filter((h) => !blobs.has(h));
+  if (!want.length) return;
+  const got = await repo.getBlobs(want);
+  set((s) => {
+    const next = new Map(s.blobs);
+    for (const [h, v] of got) next.set(h, v);
+    return { blobs: next };
+  });
+}
+
+async function reloadWorking() {
+  const { repo, project } = get();
+  if (!repo || !project) return;
+  const fresh = await repo.getProject(project.id);
+  const graph = await repo.loadWorking(project.id);
+  if (!fresh || !graph) return;
+  await ensureBlobs(graph);
+  set({ project: fresh, graph, branches: await repo.listBranches(project.id) });
 }
 
 // ── selectors ──────────────────────────────────────────────────────────────
@@ -313,6 +391,90 @@ export const actions = {
     }
   },
 
+  undo() {
+    const entry = undoStack.pop();
+    if (!entry) return;
+    if (entry.kind === "graph") {
+      redoStack.push({ kind: "graph", graph: get().graph });
+      restore(entry.graph);
+    } else void mergeBack(entry);
+    syncUndoFlags();
+  },
+
+  redo() {
+    const entry = redoStack.pop();
+    if (!entry || entry.kind !== "graph") return;
+    undoStack.push({ kind: "graph", graph: get().graph });
+    restore(entry.graph);
+    syncUndoFlags();
+  },
+
+  /** Paints what swapping `key` to `value` would make stale, before anything runs. */
+  previewSwap(nodeId: Id) {
+    const { graph } = get();
+    const node = graph.nodes[nodeId];
+    if (node?.kind !== "hypothesis") return;
+    set({ preview: blastRadius(graph, repointHypothesis(graph, node.blockId, "__preview__")) });
+  },
+
+  clearPreview() {
+    set({ preview: null });
+  },
+
+  /**
+   * Fork and rerun. The old block is retired (never edited), a new one takes its place on a new
+   * branch, and every Claude node in the blast radius reruns. ⌘Z merges the fork back.
+   */
+  async forkSwap(nodeId: Id, key: string, value: string) {
+    const { repo, project, graph, hypotheses } = get();
+    const node = graph.nodes[nodeId];
+    if (!repo || !project || node?.kind !== "hypothesis") return;
+    const block = hypotheses[node.blockId];
+    if (!block) return;
+    const old = block.vars.find((v) => v.key === key)?.value ?? "";
+    const fork = await takeSnapshot("swap", undefined, `Before swapping ${block.label}`);
+    const label = nextLabel(Object.values(hypotheses));
+    const next = await repo.createHypothesis(swapVariable(block, key, value, label), fork?.id);
+    await repo.setHypothesisStatus(block.id, "retired", `Swapped ${key}: ${old} → ${value}`, `retired · ${key} swapped`);
+    const fromBranch = project.branchId;
+    if (fork) {
+      await repo.setBranchState(fromBranch, "retired", `${block.label} branch retired by the swap`, project.id);
+      const br = await repo.branchFrom(project.id, fork.id, label);
+      set({ project: { ...project, branchId: br.id } });
+    }
+    set((s) => ({ hypotheses: { ...s.hypotheses, [block.id]: { ...block, status: "retired", note: `retired · ${key} swapped` }, [next.id]: next }, preview: null }));
+    const after = repointHypothesis(get().graph, block.id, next.id);
+    const radius = blastRadius(graph, after);
+    pushUndo({ kind: "fork", graph, fromBranch, toBranch: get().project!.branchId, oldBlock: block.id, newBlock: next.id });
+    setGraph(after, false);
+    await takeSnapshot("swap", next.id, `Swapped ${block.label} → ${label}`);
+    set({ branches: await repo.listBranches(project.id) });
+    toast(`${block.label} retired · ${label} takes its place${radius.stale.length ? ` · rerunning ${radius.stale.length}` : ""}`, "success");
+    if (radius.stale.length) scheduler.execute(planPush(get().graph, radius.stale));
+  },
+
+  /** Re-reads the working graph and branches after the branch changed underneath. */
+  async reloadFromRepo() {
+    undoStack.length = 0;
+    redoStack.length = 0;
+    syncUndoFlags();
+    await reloadWorking();
+    await refreshHistory();
+  },
+
+  /** Makes another branch current. */
+  async switchBranch(branchId: Id) {
+    const { repo, project } = get();
+    if (!repo || !project || branchId === project.branchId) return;
+    await repo.switchBranch(project.id, branchId);
+    undoStack.length = 0;
+    redoStack.length = 0;
+    syncUndoFlags();
+    await reloadWorking();
+    await refreshHistory();
+    toast("Switched branch");
+  },
+
   /** A Claude step for the phase in focus, using the phase's recipe. */
   addClaude() {
     const { graph, activePhase, loop } = get();
@@ -341,6 +503,24 @@ export const actions = {
     setGraph(g2);
     set({ selection: id });
     return block;
+  },
+
+  /** Puts an existing chain block on the canvas, wired into the phase's Claude node. */
+  placeHypothesis(blockId: Id) {
+    const { graph, activePhase, loop, hypotheses } = get();
+    const block = hypotheses[blockId];
+    if (!block) return;
+    const existing = Object.values(graph.nodes).find((n) => n.kind === "hypothesis" && n.blockId === blockId && n.phase === activePhase && n.loop === loop);
+    if (existing) return set({ selection: existing.id });
+    const id = ulid();
+    let g = addNode(graph, { id, kind: "hypothesis", phase: activePhase, loop, title: "Hypothesis", alias: block.label, position: { x: 72, y: 420 }, lineageId: id, blockId } as Omit<GraphNode, "createdSeq">);
+    const target = primaryClaude(g, activePhase, loop);
+    if (target && !incoming(g, target.id).some((e) => e.toPort === "hypothesis")) {
+      const r = connectNodes(g, id, target.id, ulid);
+      if (r.ok) g = r.graph;
+    }
+    setGraph(g);
+    set({ selection: id });
   },
 
   async updateHypothesis(blockId: Id, patch: Partial<Pick<HypothesisBlock, "statement" | "vars" | "status" | "confidence">>) {
@@ -508,6 +688,29 @@ export const actions = {
 };
 
 
+
+async function mergeBack(entry: Extract<UndoEntry, { kind: "fork" }>) {
+  const { repo, project, hypotheses } = get();
+  if (!repo || !project) return;
+  await repo.setBranchState(entry.toBranch, "merged_back", "Fork merged back with ⌘Z", project.id);
+  await repo.setBranchState(entry.fromBranch, "active", "Fork merged back with ⌘Z", project.id);
+  await repo.switchBranch(project.id, entry.fromBranch);
+  await repo.setHypothesisStatus(entry.oldBlock, "testing", "Fork merged back with ⌘Z");
+  await repo.setHypothesisStatus(entry.newBlock, "retired", "Fork merged back with ⌘Z", "merged back");
+  const oldB = hypotheses[entry.oldBlock];
+  const newB = hypotheses[entry.newBlock];
+  set((s) => ({
+    hypotheses: {
+      ...s.hypotheses,
+      ...(oldB ? { [oldB.id]: { ...oldB, status: "testing" as const } } : {}),
+      ...(newB ? { [newB.id]: { ...newB, status: "retired" as const, note: "merged back" } } : {}),
+    },
+  }));
+  await reloadWorking();
+  restore(entry.graph);
+  await refreshHistory();
+  toast(`Merged back · ${oldB?.label ?? "the old block"} is active again`, "success");
+}
 
 // ── execution ──────────────────────────────────────────────────────────────
 

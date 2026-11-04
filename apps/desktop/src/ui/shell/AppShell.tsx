@@ -11,6 +11,8 @@ import { Inspector } from "../inspector/Inspector";
 import { HistoryBar } from "../history/HistoryBar";
 import { SettingsDialog } from "../settings/SettingsDialog";
 import { KeyBanner, Toasts } from "../feedback/Toasts";
+import { CompareView } from "../history/CompareView";
+import { playback, usePlayback } from "../../store/playback";
 import styles from "./AppShell.module.css";
 
 const typing = (t: EventTarget | null) => {
@@ -27,6 +29,40 @@ function useShortcuts() {
       const ui = useUi.getState();
       if (e.key === "Escape" && ui.settingsOpen) {
         ui.setSettingsOpen(false);
+        return;
+      }
+      if (e.key === "Escape" && ui.compareOpen) {
+        ui.setCompareOpen(false);
+        return;
+      }
+      const inPlayback = usePlayback.getState().active;
+      if (e.key === "Escape" && inPlayback && !typing(e.target)) {
+        playback.close();
+        return;
+      }
+      if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight") && !typing(e.target)) {
+        e.preventDefault();
+        void playback.jumpBookmark(e.key === "ArrowLeft" ? -1 : 1);
+        return;
+      }
+      if (inPlayback && !typing(e.target) && !e.metaKey) {
+        if (e.key === "ArrowLeft") return void playback.step(-1);
+        if (e.key === "ArrowRight") return void playback.step(1);
+        if (e.key === " ") {
+          e.preventDefault();
+          if (usePlayback.getState().playing) playback.pause();
+          else {
+            playback.setSpeed(2);
+            void playback.play();
+          }
+          return;
+        }
+      }
+      if (e.metaKey && e.key.toLowerCase() === "z" && !typing(e.target)) {
+        e.preventDefault();
+        if (inPlayback) return;
+        if (e.shiftKey) actions.redo();
+        else actions.undo();
         return;
       }
       if (e.metaKey && e.key === ",") {
@@ -46,7 +82,7 @@ function useShortcuts() {
       }
       if (e.metaKey && e.key.toLowerCase() === "b") {
         e.preventDefault();
-        void actions.snapshot();
+        if (!usePlayback.getState().active) ui.setBookmarkOpen(true);
         return;
       }
       if (e.metaKey && e.key.toLowerCase() === "l" && node?.kind === "output") {
@@ -97,6 +133,7 @@ export function AppShell() {
       <Inspector />
       <HistoryBar />
       <SettingsDialog />
+      <CompareView />
       <Toasts />
       {ready && !hasKey && !settingsOpen && !(import.meta.env.DEV && location.search.includes("fake")) && <KeyBanner onAdd={() => setSettingsOpen(true)} />}
     </div>

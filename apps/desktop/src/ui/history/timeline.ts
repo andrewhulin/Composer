@@ -39,3 +39,16 @@ export function timelineFrom(snapshots: SnapshotRow[], bookmarks: { snapshotId: 
     playhead: last ? { at: pos(snapshots.length - 1), time: new Date(last.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }) } : null,
   };
 }
+
+/** The snapshots on the path from the first one to `headId`, following parent links. */
+export function lineage(snapshots: SnapshotRow[], headId: string | null | undefined): SnapshotRow[] {
+  if (!headId) return snapshots;
+  const byId = new Map(snapshots.map((s) => [s.id, s]));
+  const out: SnapshotRow[] = [];
+  let cur = byId.get(headId);
+  while (cur) {
+    out.unshift(cur);
+    cur = cur.parentId ? byId.get(cur.parentId) : undefined;
+  }
+  return out.length ? out : snapshots;
+}

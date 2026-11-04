@@ -1,5 +1,5 @@
 .scrim { position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-start; justify-content: center; padding-top: 120px; background: rgba(5, 5, 6, 0.55); }
-.dialog { width: 480px; border-radius: var(--r-xl); background: var(--bg-raised); border: 1px solid var(--border-strong); box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6); }
+.dialog { width: 520px; max-height: calc(100vh - 160px); overflow-y: auto; border-radius: var(--r-xl); background: var(--bg-raised); border: 1px solid var(--border-strong); box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6); }
 .header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--border-subtle); }
 .title { font-size: var(--fs-phase); font-weight: 500; }
 .close { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
@@ -11,3 +11,10 @@
 .primary { background: var(--text-primary); color: var(--text-inverse); }
 .secondary { border: 1px solid var(--border-strong); color: var(--text-secondary); }
 .primary:disabled, .secondary:disabled { opacity: 0.4; }
+
+.section + .section { border-top: 1px solid var(--border-subtle); }
+.connector { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid var(--border-subtle); }
+.connectorHead { display: flex; justify-content: space-between; }
+.connectorName { font-size: var(--fs-body); font-weight: 500; }
+.connectorState { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.help { font-size: var(--fs-chip); color: var(--text-muted); }

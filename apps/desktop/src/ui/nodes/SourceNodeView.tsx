@@ -2,6 +2,7 @@ import { memo } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { SourceContent, SourceNode } from "@composer/core";
 import { useProject } from "../../store/project";
+import { ago, useNow } from "../../hooks/useNow";
 import { cx } from "../primitives/cx";
 import { KIND_BADGE, PLATFORM_LABEL } from "./kinds";
 import { Port } from "./Port";
@@ -36,10 +37,14 @@ export const SourceNodeView = memo(function SourceNodeView({ id, selected }: Nod
   const node = useProject((s) => s.graph.nodes[id]) as SourceNode | undefined;
   const content = useProject((s) => (node?.contentHash ? (s.blobs.get(node.contentHash) as SourceContent | undefined) : undefined));
   const shake = useProject((s) => (s.shake?.id === id ? s.shake.at : 0));
+  const now = useNow(true, 60_000);
   if (!node) return null;
   const first = content?.items[0];
   const badge = KIND_BADGE[first?.kind ?? "note"];
-  const image = content?.items.find((i) => i.image)?.image;
+  const images = content?.items.flatMap((i) => (i.image ? [i.image] : [])) ?? [];
+  const image = images[0];
+  const synced = content?.syncedAt ? `synced ${ago(content.syncedAt, now).replace(" ago", "")}` : "";
+  const noun = first?.kind === "screen" ? "screens" : first?.kind === "pin" ? "pins" : "images";
 
   if (node.phase === "understand") {
     return (
@@ -54,7 +59,15 @@ export const SourceNodeView = memo(function SourceNodeView({ id, selected }: Nod
           <span className={own.kind}>{badge.label}</span>
         </div>
         <p className={own.cardTitle}>{node.title}</p>
-        {image && node.weight !== "mute" && <img className={own.thumb} src={image} alt="" draggable={false} />}
+        {images.length > 1 && node.weight !== "mute" ? (
+          <div className={own.thumbGrid}>
+            {images.slice(0, 3).map((src, i) => (
+              <img key={i} src={src} alt="" draggable={false} />
+            ))}
+          </div>
+        ) : (
+          image && node.weight !== "mute" && <img className={own.thumb} src={image} alt="" draggable={false} />
+        )}
         <span className={own.meta}>
           {node.weight === "mute" ? "muted" : node.weight}
           {node.why ? ` · ${node.why}` : ""}
@@ -73,10 +86,42 @@ export const SourceNodeView = memo(function SourceNodeView({ id, selected }: Nod
         <span className={styles.title}>{node.title}</span>
         <span className={styles.tag}>Source{node.weight !== "normal" ? ` · ${node.weight}` : ""}</span>
       </div>
-      {image ? (
+      {images.length > 1 ? (
+        <div className={own.previewWrap}>
+          <div className={own.preview}>
+            <div className={own.grid}>
+              {images.slice(0, 6).map((src, i) => (
+                <img key={i} src={src} alt="" draggable={false} />
+              ))}
+            </div>
+            <span className={own.badgeRow}>
+              <span className={own.countBadge}>
+                {Math.min(images.length, 6)} / {images.length} {noun}
+              </span>
+            </span>
+            <Corners />
+          </div>
+        </div>
+      ) : image ? (
         <div className={own.previewWrap}>
           <div className={own.preview}>
             <img src={image} alt="" draggable={false} className={own.previewImg} />
+            <Corners />
+          </div>
+        </div>
+      ) : first?.kind === "ticket" ? (
+        <div className={own.previewWrap}>
+          <div className={cx(own.preview, own.ticket)}>
+            <span className={own.ticketId}>{first.title.split(" ")[0]}</span>
+            <p className={own.ticketTitle}>{first.title.split(" ").slice(1).join(" ")}</p>
+            {first.author && (
+              <span className={own.labels}>
+                {first.author.split(", ").slice(0, 3).map((l) => (
+                  <span key={l}>{l}</span>
+                ))}
+              </span>
+            )}
+            <span className={own.ticketMeta}>{Math.max(0, first.units.length - 1)} passages · comments</span>
             <Corners />
           </div>
         </div>
@@ -101,14 +146,14 @@ export const SourceNodeView = memo(function SourceNodeView({ id, selected }: Nod
           </div>
           <div className={styles.row}>
             <span className={styles.key}>sync</span>
-            <span className={styles.val}>{content?.syncedAt ? "frozen" : "—"}</span>
+            <span className={styles.val}>{synced || "—"}</span>
           </div>
         </div>
       )}
-      {(image || quote) && (
+      {(image || quote || first?.kind === "ticket") && (
         <div className={own.footer}>
-          <span>{summary(content)}</span>
-          <span>{PLATFORM_LABEL[node.platform]}</span>
+          <span>{first?.kind === "transcript" ? summary(content) : PLATFORM_LABEL[node.platform]}</span>
+          <span>{synced || summary(content)}</span>
         </div>
       )}
       <Port nodeId={id} port="out" type="context" side="out" top={14} />

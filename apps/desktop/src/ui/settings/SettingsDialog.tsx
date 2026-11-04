@@ -3,6 +3,7 @@ import { deleteSecret, getSecret, setSecret, SECRET } from "../../platform/secre
 import { useUi } from "../../store/ui";
 import { toast } from "../../store/project";
 import { AnthropicLlm } from "../../llm/anthropic";
+import { CONNECTORS, type Connector } from "../../connectors";
 import styles from "./SettingsDialog.module.css";
 
 /** ⌘, — the Anthropic API key (stored in Keychain) and a connection check. */
@@ -90,7 +91,68 @@ export function SettingsDialog() {
             )}
           </div>
         </section>
+        <section className={styles.section}>
+          <span className="caps">Sources</span>
+          <p className={styles.note}>Paste or drop a link from any of these and Composer pulls it through the API. Tokens live in Keychain.</p>
+          {CONNECTORS.map((c) => (
+            <ConnectorRow key={c.platform} connector={c} />
+          ))}
+        </section>
       </div>
+    </div>
+  );
+}
+
+function ConnectorRow({ connector }: { connector: Connector }) {
+  const [has, setHas] = useState<boolean | null>(null);
+  const [value, setValue] = useState("");
+  useEffect(() => {
+    if (connector.secret) void getSecret(connector.secret).then((k) => setHas(!!k));
+  }, [connector.secret]);
+  const save = async () => {
+    if (!connector.secret || !value.trim()) return;
+    await setSecret(connector.secret, value.trim());
+    setValue("");
+    setHas(true);
+    toast(`${connector.label} token saved to Keychain`, "success");
+  };
+  return (
+    <div className={styles.connector}>
+      <div className={styles.connectorHead}>
+        <span className={styles.connectorName}>{connector.label}</span>
+        <span className={styles.connectorState}>{!connector.secret ? "no token needed" : has ? "connected" : connector.tokenRequired ? "needs a token" : "optional token"}</span>
+      </div>
+      {connector.tokenHelp && <span className={styles.help}>{connector.tokenHelp}</span>}
+      {connector.secret && (
+        <div className={styles.row}>
+          <input
+            className={styles.input}
+            type="password"
+            placeholder={has ? "•••••••• saved" : "Paste token"}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void save();
+              e.stopPropagation();
+            }}
+          />
+          <button type="button" className={styles.secondary} onClick={() => void save()} disabled={!value.trim()}>
+            Save
+          </button>
+          {has && (
+            <button
+              type="button"
+              className={styles.secondary}
+              onClick={async () => {
+                await deleteSecret(connector.secret!);
+                setHas(false);
+              }}
+            >
+              Remove
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

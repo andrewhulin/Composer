@@ -152,3 +152,30 @@ describe("assemble", () => {
     expect(assemble({ ...base, instruction: "Use {mobbin}." }).unknownRefs).toEqual(["mobbin"]);
   });
 });
+
+describe("images", () => {
+  const withImages: AssemblyInput = {
+    phase: "define",
+    charter: "c",
+    foundations: {},
+    rules: [],
+    memory: { outputs: [], chain: [] },
+    docs: [
+      { alias: "pins", title: "Pins", source: "pinterest", kind: "pin", weight: "normal", pinned: false, units: [{ text: "Soft recap card" }], images: [{ src: "data:image/jpeg;base64,AAAA", caption: "Recap card, soft" }] },
+      { alias: "mood", title: "Mood", source: "arena", kind: "pin", weight: "light", pinned: false, units: [{ text: "x" }], images: [{ src: "https://example.com/a.jpg", caption: "Light one" }] },
+    ],
+    instruction: "Use {pins} for tone.",
+    budget: 200_000,
+  };
+
+  it("sends images for normal and heavy documents only, with the cache break on the last image", () => {
+    const p = assemble(withImages);
+    const content = p.messages[0]!.content as { type: string; cache_control?: unknown; source?: { type: string; media_type?: string } }[];
+    const images = content.filter((c) => c.type === "image");
+    expect(images).toHaveLength(1);
+    expect(images[0]!.source).toMatchObject({ type: "base64", media_type: "image/jpeg" });
+    expect(images[0]!.cache_control).toEqual({ type: "ephemeral" });
+    expect(content[1]!.cache_control).toBeUndefined();
+    expect(p.report.images).toEqual({ sent: 1, skipped: 1 });
+  });
+});

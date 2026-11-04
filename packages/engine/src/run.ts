@@ -53,6 +53,10 @@ export function fillOptions(instruction: string, options: Record<string, string>
   );
 }
 
+function sourceImages(content: SourceContent): { src: string; caption: string }[] {
+  return content.items.filter((i) => i.image).map((i) => ({ src: i.image!, caption: i.title }));
+}
+
 function sourceUnits(content: SourceContent): { units: Unit[]; kind: string } {
   const multi = content.items.length > 1;
   const units = content.items.flatMap((item) =>
@@ -77,7 +81,8 @@ export function gatherInputs(graph: Graph, node: ClaudeNode, deps: RunDeps) {
     if (up.kind === "source") {
       const content = up.contentHash ? (deps.readBlob(up.contentHash) as SourceContent | undefined) : undefined;
       const { units, kind } = content ? sourceUnits(content) : { units: [], kind: "note" };
-      docs.push({ alias: up.alias, title: up.title, source: up.platform, kind, weight: up.weight, pinned: up.pinned, ...(up.why ? { why: up.why } : {}), units });
+      const images = content ? sourceImages(content) : [];
+      docs.push({ alias: up.alias, title: up.title, source: up.platform, kind, weight: up.weight, pinned: up.pinned, ...(up.why ? { why: up.why } : {}), units, ...(images.length ? { images } : {}) });
     } else if (up.kind === "claude") {
       const out = graph.outputs[up.id];
       const art = out ? (deps.readBlob(out.hash) as TextArtifact | undefined) : undefined;

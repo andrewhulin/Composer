@@ -2,6 +2,41 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## M4 · Direct API connectors · 2026-11-04
+
+### Added
+- **Connectors,** each a pure parser plus a fetch through Tauri's HTTP plugin, so there's no CORS in the app:
+  - **Linear** (GraphQL, personal API key): an issue becomes a ticket item. The description comes first, then each comment as its own unit labelled with its author, with state, priority and labels.
+  - **Figma** (REST, personal access token): a frame link becomes a screen item. Its text layers become units, and a PNG thumbnail is stored as data.
+  - **Are.na** (REST, token optional): a channel's blocks become pins, notes and links, with images.
+  - **Pinterest** (public board RSS, no token): pins with their images.
+  - **Slack** (user token): a thread permalink becomes one item, with each reply labelled with who said it.
+  - Pasting or dropping a link routes it to its connector automatically. Other links are still fetched as web pages.
+- **Sync** on connector and link sources (Node tab). Changed content gets a new hash, so everything downstream goes stale. Unchanged content leaves the graph alone.
+- **Vision:**
+  - Images on heavy, normal or pinned sources go to Claude as image blocks: heaviest first, at most 12, budgeted at about 1.1k tokens each within 25% of the context.
+  - The cache breakpoint moves to the last image.
+  - The assembly report counts images sent and skipped.
+- **Visual source nodes** (Figma 02 · Source · Visual):
+  - A pin and screen grid with a count badge.
+  - The Linear ticket card with labels.
+  - A "synced 2m" footer.
+  - Context cards in Understand show a three-up thumbnail strip for boards.
+- **Settings:** a Sources section with a Keychain token per connector, and where to get each one.
+- **Tests:**
+  - Link matching for every platform.
+  - Parsers for each API shape: Linear ordering and authors, Figma text deduplication, Are.na block kinds, Pinterest RSS with CDATA, Slack permalinks and threads.
+  - Image assembly.
+  - 71 in total.
+
+### Decisions
+- **Verification:**
+  - The Are.na connector was checked end to end against the live API (72 blocks with images).
+  - Linear, Figma and Slack need tokens, so they're tested against their documented response shapes.
+  - Pinterest's RSS only works inside the app, because browsers block it with CORS.
+- **Statsig** moves to M7, where Validate reads experiment results.
+- **Pinterest RSS** is read by tag rather than through an XML parser, because feeds vary (CDATA, missing titles).
+
 ## M3 · Canvas and the first real flow · 2026-11-04
 
 ### Added

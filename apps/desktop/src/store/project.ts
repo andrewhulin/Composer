@@ -16,6 +16,7 @@ import {
   type OutputNode,
   type OutputVersion,
   type Phase,
+  type SourceContent,
   type SourceNode,
   type TextArtifact,
   type Weight,
@@ -275,7 +276,7 @@ export const actions = {
     if (!repo) return;
     const hash = await repo.putBlob(ing.content, "context");
     set((s) => ({ blobs: new Map(s.blobs).set(hash, ing.content) }));
-    const node = newSource(graph, activePhase, loop, ing.platform, ing.title, hash, position ?? nextSourcePosition(graph, activePhase, loop));
+    const node = { ...newSource(graph, activePhase, loop, ing.platform, ing.title, hash, position ?? nextSourcePosition(graph, activePhase, loop)), config: ing.config ?? {} };
     let g = addNode<SourceNode>(graph, node);
     const target = primaryClaude(g, activePhase, loop);
     if (target) {
@@ -284,6 +285,32 @@ export const actions = {
     }
     setGraph(g);
     set({ selection: node.id });
+  },
+
+  /**
+   * Fetches a connector source again. New content gets a new hash, so everything downstream goes
+   * stale; unchanged content leaves the graph untouched.
+   */
+  async sync(id: Id) {
+    const { repo, graph } = get();
+    const node = graph.nodes[id];
+    if (!repo || node?.kind !== "source") return;
+    const { connectorFor, runConnector } = await import("../connectors");
+    const { ingestUrl } = await import("../app/ingest");
+    try {
+      const connector = connectorFor(node.platform);
+      const fresh = connector ? await runConnector(connector, node.config) : node.config.url ? await ingestUrl(node.config.url) : undefined;
+      if (!fresh) return toast("This source has nothing to sync from.");
+      const prev = node.contentHash ? (get().blobs.get(node.contentHash) as SourceContent | undefined) : undefined;
+      const same = prev && hashOf({ ...prev, syncedAt: null }) === hashOf({ ...fresh.content, syncedAt: null });
+      if (same) return toast(`${node.title} is up to date`);
+      const hash = await repo.putBlob(fresh.content, "context");
+      set((s) => ({ blobs: new Map(s.blobs).set(hash, fresh.content) }));
+      setGraph(patchNode<SourceNode>(get().graph, id, { contentHash: hash }));
+      toast(`${node.title} synced · downstream is stale`, "success");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e), "error");
+    }
   },
 
   /** A Claude step for the phase in focus, using the phase's recipe. */

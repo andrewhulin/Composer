@@ -68,6 +68,15 @@ export function NodeTab({ node }: { node: GraphNode }) {
         </>
       )}
 
+      {node.kind === "source" && (node.platform !== "paste" && node.platform !== "file" && node.platform !== "image" && node.platform !== "transcript") && (
+        <div className={styles.syncRow}>
+          <button type="button" className={styles.secondary} onClick={() => void actions.sync(node.id)}>
+            Sync from {node.platform === "link" ? "the web" : node.platform}
+          </button>
+          {node.config.url && <span className={styles.meta}>{node.config.url}</span>}
+        </div>
+      )}
+
       {node.kind === "hypothesis" && <HypothesisFields node={node} draft={hypotheses[node.blockId]?.status === "draft"} />}
 
       <p className={styles.meta}>

@@ -1,4 +1,4 @@
-import type { BetaMessageParam, BetaTextBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
+import type { BetaContentBlockParam, BetaImageBlockParam, BetaMessageParam, BetaTextBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { PHASE_INFO, WEIGHTS, type Phase, type Unit, type Weight } from "@composer/core";
 import { allocate, DEFAULT_MULTIPLIERS, type Multipliers } from "./allocate";
 import { terms } from "./salience";
@@ -17,7 +17,13 @@ export interface DocInput {
   pinned: boolean;
   why?: string;
   units: Unit[];
+  /** Pictures that go to Claude as images (pins, screens, frames). data: or https: URLs. */
+  images?: { src: string; caption: string }[];
 }
+
+/** Images per prompt, and the tokens each is budgeted at (a ≤1024px image is ≈1.1k tokens). */
+export const MAX_IMAGES = 12;
+export const IMAGE_TOKENS = 1100;
 
 export interface Foundations {
   designSystem?: { version: string; digest: string };
@@ -71,6 +77,8 @@ export interface AssemblyReport {
   items: ItemReport[];
   /** Share of context tokens used, per weight, as integer percentages. */
   shares: Record<Weight, number>;
+  /** Images sent, and those left out by weight or the cap. */
+  images: { sent: number; skipped: number };
 }
 
 export interface AssembledPrompt {
@@ -173,7 +181,16 @@ export function assemble(input: AssemblyInput): AssembledPrompt {
     .map((d) => d.alias);
   const instruction = [rendered.text, input.outputFormat].filter(Boolean).join("\n\n");
 
-  const fixed = [charter, foundations, rules, memory, hypothesis, instruction].reduce((s, t) => s + estimateTokens(t), 0);
+  // Images ride along for heavy and normal documents, heaviest first, up to the cap.
+  const imageCandidates = input.docs
+    .filter((d) => d.images?.length && (d.weight === "heavy" || d.weight === "normal" || d.pinned))
+    .sort((a, b) => tierOrder(a.weight) - tierOrder(b.weight) || a.alias.localeCompare(b.alias))
+    .flatMap((d) => d.images!.map((img) => ({ ...img, alias: d.alias })));
+  const allImages = input.docs.reduce((n, d) => n + (d.images?.length ?? 0), 0);
+  const fixedText = [charter, foundations, rules, memory, hypothesis, instruction].reduce((s, t) => s + estimateTokens(t), 0);
+  const imageRoom = Math.max(0, Math.floor((input.budget - fixedText) * 0.25 / IMAGE_TOKENS));
+  const images = imageCandidates.slice(0, Math.min(MAX_IMAGES, imageRoom));
+  const fixed = fixedText + images.length * IMAGE_TOKENS;
   const contextBudget = Math.max(0, input.budget - fixed - 1024);
 
   const live = input.docs.filter((d) => d.weight !== "mute" || d.pinned);
@@ -230,16 +247,17 @@ export function assemble(input: AssemblyInput): AssembledPrompt {
     { type: "text", text: foundations, cache_control: { type: "ephemeral", ttl: "1h" } },
     { type: "text", text: rules, cache_control: { type: "ephemeral" } },
   ];
-  const messages: BetaMessageParam[] = [
-    {
-      role: "user",
-      content: [
-        { type: "text", text: memoryText, cache_control: { type: "ephemeral" } },
-        { type: "text", text: contextText, cache_control: { type: "ephemeral" } },
-        { type: "text", text: instruction },
-      ],
-    },
+  const imageBlocks: BetaImageBlockParam[] = images.map((img, i) => ({
+    ...imageSource(img.src),
+    ...(i === images.length - 1 ? { cache_control: { type: "ephemeral" as const } } : {}),
+  }));
+  const content: BetaContentBlockParam[] = [
+    { type: "text", text: memoryText, cache_control: { type: "ephemeral" } },
+    { type: "text", text: images.length ? `${contextText}\n\nImages follow, in order: ${images.map((im, i) => `[${i + 1}] ${im.caption} (from <${im.alias}>)`).join("; ")}.` : contextText, ...(images.length ? {} : { cache_control: { type: "ephemeral" as const } }) },
+    ...imageBlocks,
+    { type: "text", text: instruction },
   ];
+  const messages: BetaMessageParam[] = [{ role: "user", content }];
   const total = fixed + estimateTokens(memoryText) - estimateTokens(memory) + estimateTokens(contextText) - estimateTokens(hypothesis);
   return {
     system,
@@ -247,6 +265,13 @@ export function assemble(input: AssemblyInput): AssembledPrompt {
     estimatedTokens: total,
     unknownRefs: rendered.unknown,
     unreferenced,
-    report: { v: 1, budget: input.budget, total, contextBudget, demand: demandTotal, overBudget, items, shares },
+    report: { v: 1, budget: input.budget, total: total + images.length * IMAGE_TOKENS, contextBudget, demand: demandTotal, overBudget, items, shares, images: { sent: images.length, skipped: allImages - images.length } },
   };
+}
+
+/** An image block from a data: URL (inline base64) or an https: URL (fetched by the API). */
+function imageSource(src: string): BetaImageBlockParam {
+  const m = /^data:(image\/(?:jpeg|png|gif|webp));base64,(.+)$/.exec(src);
+  if (m) return { type: "image", source: { type: "base64", media_type: m[1] as "image/jpeg", data: m[2]! } };
+  return { type: "image", source: { type: "url", url: src } };
 }

@@ -13,7 +13,7 @@
 - SQLite (rusqlite)
 - Anthropic TypeScript SDK, Claude Opus 5.5
 
-**Status:** M3. Collect, weigh, synthesize and lock in Understand, then draft and lock a testable statement in Define.
+**Status:** M4. Collect from files, links, Linear, Figma, Are.na, Pinterest and Slack; weigh; synthesize; then draft and lock a testable statement in Define.
 
 ## Develop
 

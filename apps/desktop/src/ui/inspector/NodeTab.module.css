@@ -25,3 +25,5 @@
 .danger, .secondary { align-self: flex-start; padding: 6px 10px; border-radius: var(--r-md); border: 1px solid var(--border-strong); font-size: var(--fs-chip); }
 .danger { color: var(--phase-define); border-color: rgba(224, 90, 78, 0.4); }
 .secondary { color: var(--text-secondary); }
+.syncRow { display: flex; flex-direction: column; gap: 6px; }
+.syncRow .meta { overflow-wrap: anywhere; }

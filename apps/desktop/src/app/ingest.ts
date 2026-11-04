@@ -6,6 +6,8 @@ export interface Ingested {
   title: string;
   platform: SourcePlatform;
   content: SourceContent;
+  /** Connector settings, so the source can be synced again. */
+  config?: Record<string, string>;
 }
 
 const SPEAKER_LINE = /^\s*(?:\[?\d{1,2}:\d{2}(?::\d{2})?\]?\s*)?[A-Z][\w .'-]{0,30}:\s+\S/;
@@ -116,8 +118,21 @@ async function fetchText(url: string): Promise<string> {
   return res.text();
 }
 
-/** A link: fetched once, readable text extracted, frozen into the source. */
+/**
+ * A link. Links a connector understands (Linear issues, Figma frames, Are.na channels, Pinterest
+ * boards, Slack threads) go through its API; anything else is fetched once as a web page.
+ */
 export async function ingestUrl(url: string): Promise<Ingested> {
+  const { matchUrl, runConnector } = await import("../connectors");
+  const matched = matchUrl(url);
+  if (matched) {
+    const r = await runConnector(matched.connector, matched.config);
+    return { title: r.title, platform: matched.connector.platform, content: r.content, config: r.config };
+  }
+  return ingestPage(url);
+}
+
+async function ingestPage(url: string): Promise<Ingested> {
   const u = new URL(url);
   const platform = PLATFORM_BY_HOST.find(([re]) => re.test(u.hostname))?.[1] ?? "link";
   const html = await fetchText(url);
@@ -138,6 +153,7 @@ export async function ingestUrl(url: string): Promise<Ingested> {
     title: clip(title, 80),
     platform,
     content: content([item("link", title, text, { url, ...(image ? { image } : {}) })]),
+    config: { url },
   };
 }
 

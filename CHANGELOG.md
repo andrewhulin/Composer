@@ -2,6 +2,60 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## M2 · Data model and engine core · 2026-11-04
+
+### Added
+- **`@composer/core`:**
+  - Synchronous SHA-256, checked against `node:crypto` with property tests.
+  - Canonical JSON and content addressing.
+  - ULIDs.
+  - Domain types: four node kinds, four port types, weighing, context items made of atomic units, hypothesis blocks, output versions.
+  - `Graph` ↔ `Manifest` (git-style, node blobs shared across snapshots).
+  - Typed graph diff ordered by creation sequence, for playback.
+- **`@composer/engine`:**
+  - **Ports:** the port table and snapping to the matching port, with mismatch reasons worded as in Figma 05.
+  - **Graph rules:** wires stay inside a phase, single-input ports, cycle rejection, topological order.
+  - **Keys and status:**
+    - Cache keys per node (`localKey`) plus an environment key for foundations and rules.
+    - Statuses: never_run, fresh, stale, stale_env (a softer badge).
+    - Blast radius computed before anything runs.
+    - Output lock state, including "newer available".
+  - **Scheduler:**
+    - Pull (⌘↵: node plus stale ancestors) and push (fork and rerun) plans.
+    - Concurrency cap of 3, cancellation, latest-wins, failures skip dependents.
+  - **Prompt assembly:**
+    - Stable-first layout with four cache breakpoints, the 1h TTL first.
+    - Weighted water-filling allocation, with pins capped at 15%.
+    - BM25 salience; units are never split, and omission markers show what was cut.
+    - An `AssemblyReport` per run (shares by weight, what was trimmed).
+    - Over budget means heavy and pinned material alone doesn't fit.
+    - `{alias}` templates render as `<alias>` tags. Unknown references block the run.
+  - **Recipes:** `synthesize_insights` (Understand → weighted context) and `draft_statement` (Define → testable statement in 4 frames), both with structured-output schemas and renderers.
+  - **`runClaudeNode`:** assembles, streams and parses. Refusals, max_tokens and bad output each raise their own error.
+  - **`LlmClient` interface**, plus a scriptable `FakeLlm`.
+- **`@composer/data`:**
+  - A `SqlDriver` seam with a `node:sqlite` adapter for tests.
+  - Migration 1: blobs, projects, branches, snapshots, bookmarks, runs, output versions, the hypothesis chain, prompt templates, craft rules, foundation versions, proposals, scores, decisions, links, token counts, settings.
+  - A `Repo` covering all of them.
+  - Only status columns are ever updated, and each change logs a decision. Nothing is deleted.
+- **Desktop:**
+  - rusqlite `db_all`, `db_run` and `db_tx` commands on one WAL connection.
+  - Tauri `SqlDriver`, plus a sql.js fallback for the browser preview.
+  - Keychain-backed secrets.
+  - `AnthropicLlm`:
+    - Streaming, adaptive thinking with summaries.
+    - `output_config.effort` and `format` set per request.
+    - `fallbacks: "default"`.
+    - `countTokens`.
+  - A boot step that migrates, marks orphaned runs interrupted, and opens or creates a project.
+- **Tests:** 57 across core, engine and data, including property tests for SHA-256, blast radius and allocation.
+
+### Decisions
+- **Hashing:** SHA-256 is synchronous, so cache keys and status can be derived during render without promises.
+- **"Over budget":** means the heavy and pinned documents alone can't fit. Anything lighter is trimmed by weight instead, so the brief is never cut silently.
+- **Hypothesis inputs:** a hypothesis's `evidence` port accepts locked outputs and Claude text but not raw context, per the Figma error state.
+- **Utility model:** utility calls stay on Opus 5.5. A per-node model override is in the node type, and its UI comes in M3.
+
 ## M1 · Scaffold and tokens · 2026-11-04
 
 ### Added

@@ -16,4 +16,4 @@
 .project { font-weight: 500; color: var(--text-primary); }
 .slash { color: var(--text-muted); }
 .phase { color: var(--text-secondary); }
-.saved { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.saved { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

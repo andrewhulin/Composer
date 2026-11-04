@@ -1,0 +1,10 @@
+{
+  "name": "@composer/data",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./node-sqlite": "./src/node-sqlite.ts" },
+  "scripts": { "typecheck": "tsc -p tsconfig.json" },
+  "dependencies": { "@composer/core": "workspace:*" },
+  "devDependencies": { "typescript": "~6.0.3", "vitest": "^5.1.0" }
+}

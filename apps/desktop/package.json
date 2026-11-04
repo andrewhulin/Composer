@@ -11,16 +11,21 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.5.0",
     "@composer/core": "workspace:*",
+    "@composer/data": "workspace:*",
+    "@composer/engine": "workspace:*",
     "@tauri-apps/api": "^2.12.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "sql.js": "^1.15.2",
     "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/sql.js": "^1.4.11",
     "@vitejs/plugin-react": "^6.2.1",
     "typescript": "~6.0.3",
     "vite": "^8.3.5",

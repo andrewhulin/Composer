@@ -13,7 +13,7 @@
 - SQLite (rusqlite)
 - Anthropic TypeScript SDK, Claude Opus 5.5
 
-**Status:** M1. The app shell matches Figma 01 · Workspace.
+**Status:** M2. The data model and execution engine are tested, and the shell matches Figma 01 · Workspace.
 
 ## Develop
 

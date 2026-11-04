@@ -2,6 +2,40 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## M7 · Validate: test strategy, verdict, and the loop · 2026-11-04
+
+### Added
+- **Two Validate recipes:**
+  - `test_strategy` names a success metric with its threshold, guardrails and a kill criterion. For each method (internal feedback in Slack, 360 testing, a Statsig A/B test, an unmoderated survey) it says whether to use it, the plan, and the exact questions to ask.
+  - `verdict` reads the strategy and the evidence wired in. It returns holds, misses or inconclusive, what was observed for each metric and whether it was met, the findings, and what the next loop should look at.
+- **Validate is scaffolded:** inlet `{prototype}` → Test strategy → Verdict → Verdict output. Evidence added while in Validate (Slack threads, session notes, Statsig results) wires straight into the Verdict.
+- **Inspector · Test strategy** (Figma 07 · Validate):
+  - Metric chips: success, guardrail and kill.
+  - One row per method with Claude's plan and a badge that reflects real evidence: "4 replies" once a Slack thread is back, "N sessions" once notes are added, "results in" once Statsig is pulled.
+  - Actions: **Post N questions to Slack** posts to the feedback channel and wires the thread in as evidence. **Add session notes** opens the Add menu. **Pull results** takes a Statsig experiment link.
+- **Inspector · Verdict:** the verdict, each metric with observed value and ✓/✕, the findings, and the designer's call: **Metric holds → Share** or **↺ Misses → back to Understand**.
+- **The loop:**
+  - A miss locks the verdict, marks the hypotheses under test as failed with the result, and opens loop N+1 in Understand. The new loop gets a `{verdict}` inlet plus copies of every heavy or pinned source, and its own snapshot ("Loop 2 · back to Understand").
+  - A hold marks them held. Share is scaffolded in M8.
+  - Inconclusive asks for more evidence and stays in Validate.
+  - Calling it differently from Claude is allowed. The override is stored on the locked version (`claude_said`) and logged as a decision.
+- **Statsig connector:** an experiment link (Console API, `STATSIG-API-KEY`) becomes a data source. It finds the control and test groups, then pulls Pulse results: one line per primary and secondary metric with % change, confidence interval, p-value and sample sizes.
+- **Settings:** a Slack feedback channel ID, stored as a project setting (not a secret).
+- **Tests:** the strategy and verdict contracts, Statsig pulse parsing, and scaffolding: every name an instruction mentions is wired, including when a phase is scaffolded again in the next loop. 91 in total.
+
+### Fixed
+- **Template names are unique within a phase and loop**, not across the whole project. Previously, loop 2's strategy node became `strategy-2`, and the verdict's `{strategy}` stopped resolving.
+- **Earlier loops are read-only for locking.** Locking an output from a previous loop now says so instead of writing a version.
+- **Methods list in a stable order.** Object keys put "360" first because it looks like a number.
+
+### Decisions
+- **The holds and misses buttons sit under the verdict**, not under the strategy as drawn in the Figma 07 panel. The call is about the verdict, and the strategy exists before any evidence does.
+- **Method switches show Claude's plan and aren't controls.** The strategy is an output, so changing which methods run means editing the instruction and rerunning.
+- **Inspector type stays at the inspector scale** (12px body, 10px mono plans). The Figma panel is drawn 884px wide, at 13px.
+- **Verification:**
+  - The whole loop ran in the browser preview with the scripted model: Build lock → Validate scaffold → strategy → verdict → Misses → loop 2 → Understand through Validate again → Holds, with an override.
+  - The Slack post path was only checked up to the missing-token message. Nothing was posted.
+
 ## M6 · Build: code prototypes and Figma · 2026-11-04
 
 ### Added

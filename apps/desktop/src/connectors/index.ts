@@ -5,9 +5,10 @@ import { figma } from "./figma";
 import { linear } from "./linear";
 import { pinterest } from "./pinterest";
 import { slack } from "./slack";
+import { statsig } from "./statsig";
 import type { Connector, ConnectorResult } from "./types";
 
-export const CONNECTORS: Connector[] = [linear, figma, arena, pinterest, slack];
+export const CONNECTORS: Connector[] = [linear, figma, arena, pinterest, slack, statsig];
 
 export function connectorFor(platform: SourcePlatform): Connector | undefined {
   return CONNECTORS.find((c) => c.platform === platform);

@@ -6,6 +6,7 @@ import { parseArenaBlocks, arena } from "./arena";
 import { parsePinterestRss, pinterest } from "./pinterest";
 import { parseSlackPermalink, parseSlackThread, slack } from "./slack";
 import { matchUrl } from "./index";
+import { parsePulse, statsig } from "./statsig";
 
 describe("link matching", () => {
   it("routes each platform's links to its connector, with the config parsed out", () => {
@@ -14,6 +15,7 @@ describe("link matching", () => {
     expect(matchUrl("https://www.are.na/andrew/interface-motion")).toMatchObject({ connector: arena, config: { channel: "interface-motion" } });
     expect(matchUrl("https://www.pinterest.com/andrew/nov-board/")).toMatchObject({ connector: pinterest, config: { user: "andrew", board: "nov-board" } });
     expect(matchUrl("https://slingshot.slack.com/archives/C0123ABCD/p1730736000123456")).toMatchObject({ connector: slack, config: { channel: "C0123ABCD", ts: "1730736000.123456" } });
+    expect(matchUrl("https://console.statsig.com/abc123/experiments/recap_v2/pulse")).toMatchObject({ connector: statsig, config: { experiment: "recap_v2" } });
     expect(matchUrl("https://example.com/article")).toBeUndefined();
     expect(matchUrl("https://www.figma.com/design/abc/File")).toBeUndefined();
   });
@@ -70,6 +72,14 @@ describe("parsers", () => {
     expect(items.map((i) => [i.title, i.image])).toEqual([
       ["Recap card, soft", "https://i.pinimg.com/236x/a.jpg"],
       ["Progress rings", "https://i.pinimg.com/236x/b.jpg"],
+    ]);
+  });
+
+  it("Statsig: one line per metric with change, interval, p-value and sample sizes", () => {
+    const [item] = parsePulse("recap_v2", [{ metricID: "Recap Opened::user", percent_change: 12.34, percent_confidence_interval: { lower: 4.1, upper: 20.6 }, p_value: 0.0123, test_units: 1669, control_units: 1589 }], [{ metricID: "Session Length::user", percent_change: -0.9 }]);
+    expect(item!.units).toEqual([
+      { text: "Recap Opened: +12.3% (CI +4.1% to +20.6%), p=0.012, n=1669 test vs 1589 control", label: "primary" },
+      { text: "Session Length: -0.9%", label: "secondary" },
     ]);
   });
 

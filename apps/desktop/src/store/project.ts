@@ -53,7 +53,7 @@ import {
 } from "@composer/engine";
 import type { BranchRow, ProjectRow, Repo, RunRow, SnapshotRow } from "@composer/data";
 import type { Booted } from "../app/boot";
-import { newClaude, newSource, nextSourcePosition, phaseHasNodes, primaryClaude, scaffoldPhase } from "../app/scaffold";
+import { evidenceTarget, newClaude, newSource, nextSourcePosition, phaseHasNodes, primaryClaude, scaffoldPhase } from "../app/scaffold";
 import type { Ingested } from "../app/ingest";
 import { AnthropicLlm } from "../llm/anthropic";
 import { demoLlm } from "../llm/demo";
@@ -368,7 +368,7 @@ export const actions = {
     set((s) => ({ blobs: new Map(s.blobs).set(hash, ing.content) }));
     const node = { ...newSource(graph, activePhase, loop, ing.platform, ing.title, hash, position ?? nextSourcePosition(graph, activePhase, loop)), config: ing.config ?? {} };
     let g = addNode<SourceNode>(graph, node);
-    const target = primaryClaude(g, activePhase, loop);
+    const target = evidenceTarget(g, activePhase, loop);
     if (target) {
       const r = connectNodes(g, node.id, target.id, ulid);
       if (r.ok) g = r.graph;
@@ -490,7 +490,7 @@ export const actions = {
   /** A Claude step for the phase in focus, using the phase's recipe. */
   addClaude() {
     const { graph, activePhase, loop } = get();
-    const recipeId = activePhase === "define" ? "draft_statement" : activePhase === "build" ? "prototype" : "synthesize_insights";
+    const recipeId = activePhase === "define" ? "draft_statement" : activePhase === "build" ? "prototype" : activePhase === "validate" ? "verdict" : "synthesize_insights";
     const count = Object.values(graph.nodes).filter((n) => n.kind === "claude" && n.phase === activePhase && n.loop === loop).length;
     const node = newClaude(graph, activePhase, loop, recipeId, { x: 600, y: 248 + count * 220 });
     setGraph(addNode<ClaudeNode>(graph, node));
@@ -641,17 +641,28 @@ export const actions = {
    * Locks an Output node: a new immutable version, a snapshot, and the next phase's inlet now
    * points at it (scaffolding that phase the first time).
    */
-  async lock(outputId: Id) {
+  async lock(outputId: Id, call?: "holds" | "misses") {
     const { repo, project, graph, loop } = get();
     const node = graph.nodes[outputId] as OutputNode | undefined;
     if (!repo || !project || node?.kind !== "output" || node.mode !== "output") return;
+    if (node.loop !== loop) {
+      toast(`That's from loop ${node.loop}. Earlier loops are read-only.`);
+      return;
+    }
     const edge = incoming(graph, outputId)[0];
     const out = edge ? graph.outputs[edge.from] : undefined;
-    const artifact = out ? (get().blobs.get(out.hash) as TextArtifact | undefined) : undefined;
+    let artifact = out ? (get().blobs.get(out.hash) as TextArtifact | undefined) : undefined;
     if (!out || !artifact) {
       toast("Run the Claude node first; there's nothing to lock yet.", "error");
       return;
     }
+    // A verdict is the designer's call: overriding Claude's reading is allowed and logged.
+    const claimed = (artifact.data as { verdict?: string } | undefined)?.verdict;
+    if (node.phase === "validate" && call && claimed && call !== claimed) {
+      artifact = { ...artifact, data: { ...(artifact.data as object), verdict: call, claude_said: claimed }, text: artifact.text.replace(/^Verdict: \w+/, `Verdict: ${call}`) };
+      await repo.decide(project.id, "verdict_override", `Called it ${call}; Claude said ${claimed}`, { outputId });
+    }
+    const verdict = node.phase === "validate" ? ((artifact.data as { verdict?: string } | undefined)?.verdict ?? "inconclusive") : undefined;
     const latest = latestVersionOf(node.familyId);
     if (latest?.contentHash === hashOf(artifact)) {
       toast(`v${latest.version} is already locked.`);
@@ -660,6 +671,24 @@ export const actions = {
     const version = await repo.lockOutput({ projectId: project.id, familyId: node.familyId, phase: node.phase, loop: node.loop, content: artifact, runId: out.runId });
     set((s) => ({ versions: { ...s.versions, [version.id]: version }, blobs: new Map(s.blobs).set(version.contentHash, artifact) }));
 
+    if (verdict === "misses") {
+      const snap = await takeSnapshot("lock", version.id, `Verdict v${version.version} · missed`);
+      if (snap) await repo.setVersionSnapshot(version.id, snap.id);
+      await startNextLoop(version, artifact);
+      return;
+    }
+    if (verdict === "holds") {
+      for (const h of Object.values(get().hypotheses).filter((x) => x.status === "testing")) {
+        await repo.setHypothesisStatus(h.id, "held", `Held in loop ${loop}`);
+        set((s) => ({ hypotheses: { ...s.hypotheses, [h.id]: { ...h, status: "held" } } }));
+      }
+    }
+    if (verdict === "inconclusive") {
+      const snap = await takeSnapshot("lock", version.id, `Verdict v${version.version} · inconclusive`);
+      if (snap) await repo.setVersionSnapshot(version.id, snap.id);
+      toast("Inconclusive. Wire in more evidence and run the verdict again.");
+      return;
+    }
     const next = nextPhase(node.phase);
     let g = get().graph;
     if (next) {
@@ -722,6 +751,61 @@ async function mergeBack(entry: Extract<UndoEntry, { kind: "fork" }>) {
   restore(entry.graph);
   await refreshHistory();
   toast(`Merged back · ${oldB?.label ?? "the old block"} is active again`, "success");
+}
+
+/**
+ * A miss sends the work back to Understand as loop N+1: the verdict becomes its inlet, heavy and
+ * pinned sources carry forward (same lineage), and the hypotheses tested this loop are failed with
+ * their result. Earlier loops stay on the timeline, read-only.
+ */
+async function startNextLoop(version: OutputVersion, verdict: TextArtifact) {
+  const { repo, project, graph, loop, hypotheses } = get();
+  if (!repo || !project) return;
+  const nextLoop = loop + 1;
+  const summary = (verdict.data as { summary?: string } | undefined)?.summary ?? "missed";
+  const failed: Record<Id, HypothesisBlock> = {};
+  for (const h of Object.values(hypotheses).filter((x) => x.status === "testing")) {
+    const note = `failed loop ${loop} · ${summary.slice(0, 80)}`;
+    await repo.setHypothesisStatus(h.id, "failed", `Missed in loop ${loop}`, note);
+    failed[h.id] = { ...h, status: "failed", note };
+  }
+  let g = scaffoldPhase(graph, "understand", nextLoop, { familyId: version.familyId, versionId: version.id, phase: "validate" });
+  const synth = primaryClaude(g, "understand", nextLoop);
+  const carry = Object.values(graph.nodes).filter((n): n is SourceNode => n.kind === "source" && n.phase === "understand" && n.loop === loop && (n.weight === "heavy" || n.pinned));
+  for (const n of carry) {
+    const copy = { ...n, id: ulid(), loop: nextLoop, position: { x: n.position.x + 280, y: n.position.y } };
+    const { createdSeq: _seq, ...rest } = copy;
+    g = addNode<SourceNode>(g, rest);
+    if (synth) {
+      const r = connectNodes(g, copy.id, synth.id, ulid);
+      if (r.ok) g = r.graph;
+    }
+  }
+  await repo.updateProject(project.id, { loop: nextLoop, activePhase: "understand" });
+  set((s) => ({ loop: nextLoop, project: { ...project, loop: nextLoop, activePhase: "understand" }, activePhase: "understand", hypotheses: { ...s.hypotheses, ...failed }, selection: null }));
+  setGraph(g, false);
+  await takeSnapshot("lock", version.id, `Loop ${nextLoop} · back to Understand`);
+  toast(`Missed. Loop ${nextLoop} starts in Understand with the verdict as its inlet${carry.length ? ` and ${carry.length} heavy source${carry.length === 1 ? "" : "s"} carried forward` : ""}.`, "success");
+}
+
+/** Posts the strategy's questions to the feedback channel; the thread comes back as evidence. */
+export async function postToSlack(text: string) {
+  const { repo } = get();
+  if (!repo) return;
+  const channel = await repo.getSetting<string>("slack_channel");
+  const token = await getSecret(SECRET.slack);
+  if (!token || !channel) throw new Error("Add a Slack token and a feedback channel ID in Settings (⌘,).");
+  const { httpJson } = await import("../connectors/http");
+  const res = await httpJson<{ ok: boolean; error?: string; ts?: string; channel?: string }>("https://slack.com/api/chat.postMessage", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json; charset=utf-8" },
+    body: JSON.stringify({ channel, text, unfurl_links: false }),
+  });
+  if (!res.ok || !res.ts) throw new Error(`Slack: ${res.error ?? "post failed"}`);
+  const { slack } = await import("../connectors/slack");
+  const r = await slack.fetch({ channel: res.channel ?? channel, ts: res.ts }, token);
+  await actions.addSource({ title: "Slack · feedback thread", platform: "slack", content: r.content, config: r.config });
+  toast("Posted to Slack. Sync the thread later to pull replies in as evidence.", "success");
 }
 
 // ── execution ──────────────────────────────────────────────────────────────

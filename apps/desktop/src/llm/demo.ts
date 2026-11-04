@@ -32,7 +32,31 @@ button{margin-top:auto;padding:14px;border:0;border-radius:10px;background:#1919
       rationale: "One card, three lines: proof of progress without a transcript to read.",
       tests: "Recap opens within 24h rise 40% or more",
     };
-    const answer = schemaText.includes('"html"') ? proto : schemaText.includes("insights")
+    const strategy = {
+      metrics: [
+        { kind: "success", text: "Recap opened within 24h · +40% vs control" },
+        { kind: "guardrail", text: "Session length does not drop" },
+        { kind: "kill", text: "No lift after 2 weeks → back to Understand" },
+      ],
+      methods: [
+        { method: "slack", use: true, plan: "Post the prototype and 3 questions to the design channel", questions: ["Would you open this before chatting?", "What's missing from the recap?", "Too much or too little?"] },
+        { method: "360", use: true, plan: "5 sessions · returning users only", questions: ["Walk me through what you'd do first"] },
+        { method: "statsig", use: true, plan: "recap_v2 vs control · 50/50 · 14 days", questions: [] },
+        { method: "survey", use: false, plan: "Not needed for this hypothesis", questions: [] },
+      ],
+      decision_rule: "Holds if opens rise 40% with no drop in session length; misses at the kill line.",
+    };
+    const verdict = {
+      verdict: "misses",
+      summary: "Opens rose 12%, well short of 40%; people skim past the card.",
+      metrics: [
+        { kind: "success", text: "Recap opened within 24h · +40%", observed: "+12%", met: "no" },
+        { kind: "guardrail", text: "Session length does not drop", observed: "-0.9%", met: "yes" },
+      ],
+      findings: [{ text: "People skim past a card that looks like content", source: "Slack · 4 replies" }],
+      next: "Back to Understand: why is the card skimmed instead of opened?",
+    };
+    const answer = schemaText.includes('"decision_rule"') ? strategy : schemaText.includes('"findings"') ? verdict : schemaText.includes('"html"') ? proto : schemaText.includes("insights")
       ? {
           summary: `Returning people lose the thread between sessions and want proof of progress, not a transcript. (${heavy} heavy sources)`,
           insights: [

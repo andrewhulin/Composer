@@ -23,8 +23,11 @@ export const DEFAULT_BUDGET = 200_000;
 
 type NewNode<T extends GraphNode> = Omit<T, "createdSeq">;
 
-/** A short, unique template alias from a title: "Interviews · P04, P07" → "interviews". */
-export function aliasFor(title: string, graph: Graph): string {
+/**
+ * A short template alias from a title: "Interviews · P04, P07" → "interviews". Unique within its
+ * phase and loop, which is as far as any instruction can see.
+ */
+export function aliasFor(title: string, graph: Graph, scope: { phase: Phase; loop: number }): string {
   const words = title
     .toLowerCase()
     .replace(/[“”"'’]/g, "")
@@ -32,10 +35,13 @@ export function aliasFor(title: string, graph: Graph): string {
     .filter((w) => w && !["the", "a", "an", "of", "and"].includes(w))
     .slice(0, 2);
   const base = words.join("-") || "source";
-  const taken = new Set(Object.values(graph.nodes).map((n) => n.alias));
+  const taken = new Set(Object.values(graph.nodes).filter((n) => n.phase === scope.phase && n.loop === scope.loop).map((n) => n.alias));
   if (!taken.has(base)) return base;
   for (let i = 2; ; i++) if (!taken.has(`${base}-${i}`)) return `${base}-${i}`;
 }
+
+/** Names other recipes' instructions use to refer to this one, e.g. the verdict's {strategy}. */
+const RECIPE_ALIAS: Partial<Record<RecipeId, string>> = { test_strategy: "strategy" };
 
 export function newClaude(graph: Graph, phase: Phase, loop: number, recipeId: RecipeId, position: { x: number; y: number }, title?: string): NewNode<ClaudeNode> {
   const r = recipe(recipeId);
@@ -47,7 +53,7 @@ export function newClaude(graph: Graph, phase: Phase, loop: number, recipeId: Re
     phase,
     loop,
     title: t,
-    alias: aliasFor(t, graph),
+    alias: aliasFor(RECIPE_ALIAS[recipeId] ?? t, graph, { phase, loop }),
     position,
     lineageId: id,
     recipe: recipeId,
@@ -64,14 +70,14 @@ export function newClaude(graph: Graph, phase: Phase, loop: number, recipeId: Re
 export function newOutput(graph: Graph, phase: Phase, loop: number, position: { x: number; y: number }, familyId: Id = ulid()): NewNode<OutputNode> {
   const id = ulid();
   const title = PHASE_INFO[phase].output;
-  return { id, kind: "output", mode: "output", phase, loop, title, alias: aliasFor(title, graph), position, lineageId: id, familyId };
+  return { id, kind: "output", mode: "output", phase, loop, title, alias: aliasFor(title, graph, { phase, loop }), position, lineageId: id, familyId };
 }
 
 export function newInlet(graph: Graph, phase: Phase, loop: number, from: { familyId: Id; versionId: Id; phase: Phase }, position: { x: number; y: number }): NewNode<OutputNode> {
   const id = ulid();
   const title = PHASE_INFO[from.phase].output;
   const ALIAS: Partial<Record<Phase, string>> = { understand: "insights", define: "statement", build: "prototype", validate: "verdict" };
-  const alias = ALIAS[from.phase] ?? aliasFor(title, graph);
+  const alias = ALIAS[from.phase] ?? aliasFor(title, graph, { phase, loop });
   return {
     id,
     kind: "output",
@@ -97,7 +103,7 @@ export function newSource(graph: Graph, phase: Phase, loop: number, platform: So
     phase,
     loop,
     title,
-    alias: aliasFor(title, graph),
+    alias: aliasFor(title, graph, { phase, loop }),
     position,
     lineageId: id,
     platform,
@@ -123,7 +129,16 @@ export function nextSourcePosition(graph: Graph, phase: Phase, loop: number): { 
   return { x: 72 + col * 248, y: 96 + row * 112 };
 }
 
-const RECIPE_FOR: Partial<Record<Phase, RecipeId>> = { understand: "synthesize_insights", define: "draft_statement", build: "prototype" };
+const RECIPE_FOR: Partial<Record<Phase, RecipeId>> = { understand: "synthesize_insights", define: "draft_statement", build: "prototype", validate: "test_strategy" };
+
+/** Where evidence dropped into a phase is wired: Validate's verdict step, else the phase's first step. */
+export function evidenceTarget(graph: Graph, phase: Phase, loop: number): ClaudeNode | undefined {
+  if (phase === "validate") {
+    const verdict = Object.values(graph.nodes).find((n): n is ClaudeNode => n.kind === "claude" && n.recipe === "verdict" && n.phase === phase && n.loop === loop);
+    if (verdict) return verdict;
+  }
+  return primaryClaude(graph, phase, loop);
+}
 
 /**
  * Lays out a phase's spine: [inlet →] Claude → Output. Understand starts with no inlet (it is the
@@ -135,9 +150,18 @@ export function scaffoldPhase(graph: Graph, phase: Phase, loop: number, inlet?: 
   let g = graph;
   const claude = newClaude(g, phase, loop, recipeId, { x: 600, y: 248 });
   g = addNode(g, claude);
-  const out = newOutput(g, phase, loop, { x: 920, y: 264 });
+  let last: { id: Id } = claude;
+  if (phase === "validate") {
+    // Validate has two steps: the strategy, then the verdict it's judged by.
+    const verdict = newClaude(g, phase, loop, "verdict", { x: 920, y: 248 });
+    g = addNode(g, verdict);
+    const r = connect(g, claude.id, verdict.id, ulid);
+    if (r.ok) g = r.graph;
+    last = verdict;
+  }
+  const out = newOutput(g, phase, loop, { x: phase === "validate" ? 1240 : 920, y: 264 });
   g = addNode(g, out);
-  const r1 = connect(g, claude.id, out.id, ulid);
+  const r1 = connect(g, last.id, out.id, ulid);
   if (r1.ok) g = r1.graph;
   if (inlet) {
     const node = newInlet(g, phase, loop, inlet, { x: 72, y: 96 });

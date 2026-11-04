@@ -164,6 +164,77 @@ ${FIDELITY_RULES}`,
   },
 };
 
+export type MetricKind = "success" | "guardrail" | "kill";
+export const METHODS = { slack: "Internal feedback · Slack", "360": "360 testing", statsig: "A/B test · Statsig", survey: "Unmoderated survey" } as const;
+export type Method = keyof typeof METHODS;
+/** Display order; object keys alone would put "360" first. */
+export const METHOD_ORDER: Method[] = ["slack", "360", "statsig", "survey"];
+
+export interface StrategyData {
+  metrics: { kind: MetricKind; text: string }[];
+  methods: { method: Method; use: boolean; plan: string; questions: string[] }[];
+  decision_rule: string;
+}
+
+export interface VerdictData {
+  verdict: "holds" | "misses" | "inconclusive";
+  summary: string;
+  metrics: { kind: MetricKind; text: string; observed: string; met: "yes" | "no" | "unknown" }[];
+  findings: { text: string; source: string }[];
+  next: string;
+}
+
+RECIPES.test_strategy = {
+  id: "test_strategy",
+  phase: "validate",
+  title: "Test strategy",
+  artifact: "test_strategy",
+  effort: "high",
+  charter:
+    "This phase crafts the test strategy and reaches a verdict. This step writes the strategy: success metrics tied to the hypothesis, guardrails that must not get worse, a kill criterion that sends the work back to Understand, and the cheapest methods that can prove or disprove it. Methods available: internal feedback in Slack, 360 user sessions, an A/B test in Statsig, an unmoderated survey. Only switch on the methods this hypothesis needs.",
+  defaultInstruction: "Write the test strategy for {prototype}, held against the active hypothesis. Name one success metric with its threshold, the guardrails, and the kill criterion. For each method, say whether to use it, the plan, and the exact questions to ask.",
+  schema: obj({
+    metrics: arr(obj({ kind: { type: "string", enum: ["success", "guardrail", "kill"] }, text: str })),
+    methods: arr(obj({ method: { type: "string", enum: METHOD_ORDER }, use: { type: "boolean" }, plan: str, questions: arr(str) })),
+    decision_rule: str,
+  }),
+  render: (data) => {
+    const d = data as StrategyData;
+    return [
+      ...d.metrics.map((m) => `${m.kind}: ${m.text}`),
+      ...d.methods.filter((m) => m.use).map((m) => `${METHODS[m.method]}: ${m.plan}`),
+      `Decision: ${d.decision_rule}`,
+    ].join("\n");
+  },
+};
+
+RECIPES.verdict = {
+  id: "verdict",
+  phase: "validate",
+  title: "Verdict",
+  artifact: "verdict",
+  effort: "high",
+  charter:
+    "This step reaches the verdict. Hold the evidence (feedback threads, session notes, experiment results) against the strategy's metrics. The hypothesis holds only if the success metric is met and no guardrail broke; it misses if the kill criterion is met or the success metric clearly failed; otherwise it is inconclusive and you say exactly what evidence is missing. Quote people and numbers; never round a miss into a hold.",
+  defaultInstruction: "Reach a verdict on the active hypothesis from {strategy} and the evidence wired in. For each metric say what was observed and whether it was met. List the findings that should feed the next loop if it misses.",
+  schema: obj({
+    verdict: { type: "string", enum: ["holds", "misses", "inconclusive"] },
+    summary: str,
+    metrics: arr(obj({ kind: { type: "string", enum: ["success", "guardrail", "kill"] }, text: str, observed: str, met: { type: "string", enum: ["yes", "no", "unknown"] } })),
+    findings: arr(obj({ text: str, source: str })),
+    next: str,
+  }),
+  render: (data) => {
+    const d = data as VerdictData;
+    return [
+      `Verdict: ${d.verdict}. ${d.summary}`,
+      ...d.metrics.map((m) => `${m.kind} · ${m.text} → ${m.observed} (${m.met === "yes" ? "met" : m.met === "no" ? "not met" : "unknown"})`),
+      ...d.findings.map((f) => `Finding: ${f.text} (${f.source})`),
+      `Next: ${d.next}`,
+    ].join("\n");
+  },
+};
+
 export function recipe(id: RecipeId): Recipe {
   const r = RECIPES[id];
   if (!r) throw new Error(`Recipe ${id} is not available yet`);

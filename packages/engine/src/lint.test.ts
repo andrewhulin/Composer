@@ -36,3 +36,23 @@ describe("prototype recipe", () => {
     expect(r.render!({ title: "Recap", fidelity: "wireframe", html: "<html/>", screens: [{ name: "Home", purpose: "show change" }], rationale: "r", tests: "t" })).toContain("Prototype (Wireframe): Recap");
   });
 });
+
+describe("validate recipes", () => {
+  it("renders a verdict that keeps misses honest and lists findings for the next loop", () => {
+    const text = recipe("verdict").render!({
+      verdict: "misses",
+      summary: "Opens rose 12%, short of 40%.",
+      metrics: [{ kind: "success", text: "Recap opened within 24h +40%", observed: "+12%", met: "no" }],
+      findings: [{ text: "People skim past the card", source: "Slack · 4 replies" }],
+      next: "Back to Understand: why is the card skimmed?",
+    });
+    expect(text).toContain("Verdict: misses.");
+    expect(text).toContain("→ +12% (not met)");
+    expect(text).toContain("Finding: People skim past the card (Slack · 4 replies)");
+  });
+
+  it("asks the strategy for metrics of all three kinds and one plan per method", () => {
+    const schema = JSON.stringify(recipe("test_strategy").schema);
+    for (const k of ["success", "guardrail", "kill", "slack", "360", "statsig", "survey"]) expect(schema).toContain(k);
+  });
+});

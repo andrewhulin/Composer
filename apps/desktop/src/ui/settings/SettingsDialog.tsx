@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { deleteSecret, getSecret, setSecret, SECRET } from "../../platform/secrets";
 import { useUi } from "../../store/ui";
-import { toast } from "../../store/project";
+import { toast, useProject } from "../../store/project";
 import { AnthropicLlm } from "../../llm/anthropic";
 import { CONNECTORS, type Connector } from "../../connectors";
 import styles from "./SettingsDialog.module.css";
@@ -103,6 +103,27 @@ export function SettingsDialog() {
   );
 }
 
+/** Where Validate posts its feedback questions. */
+function SlackChannel() {
+  const repo = useProject((s) => s.repo);
+  const [value, setValue] = useState<string | null>(null);
+  useEffect(() => {
+    void repo?.getSetting<string>("slack_channel").then((v) => setValue(v ?? ""));
+  }, [repo]);
+  if (value === null) return null;
+  return (
+    <div className={styles.row}>
+      <input
+        className={styles.input}
+        placeholder="Feedback channel ID (C0123…)"
+        defaultValue={value}
+        onBlur={(e) => void repo?.setSetting("slack_channel", e.currentTarget.value.trim())}
+        onKeyDown={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
+}
+
 function ConnectorRow({ connector }: { connector: Connector }) {
   const [has, setHas] = useState<boolean | null>(null);
   const [value, setValue] = useState("");
@@ -123,6 +144,7 @@ function ConnectorRow({ connector }: { connector: Connector }) {
         <span className={styles.connectorState}>{!connector.secret ? "no token needed" : has ? "connected" : connector.tokenRequired ? "needs a token" : "optional token"}</span>
       </div>
       {connector.tokenHelp && <span className={styles.help}>{connector.tokenHelp}</span>}
+      {connector.platform === "slack" && <SlackChannel />}
       {connector.secret && (
         <div className={styles.row}>
           <input

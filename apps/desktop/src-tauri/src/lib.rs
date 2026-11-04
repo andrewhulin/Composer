@@ -1,4 +1,5 @@
 mod db;
+mod prototypes;
 mod secrets;
 
 use tauri::Manager;
@@ -18,6 +19,7 @@ pub fn run() {
             db::db_all,
             db::db_run,
             db::db_tx,
+            prototypes::prototype_write,
             secrets::secret_get,
             secrets::secret_set,
             secrets::secret_delete,

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { PHASE_INFO, type Graph, type ClaudeNode, type GraphNode, type HypothesisNode, type Id, type OutputNode, type SourceContent, type SourceNode, type TextArtifact } from "@composer/core";
-import { incoming, templateRefs, type AssembledPrompt, type Frame, type InsightsData, type StatementData } from "@composer/engine";
+import { hashOf } from "@composer/core";
+import { incoming, templateRefs, type AssembledPrompt, type Frame, type InsightsData, type PrototypeData, type StatementData } from "@composer/engine";
 import { actions, latestVersionOf, previewPrompt, useProject } from "../../store/project";
 import { useUi, type InspectorTab } from "../../store/ui";
 import { useDisplayGraph, usePlaybackActive } from "../../store/display";
@@ -13,6 +14,7 @@ import { ContextChip, type Chip } from "./ContextChip";
 import { InstructionEditor } from "./InstructionEditor";
 import { InsightsCard } from "./InsightsCard";
 import { StatementCard } from "./StatementCard";
+import { PrototypeView } from "./PrototypeView";
 import { NodeTab } from "./NodeTab";
 import { PromptTab } from "./PromptTab";
 import { countKey, partialField } from "./partial";
@@ -142,6 +144,8 @@ function Preview({ node, graph }: { node: GraphNode | undefined; graph: Graph })
           {...(recipeNode ? { claudeId: recipeNode.id } : {})}
           {...(outputFor && node.kind !== "output" ? { outputId: outputFor } : outputNode?.mode === "output" ? { outputId: outputNode.id } : {})}
         />
+      ) : artifact.artifact === "prototype" && artifact.data ? (
+        <PrototypeView data={artifact.data as PrototypeData} hash={hashOf(artifact)} {...(recipeNode ? { claudeId: recipeNode.id } : {})} />
       ) : artifact.artifact === "weighted_context" && artifact.data ? (
         <InsightsCard data={artifact.data as InsightsData} label={`Weighted context${versionLabel ? ` · ${versionLabel}` : ""}`} />
       ) : (

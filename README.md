@@ -13,7 +13,7 @@
 - SQLite (rusqlite)
 - Anthropic TypeScript SDK, Claude Opus 5.5
 
-**Status:** M5. Every run is a snapshot: play the process back, branch, compare, and swap hypothesis variables (fork and rerun, ⌘Z merges back). M4: Collect from files, links, Linear, Figma, Are.na, Pinterest and Slack; weigh; synthesize; then draft and lock a testable statement in Define.
+**Status:** M6. Build code prototypes at any fidelity and send them to Figma as editable frames (`packages/figma-plugin`). M5: every run is a snapshot: play the process back, branch, compare, and swap hypothesis variables (fork and rerun, ⌘Z merges back). M4: Collect from files, links, Linear, Figma, Are.na, Pinterest and Slack; weigh; synthesize; then draft and lock a testable statement in Define.
 
 ## Develop
 

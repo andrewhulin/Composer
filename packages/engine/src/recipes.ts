@@ -48,6 +48,24 @@ export interface StatementData {
   alternates: { frame: Frame; statement: string }[];
 }
 
+export const FIDELITIES = { lofi: "Low-fi", wireframe: "Wireframe", hifi: "High-fi" } as const;
+export type Fidelity = keyof typeof FIDELITIES;
+
+export interface PrototypeData {
+  title: string;
+  fidelity: Fidelity;
+  /** One self-contained HTML document: inline CSS and JS, no network. */
+  html: string;
+  screens: { name: string; purpose: string }[];
+  rationale: string;
+  tests: string;
+}
+
+const FIDELITY_RULES = `Fidelity rules:
+- lofi: grayscale only, boxes and labels, system font, no imagery. It answers "what goes where".
+- wireframe: real copy from the evidence, real structure and states, a neutral palette, no brand styling.
+- hifi: the finished visual design. Use the design system's tokens as CSS custom properties when one is slotted; otherwise a restrained, considered style. Include hover, pressed and empty states.`;
+
 export const RECIPES: Partial<Record<RecipeId, Recipe>> = {
   synthesize_insights: {
     id: "synthesize_insights",
@@ -117,6 +135,32 @@ export const RECIPES: Partial<Record<RecipeId, Recipe>> = {
         .filter(Boolean)
         .join("\n");
     },
+  },
+};
+
+RECIPES.prototype = {
+  id: "prototype",
+  phase: "build",
+  title: "Prototype",
+  artifact: "prototype",
+  effort: "high",
+  charter: `This phase reaches a prototype at any fidelity. Its one output is a working prototype that tests the locked statement, plus why it is shaped that way.
+
+Return one complete, self-contained HTML document: inline <style> and <script> only, no external requests, no frameworks, no web fonts. Frame it as a phone screen (390 × 844) unless the statement is clearly about desktop. Mark each top-level screen with data-screen="Name", and put data-part="who|behavior|because|metric" on the elements that carry that part of the hypothesis. Use real words from the evidence, never lorem ipsum.
+
+${FIDELITY_RULES}`,
+  defaultInstruction: "Build a {fidelity} prototype that tests {statement}. Hold it against the active hypothesis if one is wired. Show the moment the hypothesis is about, and nothing that doesn't serve it.",
+  schema: obj({
+    title: str,
+    fidelity: { type: "string", enum: Object.keys(FIDELITIES) },
+    html: str,
+    screens: arr(obj({ name: str, purpose: str })),
+    rationale: str,
+    tests: str,
+  }),
+  render: (data) => {
+    const d = data as PrototypeData;
+    return [`Prototype (${FIDELITIES[d.fidelity] ?? d.fidelity}): ${d.title}`, `Screens: ${d.screens.map((s) => `${s.name} (${s.purpose})`).join("; ")}`, `Why: ${d.rationale}`, `Tests: ${d.tests}`].join("\n");
   },
 };
 

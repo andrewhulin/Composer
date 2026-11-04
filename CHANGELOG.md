@@ -2,6 +2,37 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## M6 · Build: code prototypes and Figma · 2026-11-04
+
+### Added
+- **The `prototype` recipe** (Build → Prototype):
+  - Claude returns one self-contained HTML document: inline CSS and JS, no network, no frameworks, framed at 390×844.
+  - Each screen is marked with `data-screen`, and the elements carrying each part of the hypothesis with `data-part="who|behavior|because|metric"`.
+  - Fidelity rules for low-fi (grayscale boxes), wireframe (real copy, neutral) and high-fi (design-system tokens as CSS variables, with states).
+  - The result also carries screens, rationale and what it tests.
+- **Build is scaffolded:** inlet `{statement}` → Prototype → Prototype output. Opening any empty phase whose predecessor is locked now lays out its spine from that lock.
+- **Prototype runtime:**
+  - A Rust `prototype_write` command writes the files under app data, with path-traversal checks.
+  - The asset protocol is scoped to `$APPDATA/prototypes/**`, so prototypes load in a sandboxed iframe (`allow-scripts` only) outside Composer's origin and CSP. The browser preview uses blob URLs.
+- **Inspector · Prototype** (Figma 07 · Build):
+  - Fidelity cards: Low-fi, Wireframe, High-fi. Picking one changes what the next run builds.
+  - The live prototype in a device frame, with Open large.
+  - Screens, rationale, and Build in: Code prototype, Figma, On-system.
+- **DOM → Figma:** a serializer is injected into every prototype. It walks the rendered DOM into a layer tree (flexbox becomes auto layout with gap and padding; text keeps size, weight, color and line height; layers are named by `data-screen` and `data-part`) and reports the colors, radii and font sizes used.
+- **Companion Figma plugin** (`packages/figma-plugin`, plain JS, no network):
+  - **Paste from Composer** builds the frames on a "Design Composer" page, with auto layout, fills, strokes, radii and fonts (falling back to Inter).
+  - **Copy selection for Composer** exports a frame's PNG and text. Pasting that onto Composer's canvas makes a Figma source.
+- **On-system lint** (`lintAgainstTokens`): the share of used colors, radii and sizes that match design-system tokens, with offenders ranked. It feeds the On-system figure and, in M9, design-system proposals.
+- **Tests:** color normalization, lint scoring, and the prototype recipe contract. 84 in total.
+
+### Decisions
+- **Figma handoff goes through the clipboard** instead of a live WebSocket bridge. It needs no network permission in the plugin and no pairing, and it works offline. A live bridge can come later if paste feels slow in daily use.
+- **Prototypes are single HTML documents.** React through a CDN would need network access inside the sandbox, so Claude writes vanilla HTML, CSS and JS.
+- **Verification:**
+  - The serializer was checked on a laid-out copy of a generated prototype: frames, auto-layout direction and gaps, text roles, used styles.
+  - The inspector's own sandboxed frame couldn't be measured because the preview pane was hidden.
+  - The Figma plugin was syntax-checked but hasn't been run inside Figma yet.
+
 ## M5 · History, playback and the memory chain · 2026-11-04
 
 ### Added
@@ -25,7 +56,7 @@ Newest first. Every milestone adds an entry. A **Decisions** list records each d
 - **Memory:** clicking a hypothesis in the sidebar's Memory section places that chain block on the canvas, wired into the phase's Claude node.
 - **Engine:** `swapVariable`, `nextLabel`, `evidenceFor`, `swapCandidates`, `repointHypothesis`, `playbackFrames`, `frameDelay`, `revealOrder`, `describeChanges`.
 - **Data:** `Repo.switchBranch`.
-- **Tests:** 81 in total.
+- **Tests:** 80 in total.
 
 ### Decisions
 - **Swap candidates:** in v1 they come from values other blocks in the chain have used, plus anything you type. Evidence is the number of source items that mention every content word. A Claude-suggested candidate list can come later, if typed swaps prove too manual.

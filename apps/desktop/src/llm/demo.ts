@@ -8,7 +8,31 @@ export function demoLlm(): FakeLlm {
   return new FakeLlm((req: LlmRequest) => {
     const schemaText = JSON.stringify(req.schema ?? {});
     const heavy = (JSON.stringify(req.messages).match(/weight=\\"heavy\\"/g) ?? []).length;
-    const answer = schemaText.includes("insights")
+    const proto = {
+      title: "Recap: what changed since last time",
+      fidelity: /fidelity[^.]*low-fi|a low-fi/i.test(JSON.stringify(req.messages)) ? "lofi" : /high-fi/i.test(JSON.stringify(req.messages)) ? "hifi" : "wireframe",
+      html: `<!doctype html><html><head><meta charset="utf-8"><title>Recap</title><style>
+body{margin:0;font-family:-apple-system,system-ui,sans-serif;background:#f6f5f2;color:#19191c}
+main{display:flex;flex-direction:column;gap:16px;padding:56px 20px 24px;min-height:844px;box-sizing:border-box}
+h1{font-size:24px;margin:0;line-height:1.2}
+.card{display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:12px;background:#fff;border:1px solid #e4e1da}
+.label{font-size:12px;color:#8a857a;text-transform:uppercase;letter-spacing:.06em}
+.item{display:flex;gap:10px;align-items:center;font-size:15px}
+.dot{width:8px;height:8px;border-radius:4px;background:#de8a45}
+button{margin-top:auto;padding:14px;border:0;border-radius:10px;background:#19191c;color:#fff;font-size:16px}
+</style></head><body><main data-screen="Recap">
+<span class="label" data-part="who">Welcome back, third session</span>
+<h1 data-part="because">Since last time</h1>
+<div class="card"><span class="label">What changed</span>
+<div class="item"><span class="dot"></span>You named the feeling: “too much to read”</div>
+<div class="item"><span class="dot"></span>Two new ideas to try this week</div></div>
+<button data-part="behavior">Pick up where we left off</button>
+</main></body></html>`,
+      screens: [{ name: "Recap", purpose: "Show what changed before chat" }],
+      rationale: "One card, three lines: proof of progress without a transcript to read.",
+      tests: "Recap opens within 24h rise 40% or more",
+    };
+    const answer = schemaText.includes('"html"') ? proto : schemaText.includes("insights")
       ? {
           summary: `Returning people lose the thread between sessions and want proof of progress, not a transcript. (${heavy} heavy sources)`,
           insights: [

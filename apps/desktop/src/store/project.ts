@@ -337,6 +337,18 @@ export const actions = {
 
   async setActivePhase(phase: Phase) {
     set({ activePhase: phase, selection: null });
+    // Opening an empty phase whose predecessor is locked lays out its spine from that lock.
+    const { graph, loop } = get();
+    const prev = PHASES[PHASES.indexOf(phase) - 1];
+    if (prev && !phaseHasNodes(graph, phase, loop)) {
+      const lock = Object.values(get().versions)
+        .filter((v) => v.phase === prev && v.loop === loop)
+        .sort((a, b) => b.version - a.version)[0];
+      if (lock) {
+        const g = scaffoldPhase(graph, phase, loop, { familyId: lock.familyId, versionId: lock.id, phase: prev });
+        if (g !== graph) setGraph(g, false);
+      }
+    }
     const { repo, project } = get();
     if (repo && project) await repo.updateProject(project.id, { activePhase: phase });
   },
@@ -478,7 +490,7 @@ export const actions = {
   /** A Claude step for the phase in focus, using the phase's recipe. */
   addClaude() {
     const { graph, activePhase, loop } = get();
-    const recipeId = activePhase === "define" ? "draft_statement" : "synthesize_insights";
+    const recipeId = activePhase === "define" ? "draft_statement" : activePhase === "build" ? "prototype" : "synthesize_insights";
     const count = Object.values(graph.nodes).filter((n) => n.kind === "claude" && n.phase === activePhase && n.loop === loop).length;
     const node = newClaude(graph, activePhase, loop, recipeId, { x: 600, y: 248 + count * 220 });
     setGraph(addNode<ClaudeNode>(graph, node));

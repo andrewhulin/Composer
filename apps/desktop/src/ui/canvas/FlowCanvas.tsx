@@ -17,7 +17,7 @@ import { actions, toast, useProject } from "../../store/project";
 import { useUi } from "../../store/ui";
 import { useDisplayGraph } from "../../store/display";
 import { usePlayback } from "../../store/playback";
-import { ingestFile, ingestText, ingestUrl, isUrl } from "../../app/ingest";
+import { ingestFigmaSelection, ingestFile, ingestText, ingestUrl, isUrl } from "../../app/ingest";
 import { ClaudeNodeView } from "../nodes/ClaudeNodeView";
 import { SourceNodeView } from "../nodes/SourceNodeView";
 import { HypothesisNodeView } from "../nodes/HypothesisNodeView";
@@ -254,6 +254,10 @@ export function FlowCanvas() {
 
 async function addFromText(text: string, at?: { x: number; y: number }) {
   const t = text.trim();
+  if (t.startsWith('{"composer":"figma-selection"')) {
+    const frame = await ingestFigmaSelection(t);
+    if (frame) return actions.addSource(frame, at);
+  }
   if (isUrl(t)) {
     toast(`Fetching ${new URL(t).hostname}…`);
     await actions.addSource(await ingestUrl(t), at);

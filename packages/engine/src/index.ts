@@ -13,3 +13,4 @@ export * from "./assembly/trim";
 export * from "./assembly/units";
 export * from "./memory";
 export * from "./history";
+export * from "./lint";

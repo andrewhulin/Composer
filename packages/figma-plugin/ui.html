@@ -1,0 +1,39 @@
+<style>
+  body { margin: 0; padding: 14px; font: 12px/1.45 Inter, system-ui, sans-serif; color: var(--figma-color-text); background: var(--figma-color-bg); }
+  h2 { margin: 0 0 6px; font-size: 12px; font-weight: 600; }
+  p { margin: 0 0 8px; color: var(--figma-color-text-secondary); }
+  textarea { width: 100%; height: 96px; box-sizing: border-box; font: 11px/1.4 ui-monospace, Menlo, monospace; border: 1px solid var(--figma-color-border); border-radius: 6px; padding: 6px; background: var(--figma-color-bg-secondary); color: inherit; resize: none; }
+  button { margin-top: 8px; padding: 7px 12px; border: 0; border-radius: 6px; background: var(--figma-color-bg-brand); color: var(--figma-color-text-onbrand); font-weight: 500; cursor: pointer; }
+  button.secondary { background: transparent; color: var(--figma-color-text); border: 1px solid var(--figma-color-border); }
+  hr { border: 0; border-top: 1px solid var(--figma-color-border); margin: 14px 0; }
+  #status { margin-top: 8px; min-height: 16px; }
+</style>
+<h2>Paste from Composer</h2>
+<p>In Composer, open a prototype and choose Figma → send frames. Paste here.</p>
+<textarea id="paste" placeholder="⌘V"></textarea>
+<button id="build">Build frames</button>
+<hr />
+<h2>Send selection to Composer</h2>
+<p>Select a frame, then copy and paste it onto Composer's canvas (⌘V). It arrives as a Figma source.</p>
+<button id="send" class="secondary">Copy selection for Composer</button>
+<textarea id="out" readonly hidden></textarea>
+<div id="status"></div>
+<script>
+  const $ = (id) => document.getElementById(id);
+  $("build").onclick = () => parent.postMessage({ pluginMessage: { type: "paste", text: $("paste").value } }, "*");
+  $("send").onclick = () => parent.postMessage({ pluginMessage: { type: "selection" } }, "*");
+  onmessage = (e) => {
+    const msg = e.data.pluginMessage;
+    if (!msg) return;
+    if (msg.type === "selection") {
+      const out = $("out");
+      out.hidden = false;
+      out.value = msg.text;
+      out.select();
+      const ok = document.execCommand("copy");
+      $("status").textContent = ok ? "Copied. Paste onto Composer's canvas." : "Select the text above and copy it.";
+    } else {
+      $("status").textContent = msg.text;
+    }
+  };
+</script>

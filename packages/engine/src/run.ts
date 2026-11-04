@@ -16,7 +16,7 @@ import { splitUnits } from "./assembly/units";
 import { incoming } from "./graph-ops";
 import { envKeyFor, localKey, type KeyEnv } from "./keys";
 import type { LlmClient, LlmResult } from "./llm";
-import { FRAMES, recipe } from "./recipes";
+import { FIDELITIES, FRAMES, recipe } from "./recipes";
 
 /** Everything a run reads that isn't on the canvas. */
 export interface RunDeps {
@@ -43,7 +43,7 @@ export class RunError extends Error {
 }
 
 const OPTION_TEXT: Record<string, string> = Object.fromEntries(
-  Object.entries(FRAMES).map(([k, v]) => [k, v.toLowerCase()]),
+  [...Object.entries(FRAMES), ...Object.entries(FIDELITIES)].map(([k, v]) => [k, v.toLowerCase()]),
 );
 
 /** Fills `{option}` placeholders (e.g. `{frame}`) from the node's options before references resolve. */

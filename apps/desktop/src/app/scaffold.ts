@@ -57,7 +57,7 @@ export function newClaude(graph: Graph, phase: Phase, loop: number, recipeId: Re
     effort: r.effort,
     budget: DEFAULT_BUDGET,
     disabledInputs: [],
-    options: recipeId === "draft_statement" ? { frame: "hypothesis" } : {},
+    options: recipeId === "draft_statement" ? { frame: "hypothesis" } : recipeId === "prototype" ? { fidelity: "wireframe" } : {},
   };
 }
 
@@ -70,7 +70,8 @@ export function newOutput(graph: Graph, phase: Phase, loop: number, position: { 
 export function newInlet(graph: Graph, phase: Phase, loop: number, from: { familyId: Id; versionId: Id; phase: Phase }, position: { x: number; y: number }): NewNode<OutputNode> {
   const id = ulid();
   const title = PHASE_INFO[from.phase].output;
-  const alias = from.phase === "understand" ? "insights" : aliasFor(title, graph);
+  const ALIAS: Partial<Record<Phase, string>> = { understand: "insights", define: "statement", build: "prototype", validate: "verdict" };
+  const alias = ALIAS[from.phase] ?? aliasFor(title, graph);
   return {
     id,
     kind: "output",
@@ -122,7 +123,7 @@ export function nextSourcePosition(graph: Graph, phase: Phase, loop: number): { 
   return { x: 72 + col * 248, y: 96 + row * 112 };
 }
 
-const RECIPE_FOR: Partial<Record<Phase, RecipeId>> = { understand: "synthesize_insights", define: "draft_statement" };
+const RECIPE_FOR: Partial<Record<Phase, RecipeId>> = { understand: "synthesize_insights", define: "draft_statement", build: "prototype" };
 
 /**
  * Lays out a phase's spine: [inlet →] Claude → Output. Understand starts with no inlet (it is the

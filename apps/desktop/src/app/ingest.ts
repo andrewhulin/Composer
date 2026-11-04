@@ -157,6 +157,37 @@ async function ingestPage(url: string): Promise<Ingested> {
   };
 }
 
+/** A frame the companion Figma plugin copied ("Copy selection for Composer"). */
+export async function ingestFigmaSelection(json: string): Promise<Ingested | undefined> {
+  let data: { composer?: string; name?: string; text?: string[]; png?: string; url?: string };
+  try {
+    data = JSON.parse(json);
+  } catch {
+    return undefined;
+  }
+  if (data.composer !== "figma-selection" || !data.name) return undefined;
+  let image: string | undefined;
+  if (data.png && typeof document !== "undefined") {
+    const blob = await (await fetch(`data:image/png;base64,${data.png}`)).blob();
+    image = await downscale(new File([blob], "frame.png", { type: "image/png" }), 768);
+  }
+  const lines = [...new Set((data.text ?? []).map((t) => t.trim()).filter(Boolean))];
+  return {
+    title: `Figma · ${data.name}`,
+    platform: "figma",
+    content: content([
+      {
+        id: ulid(),
+        kind: "screen",
+        title: data.name,
+        units: lines.length ? lines.map((text) => ({ text })) : [{ text: `Figma frame: ${data.name}` }],
+        ...(data.url ? { url: data.url } : {}),
+        ...(image ? { image } : {}),
+      },
+    ]),
+  };
+}
+
 export function isUrl(text: string): boolean {
   return /^https?:\/\/\S+$/i.test(text.trim());
 }

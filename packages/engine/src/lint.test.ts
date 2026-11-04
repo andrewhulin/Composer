@@ -1,0 +1,38 @@
+import { describe, expect, it } from "vitest";
+import { lintAgainstTokens, normalizeColor } from "./lint";
+import { recipe } from "./recipes";
+
+describe("normalizeColor", () => {
+  it("reads hex and rgb the same way, and skips transparent", () => {
+    expect(normalizeColor("rgb(224, 90, 78)")).toBe("#e05a4e");
+    expect(normalizeColor("#E05A4E")).toBe("#e05a4e");
+    expect(normalizeColor("#fff")).toBe("#ffffff");
+    expect(normalizeColor("rgba(0, 0, 0, 0)")).toBeNull();
+    expect(normalizeColor("transparent")).toBeNull();
+  });
+});
+
+describe("lintAgainstTokens", () => {
+  const tokens = { colors: ["#19191c", "#eeedea"], radii: [4, 8], fontSizes: [12, 16] };
+
+  it("scores how much of the prototype uses tokens and lists the rest, most used first", () => {
+    const r = lintAgainstTokens({ colors: ["rgb(25, 25, 28)", "#eeedea", "#123456", "#123456"], radii: [8, 12, 12], fontSizes: [12, 15] }, tokens);
+    expect(r.pct).toBe(44);
+    expect(r.offenders[0]).toEqual({ kind: "color", value: "#123456", count: 2 });
+    expect(r.offenders.map((o) => o.value)).toEqual(["#123456", "12px", "15px"]);
+  });
+
+  it("has no score until a design system is slotted", () => {
+    expect(lintAgainstTokens({ colors: ["#000"], radii: [], fontSizes: [] }, null)).toEqual({ pct: null, offenders: [] });
+  });
+});
+
+describe("prototype recipe", () => {
+  it("asks for one self-contained document at the chosen fidelity", () => {
+    const r = recipe("prototype");
+    expect(r.phase).toBe("build");
+    expect(r.charter).toContain("self-contained HTML");
+    expect(r.defaultInstruction).toContain("{fidelity}");
+    expect(r.render!({ title: "Recap", fidelity: "wireframe", html: "<html/>", screens: [{ name: "Home", purpose: "show change" }], rationale: "r", tests: "t" })).toContain("Prototype (Wireframe): Recap");
+  });
+});

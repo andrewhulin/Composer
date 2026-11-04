@@ -38,7 +38,7 @@ async function font(family, weight) {
     try {
       await figma.loadFontAsync(f);
       return f;
-    } catch (e) {
+    } catch {
       // try the next one
     }
   }

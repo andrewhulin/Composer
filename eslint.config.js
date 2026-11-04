@@ -17,6 +17,11 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    // The Figma plugin runs in Figma's sandbox, where `figma` and `__html__` are globals.
+    files: ["packages/figma-plugin/**/*.js"],
+    languageOptions: { globals: { figma: "readonly", __html__: "readonly" } },
+  },
+  {
     files: ["**/*.{ts,tsx}"],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
     plugins: { "react-hooks": reactHooks },

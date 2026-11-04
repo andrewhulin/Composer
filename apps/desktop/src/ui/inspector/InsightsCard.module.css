@@ -1,0 +1,12 @@
+.paper { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: var(--r-lg); background: var(--paper-bg); user-select: text; }
+.label { font-family: var(--font-mono); font-size: var(--fs-micro); letter-spacing: var(--tracking-caps); color: var(--paper-ink-muted); }
+.summary { font-size: 17px; font-weight: 500; line-height: 1.25; letter-spacing: -0.01em; color: var(--paper-ink); }
+.list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding-left: 16px; color: var(--paper-ink-muted); font-size: var(--fs-note); }
+.title { font-weight: 500; color: var(--paper-ink); line-height: 17px; }
+.title span { margin-left: 4px; font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 400; }
+.strong { color: var(--phase-understand); }
+.moderate { color: var(--paper-ink-muted); }
+.weak { color: #b5b0a6; }
+.quote { margin-top: 3px; line-height: 16px; color: var(--paper-ink-2); }
+.quote span { color: var(--paper-ink-muted); }
+.open { font-size: var(--fs-chip); line-height: 16px; color: var(--paper-ink-muted); }

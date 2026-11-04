@@ -1,4 +1,5 @@
 .row {
+  text-align: left;
   display: flex;
   align-items: center;
   gap: 10px;

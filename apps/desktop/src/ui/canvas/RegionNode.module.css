@@ -1,0 +1,26 @@
+.region {
+  width: 1320px;
+  height: 900px;
+  border: 1px dashed rgba(var(--phase-rgb), 0.35);
+  border-radius: 16px;
+  background: rgba(var(--phase-rgb), 0.025);
+  pointer-events: none;
+}
+.label { position: absolute; left: 20px; top: 16px; display: flex; align-items: baseline; gap: 8px; font-size: var(--fs-header); font-weight: 600; letter-spacing: -0.02em; color: var(--text-primary); }
+.index { font-family: var(--font-mono); font-size: var(--fs-chip); font-weight: 500; color: var(--phase); }
+.output { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 500; letter-spacing: var(--tracking-micro); color: var(--text-muted); }
+.drop {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 472px;
+  padding: 10px 14px;
+  border: 1px dashed rgba(222, 138, 69, 0.55);
+  border-radius: var(--r-md);
+  background: rgba(222, 138, 69, 0.05);
+  font-family: var(--font-mono);
+  font-size: var(--fs-chip);
+  color: var(--phase-understand);
+  pointer-events: none;
+}
+.dropSub { font-size: var(--fs-meta); color: var(--text-muted); }

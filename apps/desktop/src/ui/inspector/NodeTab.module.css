@@ -1,0 +1,27 @@
+.tab { display: flex; flex-direction: column; gap: 14px; padding: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.label { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.input, .textarea {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-raised);
+  font-size: var(--fs-body);
+  color: var(--text-primary);
+  outline: none;
+  user-select: text;
+}
+.input:focus, .textarea:focus { border-color: var(--border-strong); }
+.textarea { resize: vertical; line-height: 1.45; }
+.mono { font-family: var(--font-mono); font-size: var(--fs-chip); }
+.static { font-size: var(--fs-body); line-height: 1.45; color: var(--text-secondary); user-select: text; }
+.segmented { display: flex; gap: 2px; padding: 2px; border-radius: var(--r-md); background: var(--bg-canvas); }
+.segmented button { flex: 1; padding: 5px 0; border-radius: var(--r-xs); font-size: var(--fs-chip); color: var(--text-secondary); }
+.segmented button:hover { color: var(--text-primary); }
+.segmented .on, .segmented .on:hover { background: var(--bg-hover); color: var(--text-primary); }
+.toggleRow { display: flex; align-items: center; gap: 8px; font-size: var(--fs-body); color: var(--text-primary); }
+.meta { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.danger, .secondary { align-self: flex-start; padding: 6px 10px; border-radius: var(--r-md); border: 1px solid var(--border-strong); font-size: var(--fs-chip); }
+.danger { color: var(--phase-define); border-color: rgba(224, 90, 78, 0.4); }
+.secondary { color: var(--text-secondary); }

@@ -13,7 +13,7 @@
 - SQLite (rusqlite)
 - Anthropic TypeScript SDK, Claude Opus 5.5
 
-**Status:** M2. The data model and execution engine are tested, and the shell matches Figma 01 · Workspace.
+**Status:** M3. Collect, weigh, synthesize and lock in Understand, then draft and lock a testable statement in Define.
 
 ## Develop
 
@@ -22,7 +22,7 @@ Needs Node 26+, pnpm 11, Rust (stable, via rustup) and Xcode command line tools.
 ```bash
 pnpm install
 pnpm dev        # Tauri app with hot reload
-pnpm web        # frontend only, in a browser at localhost:1420
+pnpm web        # frontend only, in a browser at localhost:1420 (add ?fake for a scripted model)
 pnpm check      # lint + typecheck + tests
 ```
 

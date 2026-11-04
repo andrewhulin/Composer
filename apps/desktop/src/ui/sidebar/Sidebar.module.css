@@ -89,3 +89,4 @@
 }
 .healthTitle { font-size: var(--fs-body); color: var(--text-primary); }
 .healthBody { font-size: var(--fs-chip); line-height: 16px; color: var(--text-secondary); }
+.empty { padding: 4px 10px 6px; font-size: var(--fs-chip); line-height: 16px; color: var(--text-muted); }

@@ -1,0 +1,13 @@
+.claude { width: 256px; }
+.fill { background: var(--signal-live); }
+.running { border: 1.5px solid var(--text-primary); }
+.running .line { color: var(--text-primary); }
+.running .fill { background: var(--text-primary); }
+.stale { border: 1.5px solid var(--signal-warn); }
+.stale .line { color: var(--signal-warn); }
+.stale .fill { background: var(--signal-warn); }
+.over, .failed { border: 1.5px solid var(--phase-define); }
+.over .line, .failed .line { color: var(--phase-define); }
+.over .fill, .failed .fill { background: var(--phase-define); }
+.overText { color: var(--phase-define); }
+.idle .fill { background: var(--border-strong); }

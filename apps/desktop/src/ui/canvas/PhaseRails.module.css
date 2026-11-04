@@ -4,7 +4,8 @@
   bottom: 0;
   width: 28px;
   background: rgba(var(--phase-rgb), 0.12);
-  z-index: 2;
+  z-index: 5;
+  pointer-events: none;
 }
 .inlet { left: 0; border-right: 2px solid var(--phase); }
 .outlet { right: 0; border-left: 2px solid var(--phase); }

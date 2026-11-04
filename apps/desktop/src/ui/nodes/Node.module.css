@@ -1,0 +1,67 @@
+/* Shared node chrome from Figma 02 · Nodes. */
+.node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl);
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.45));
+  color: var(--text-primary);
+  transition: border-color var(--t-fast) var(--ease-out);
+}
+.selected { border-color: var(--text-secondary); }
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  min-width: 0;
+}
+.glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-chip);
+  font-weight: 500;
+}
+.title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+.tag {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.body { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 12px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; white-space: nowrap; }
+.key { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.val { font-size: var(--fs-chip); color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; }
+.runbar { display: flex; flex-direction: column; gap: 6px; padding: 0 12px 12px; }
+.runline { display: flex; justify-content: space-between; gap: 8px; font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); white-space: nowrap; }
+.runline span:first-child { overflow: hidden; text-overflow: ellipsis; }
+.progress { position: relative; height: 3px; border-radius: 2px; background: var(--border-strong); overflow: hidden; }
+.fill { position: absolute; inset: 0 auto 0 0; border-radius: 2px; }
+.indeterminate { width: 35%; animation: slide 1.2s var(--ease-out) infinite; }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+.shake { animation: shake 0.36s cubic-bezier(0.36, 0.07, 0.19, 0.97) 2; }
+@keyframes shake {
+  20%, 80% { transform: translateX(-2px); }
+  40%, 60% { transform: translateX(3px); }
+}

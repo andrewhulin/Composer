@@ -1,0 +1,20 @@
+.flow { position: absolute; inset: 0; z-index: 1; }
+.flow :global(.react-flow__pane) { cursor: default; }
+.flow :global(.react-flow__node) { cursor: grab; }
+.flow :global(.react-flow__node.dragging) { cursor: grabbing; }
+.flow :global(.react-flow__edge-path) { fill: none; }
+.flow :global(.react-flow__connection-path) { stroke: var(--text-primary); stroke-width: 1.5; stroke-dasharray: 4 4; fill: none; }
+.flow :global(.react-flow__selection) { background: rgba(238, 237, 234, 0.04); border: 1px dashed var(--text-muted); }
+.minimap {
+  right: 44px !important;
+  bottom: 16px !important;
+  margin: 0 !important;
+  border-radius: var(--r-lg);
+  background: var(--bg-panel) !important;
+  border: 1px solid var(--border-strong);
+  overflow: hidden;
+}
+
+/* React Flow's attribution, kept as its authors ask, made quiet to fit the canvas. */
+.flow :global(.react-flow__attribution) { background: transparent; padding: 0 6px; font-family: var(--font-mono); font-size: 8px; }
+.flow :global(.react-flow__attribution a) { color: var(--text-muted); text-decoration: none; }

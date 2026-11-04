@@ -150,6 +150,8 @@ export interface ContextItem {
   url?: string;
   /** Asset hash of a thumbnail or the image itself. */
   media?: { asset: Hash; mime: string; width?: number; height?: number };
+  /** A thumbnail to show on the node: a data: URL for local images, or a remote https: URL. */
+  image?: string;
   author?: string;
   at?: string;
 }

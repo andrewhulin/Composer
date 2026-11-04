@@ -93,7 +93,7 @@ export const RECIPES: Partial<Record<RecipeId, Recipe>> = {
     charter:
       "This phase aligns on something testable. Its one output is a testable statement in the frame the designer picked: a hypothesis (We believe [who] will [behavior] if [because]. We will know when [metric].), a problem statement, a How might we, or a user statement. It must be specific about who, measurable, and traceable to the heavy evidence.",
     defaultInstruction:
-      "Draft one {frame} from the weighted context. Hold it against the active hypothesis if one is wired. Quote people directly. Then draft two alternates in other frames.",
+      "Draft one {frame} from {insights}. Hold it against the active hypothesis if one is wired. Quote people directly. Then draft two alternates in other frames.",
     schema: obj({
       frame: { type: "string", enum: Object.keys(FRAMES) },
       statement: str,

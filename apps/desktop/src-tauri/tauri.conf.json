@@ -20,19 +20,26 @@
         "minHeight": 760,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "trafficLightPosition": { "x": 16, "y": 22 },
+        "trafficLightPosition": {
+          "x": 16,
+          "y": 22
+        },
         "backgroundColor": "#0a0a0b",
-        "center": true
+        "center": true,
+        "dragDropEnabled": false
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https://api.anthropic.com",
+      "csp": "default-src 'self'; img-src 'self' asset: data: blob: https: http:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https://api.anthropic.com",
       "devCsp": null
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["app", "dmg"],
+    "targets": [
+      "app",
+      "dmg"
+    ],
     "category": "Productivity",
     "icon": [
       "icons/32x32.png",

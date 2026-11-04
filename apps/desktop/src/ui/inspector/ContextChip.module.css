@@ -12,3 +12,5 @@
 .off .label, .off .tokens { opacity: 0.5; }
 .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-chip); color: var(--text-primary); }
 .tokens { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.label { text-align: left; }
+.weight { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-muted); text-transform: uppercase; letter-spacing: var(--tracking-micro); }

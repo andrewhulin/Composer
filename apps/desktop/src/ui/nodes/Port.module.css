@@ -1,0 +1,17 @@
+.port {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 50%;
+  border: 2px solid var(--port-color);
+  background: var(--bg-app);
+  transform: none;
+  transition: box-shadow var(--t-fast) var(--ease-out), opacity var(--t-fast);
+  z-index: 2;
+}
+.in { left: -6px; }
+.out { right: -6px; left: auto; }
+.ok { box-shadow: 0 0 0 4px rgba(238, 237, 234, 0.14), 0 0 12px var(--port-color); }
+.no { opacity: 0.25; }

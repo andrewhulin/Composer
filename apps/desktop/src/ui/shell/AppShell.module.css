@@ -10,3 +10,4 @@
   height: 100vh;
   width: 100vw;
 }
+.loading { grid-area: canvas; background: var(--bg-canvas); }

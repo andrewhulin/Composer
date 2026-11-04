@@ -1,4 +1,0 @@
-.text { font-family: var(--font-mono); font-size: var(--fs-chip); line-height: 17px; color: var(--text-secondary); user-select: text; }
-.inlet { color: var(--phase-understand); }
-.hypothesis { color: var(--signal-hypothesis); }
-.plain { color: var(--text-primary); }

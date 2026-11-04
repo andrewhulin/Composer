@@ -1,0 +1,11 @@
+.output { width: 232px; }
+.glyph { background: rgba(var(--phase-rgb), 0.16); border: 1px solid rgba(var(--phase-rgb), 0.45); color: var(--phase); }
+.body { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; }
+.preview { font-size: var(--fs-note); line-height: 17px; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.empty { color: var(--text-muted); }
+.footer { display: flex; justify-content: space-between; gap: 8px; font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); white-space: nowrap; }
+.status { overflow: hidden; text-overflow: ellipsis; }
+.locked { color: var(--phase); }
+.draft { color: var(--text-secondary); }
+.warn { color: var(--signal-warn); }
+.empty { color: var(--text-muted); }

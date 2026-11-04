@@ -32,3 +32,5 @@ img { display: block; }
   text-transform: uppercase;
   color: var(--text-muted);
 }
+
+@keyframes wire-flow { to { stroke-dashoffset: -10; } }

@@ -35,6 +35,7 @@
   --signal-hypothesis: #e3c25a;
   --signal-retired: #5a5852;
   --signal-hypothesis-tint: rgba(227, 194, 90, 0.14);
+  --signal-warn: #e09a45;
 
   /* paper: rendered output previews */
   --paper-bg: #f2efe8;

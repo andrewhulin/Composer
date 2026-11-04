@@ -1,0 +1,32 @@
+.editor { position: relative; border-radius: var(--r-md); background: var(--bg-raised); border: 1px solid var(--border-subtle); }
+.editor:focus-within { border-color: var(--border-strong); }
+.mirror, .input {
+  margin: 0;
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-chip);
+  line-height: 17px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.mirror { color: var(--text-secondary); pointer-events: none; }
+.input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--text-primary);
+  overflow: hidden;
+  user-select: text;
+}
+.input::selection { background: rgba(238, 237, 234, 0.2); color: transparent; }
+.inlet { color: var(--phase-understand); }
+.hypothesis { color: var(--signal-hypothesis); }
+.option { color: var(--phase-define); }
+.plain { color: var(--text-primary); }
+.unknown { color: var(--phase-define); text-decoration: underline wavy; text-underline-offset: 3px; }

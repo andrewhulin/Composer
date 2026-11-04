@@ -2,6 +2,70 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## M3 · Canvas and the first real flow · 2026-11-04
+
+### Added
+- **Live canvas (React Flow).**
+  - Node views built from Figma 02: Claude, Source, Hypothesis, Output/Inlet.
+  - **Claude node run states:** not run, running (elapsed time and moving bar), fresh ("Ran 2m ago · 14s"), stale ("Inputs changed · rerun", amber), over budget ("Context 212k / 200k", red) and failed.
+  - **Typed ports:**
+    - 10px rings in the port-type color.
+    - While a wire is dragged, compatible ports glow and the rest dim.
+    - A 24px snap radius and an 8px grid.
+    - A mismatch shakes the target and shows the reason.
+  - **Wires** are colored by what they carry: inlets in their phase color, hypotheses yellow, Claude text white. They dash while their target runs and are dotted when switched off.
+  - **Focus mode:** the active phase full size, with inlet and outlet rails. Focus off puts all five phases on one canvas as regions.
+- **Collect and Weigh (Understand):**
+  - Ways to add context: drop files, ⌘V text or links, the Add node menu, or the sidebar +.
+  - Transcripts (including .vtt/.srt) are detected, split per utterance, and named after their speakers.
+  - Links are fetched once, readable text is extracted, and the OG image becomes a thumbnail.
+  - Images are downscaled into the source.
+  - Every source wires itself into the phase's Claude node.
+  - Context cards are sized by weight, as in Figma 07: heavy is 230px with an orange border, normal 150px, light 110px at 70% opacity, mute 35% with a strike-through. Pinned cards get a dashed ring.
+  - Weight popover (Mute/Light/Normal/Heavy, Pin into every phase, a "Why heavy?" note). W cycles weight and P pins.
+- **The Understand → Define loop:**
+  - New projects start with Synthesize insights → Weighted context.
+  - Locking (⌘L) writes an immutable version and a snapshot, then scaffolds Define with an inlet, Draft statement and Testable statement, and moves the focus there.
+  - Locking a newer version repoints the inlet, so Define goes stale.
+  - The statement card (Figma 07 · Define):
+    - Frame tabs: Hypothesis, Problem statement, How might we, User statement.
+    - The sentence, with who/behavior/because/metric colored.
+    - Part chips and four checks.
+    - Alternates with Compare.
+  - **Lock hypothesis** also enters the statement into the memory chain as H1 (testing).
+- **Inspector:**
+  - **Preview:**
+    - Streams while running: thinking summary, then the statement or summary as it arrives.
+    - Renders insights and statement cards.
+    - Shows source items with their units.
+  - **Context section:** chips with token counts and include toggles, a budget bar, shares by weight, and Always on.
+  - **Instruction editor:** `{references}` are highlighted live, and unknown references are flagged.
+  - **Prompt tab:** every block in order, where the cache breaks, and what was trimmed per document.
+  - **Node tab:** title, alias, model, effort, budget, frame, weight, pin and why. Draft hypotheses are editable.
+- **Shell:**
+  - The phase rail shows ✓ for locked phases and the Define frame as its output.
+  - The title bar shows the project name (double-click to rename) and save or run status.
+  - The sidebar lists the project's sources, the hypothesis chain, learned rules and locked outputs.
+  - The history bar draws the real snapshot timeline with bookmarks and the playhead.
+- **Settings (⌘,):** the Anthropic API key, stored in Keychain, with a connection check.
+- **Shortcuts:** ⌘↵ run, ⌘. cancel, ⌘B snapshot, ⌘L lock, ⌘1–5 phases, W, P, V, H, N, Esc.
+- **Persistence:**
+  - Every edit autosaves the working graph.
+  - Every run and lock writes a snapshot.
+  - Runs record prompt, report and artifact blobs.
+- **Tests:** ingest, the timeline layout, and the partial-JSON reader. 64 in total.
+
+### Decisions
+- **No real Claude call yet.** There was no API key in this session, so the end-to-end flow was checked with a dev-only scripted model (`pnpm web` and `localhost:1420/?fake`) that streams through the real engine. The first real Claude call happens once a key is added under Settings (⌘,).
+- **Visual check:** the screen was locked during M3's visual pass, so the native window couldn't be captured. Node sizes, type, ports and colors were checked against Figma through computed styles in the web build (same React code), and M1's native screenshots matched.
+- **Auto-advance:** locking moves the focus to the next phase only once that phase has a recipe. Build arrives in M6.
+- **React Flow attribution** is shown, small and muted, as React Flow's authors ask for non-Pro use.
+- **Not in M3:**
+  - PDFs. Paste the text instead.
+  - Images as visual input to Claude. They go in by title for now; vision comes with M4's visual sources.
+  - The Comment tool and ⌘K search (M10).
+  - Moving node components into `packages/nodes` (M8, when the renderer needs them).
+
 ## M2 · Data model and engine core · 2026-11-04
 
 ### Added

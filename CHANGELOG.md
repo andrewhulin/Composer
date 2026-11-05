@@ -2,6 +2,20 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## Collapsible panels · 2026-11-04
+
+### Added
+- **Collapse and expand the sidebar, inspector and history bar:**
+  - **Title bar:** three layout toggles beside the save status (sidebar, history, inspector), filled in when a panel is showing.
+  - **Shortcuts:** ⌥⌘← sidebar, ⌥⌘→ inspector, ⌥⌘↓ history. ⌘\ hides every panel, or brings them all back, like Figma's hide UI.
+  - **⌘K:** "Hide sidebar", "Show inspector" and so on, plus "Hide all panels".
+  - **Keyboard map:** a Panels group.
+  - The canvas takes the freed space, and the layout is remembered between launches.
+- **The guide reopens a panel when a step points into it:** the inspector for run, score and lock, the sidebar for foundations, the history bar for the tour.
+
+### Fixed
+- **The title bar's right side has room for the Guide pill**, the toggles and the save status, so they no longer wrap or clip.
+
 ## Guide: first-run tutorial · 2026-11-04
 
 ### Added

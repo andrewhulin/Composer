@@ -8,7 +8,7 @@
   background: var(--bg-app);
   border-bottom: 1px solid var(--border-subtle);
 }
-.left, .right { width: 300px; display: flex; align-items: center; }
+.left, .right { width: 420px; min-width: 0; display: flex; align-items: center; }
 .left { padding-left: 68px; }
 .right { justify-content: flex-end; gap: 6px; }
 .app { font-size: var(--fs-body); font-weight: 500; color: var(--text-secondary); }

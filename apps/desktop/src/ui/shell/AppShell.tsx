@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { PHASES, type ClaudeNode, type OutputNode } from "@composer/core";
 import { actions, useProject } from "../../store/project";
 import { useUi } from "../../store/ui";
@@ -70,6 +70,17 @@ function useShortcuts() {
         else actions.undo();
         return;
       }
+      // Panels: ⌥⌘← sidebar, ⌥⌘→ inspector, ⌥⌘↓ history, ⌘\ all of them.
+      if (e.metaKey && e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowDown")) {
+        e.preventDefault();
+        ui.togglePanel(e.key === "ArrowLeft" ? "left" : e.key === "ArrowRight" ? "right" : "bottom");
+        return;
+      }
+      if (e.metaKey && e.key === "\\") {
+        e.preventDefault();
+        ui.toggleAllPanels();
+        return;
+      }
       if (e.metaKey && e.key.toLowerCase() === "k") {
         e.preventDefault();
         ui.setPaletteOpen(!ui.paletteOpen);
@@ -130,6 +141,7 @@ export function AppShell() {
   const ready = useProject((s) => s.ready);
   const session = useSession();
   const guiding = useTutorial((s) => s.state?.status === "active");
+  const panels = useUi((s) => s.panels);
   const settingsOpen = useUi((s) => s.settingsOpen);
   const setSettingsOpen = useUi((s) => s.setSettingsOpen);
   const [hasKey, setHasKey] = useState(true);
@@ -139,13 +151,17 @@ export function AppShell() {
   }, [settingsOpen]);
 
   return (
-    <div className={styles.shell} data-phase={phase}>
+    <div
+      className={styles.shell}
+      data-phase={phase}
+      style={{ ...(panels.left ? {} : { "--sidebar-w": "0px" }), ...(panels.right ? {} : { "--inspector-w": "0px" }), ...(panels.bottom ? {} : { "--history-h": "0px" }) } as CSSProperties}
+    >
       <TitleBar />
       <PhaseRail />
-      <Sidebar />
+      {panels.left && <Sidebar />}
       {ready ? <Canvas /> : session.status === "error" ? <BootError message={session.message} /> : <main className={styles.loading} />}
-      <Inspector />
-      <HistoryBar />
+      {panels.right && <Inspector />}
+      {panels.bottom && <HistoryBar />}
       <SettingsDialog />
       <FoundationsSheet />
       <CommandPalette />

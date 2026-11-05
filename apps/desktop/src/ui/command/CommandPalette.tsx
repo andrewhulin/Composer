@@ -41,6 +41,10 @@ function useItems(open: boolean): Item[] {
       { id: "add", group: "Actions", label: "Add node", keys: "N", run: () => ui.setAddMenuOpen(true) },
       { id: "comment", group: "Actions", label: "Add a comment", keys: "C", run: () => ui.setTool("comment") },
       { id: "snapshot", group: "Actions", label: "Bookmark this snapshot", keys: "⌘B", run: () => ui.setBookmarkOpen(true) },
+      { id: "panel-left", group: "Actions", label: `${ui.panels.left ? "Hide" : "Show"} sidebar`, keys: "⌥⌘←", run: () => ui.togglePanel("left") },
+      { id: "panel-right", group: "Actions", label: `${ui.panels.right ? "Hide" : "Show"} inspector`, keys: "⌥⌘→", run: () => ui.togglePanel("right") },
+      { id: "panel-bottom", group: "Actions", label: `${ui.panels.bottom ? "Hide" : "Show"} history`, keys: "⌥⌘↓", run: () => ui.togglePanel("bottom") },
+      { id: "panel-all", group: "Actions", label: ui.panels.left || ui.panels.right || ui.panels.bottom ? "Hide all panels" : "Show all panels", keys: "⌘\\", run: () => ui.toggleAllPanels() },
       { id: "focus", group: "Actions", label: ui.focus ? "Show all phases" : "Focus the active phase", run: () => ui.toggleFocus() },
       { id: "playback", group: "Actions", label: "Play back the process", run: () => void playback.open() },
       { id: "compare", group: "Actions", label: "Compare snapshots", run: () => ui.setCompareOpen(true) },
@@ -170,6 +174,7 @@ const MAP: { group: string; keys: [string, string][] }[] = [
   { group: "Run and lock", keys: [["⌘↵", "Run the selected Claude node (and anything stale above it)"], ["⌘.", "Cancel the run"], ["⌘L", "Lock the selected output"], ["⌘B", "Bookmark this snapshot"]] },
   { group: "Canvas", keys: [["V", "Select"], ["H", "Pan"], ["C", "Comment"], ["N", "Add node"], ["W", "Cycle weight: mute, light, normal, heavy"], ["P", "Pin or unpin"], ["⌥ drag", "Drop without snapping"], ["⌘1–5", "Go to a phase"]] },
   { group: "History", keys: [["⌘Z / ⇧⌘Z", "Undo and redo (never deletes runs)"], ["⇧← / ⇧→", "Previous or next bookmark"], ["← / →", "Step through playback"], ["Space", "Play or pause playback"], ["Esc", "Leave playback"]] },
+  { group: "Panels", keys: [["⌥⌘←", "Show or hide the sidebar"], ["⌥⌘→", "Show or hide the inspector"], ["⌥⌘↓", "Show or hide the history bar"], ["⌘\\", "Hide every panel, or bring them all back"]] },
   { group: "App", keys: [["⌘K", "Search everything"], ["⌘,", "Settings"], ["?", "This list"]] },
 ];
 

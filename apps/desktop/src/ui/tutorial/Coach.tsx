@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { ClaudeNode, GraphNode, OutputNode, SourceNode } from "@composer/core";
 import { actions, useProject } from "../../store/project";
-import { useUi } from "../../store/ui";
+import { useUi, type Panel } from "../../store/ui";
 import { openFoundations, useCraft } from "../../store/craft";
 import { ingestText } from "../../app/ingest";
 import { STEPS, progress, stepDef, type StepId, type TutorialContext } from "../../tutorial/steps";
@@ -13,6 +13,9 @@ import styles from "./Coach.module.css";
 
 
 const nodeSel = (n: GraphNode | undefined) => (n ? `.react-flow__node[data-id="${n.id}"]` : null);
+
+/** Panels a step points into. The guide opens them rather than ringing something hidden. */
+const NEEDS: Partial<Record<StepId, Panel[]>> = { foundations: ["left"], run: ["right"], score: ["right"], lock: ["right"], define: ["right"], tour: ["bottom"] };
 
 /** The app's current pieces the guide points at and acts on. */
 function pieces() {
@@ -98,6 +101,10 @@ export function Coach() {
   const active = state?.status === "active";
   const step = active ? state.step : null;
   const rect = useTargetRect(step);
+  useEffect(() => {
+    const need = step ? NEEDS[step] : undefined;
+    if (need) useUi.getState().setPanels(Object.fromEntries(need.map((p) => [p, true])));
+  }, [step]);
   const card = useRef<HTMLDivElement>(null);
   const [h, setH] = useState(260);
   // Placement needs the card's real height, which changes with each step's copy.

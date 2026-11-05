@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { check } from "@tauri-apps/plugin-updater";
+import { tallyReplay } from "@composer/engine";
 
 vi.mock("@tauri-apps/plugin-updater", () => ({ check: vi.fn(async () => null) }));
 vi.mock("@tauri-apps/plugin-process", () => ({ relaunch: vi.fn() }));
@@ -13,10 +14,11 @@ async function freshAppAt(path: string) {
   const { useProject } = await import("./project");
   const { useCraft } = await import("./craft");
   const { useShare } = await import("../share/story");
+  const { useEvals } = await import("./evals");
   const relaunched = vi.spyOn(location, "replace").mockImplementation(() => {});
   const status = () => updates.updates.store.getState().state;
   const toasts = () => useProject.getState().toasts.map((t) => t.text);
-  return { ...updates, useProject, useCraft, useShare, relaunched, status, toasts };
+  return { ...updates, useProject, useCraft, useShare, useEvals, relaunched, status, toasts };
 }
 
 const running = { r1: { runId: "r1", status: "running" as const, text: "", thinking: "", startedAt: 0 } };
@@ -35,6 +37,7 @@ describe("restarting into an update", () => {
   const busyWith: [string, (a: Awaited<ReturnType<typeof freshAppAt>>, on: boolean) => void][] = [
     ["the Claude run", (a, on) => a.useProject.setState({ live: on ? running : {} })],
     ["Reflect", (a, on) => a.useCraft.setState({ reflecting: on })],
+    ["the replay", (a, on) => a.useEvals.setState({ byProposal: { p1: { rows: [], running: on, done: 0, total: 4, tally: tallyReplay([]) } } })],
     ["the video render", (a, on) => a.useShare.setState({ renders: { story: { line: null, running: on } } })],
   ];
 

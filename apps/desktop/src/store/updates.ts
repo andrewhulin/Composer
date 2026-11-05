@@ -3,6 +3,7 @@ import { createUpdates, type UpdatesSnapshot } from "../app/updates";
 import { platformUpdater } from "../platform/updater";
 import { toast, useProject } from "./project";
 import { useCraft } from "./craft";
+import { useEvals } from "./evals";
 import { useShare } from "../share/story";
 
 const HOUR = 60 * 60 * 1000;
@@ -11,6 +12,7 @@ const OUTLAST_SAVE_DEBOUNCE_MS = 400;
 const RESTART_WAITS_FOR: { label: string; active: () => boolean; subscribe: (cb: () => void) => () => void }[] = [
   { label: "the Claude run", active: () => Object.values(useProject.getState().live).some((r) => r.status === "running"), subscribe: useProject.subscribe },
   { label: "Reflect", active: () => useCraft.getState().reflecting, subscribe: useCraft.subscribe },
+  { label: "the replay", active: () => Object.values(useEvals.getState().byProposal).some((p) => p.running), subscribe: useEvals.subscribe },
   { label: "the video render", active: () => Object.values(useShare.getState().renders).some((r) => r.running), subscribe: useShare.subscribe },
 ];
 

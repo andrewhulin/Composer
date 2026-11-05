@@ -130,6 +130,45 @@ export interface CraftRuleRow {
   createdAt: string;
 }
 
+export type PickSource = "variants" | "rerun" | "replay";
+
+/** A pairwise pick: the designer saw two outputs of the same brief and preferred one. */
+export interface PickRow {
+  id: Id;
+  projectId: Id | null;
+  phase: Phase;
+  winnerRunId: Id;
+  loserRunId: Id;
+  source: PickSource;
+  note: string | null;
+  createdAt: string;
+}
+
+/** A past brief kept to replay against proposed rule and principle changes. */
+export interface ReplayCaseRow {
+  id: Id;
+  projectId: Id | null;
+  phase: Phase;
+  recipe: string;
+  runId: Id;
+  name: string;
+  promptHash: Hash;
+  outputHash: Hash;
+  retired: boolean;
+  createdAt: string;
+}
+
+export interface ReplayResultRow {
+  id: Id;
+  proposalId: Id;
+  caseId: Id;
+  outputHash: Hash | null;
+  status: "done" | "error";
+  error: string | null;
+  pick: "baseline" | "candidate" | "same" | null;
+  createdAt: string;
+}
+
 export interface ScoredRunRow {
   run: RunRow;
   score: number;
@@ -587,6 +626,101 @@ export class Repo {
   async latestScore(runId: Id): Promise<number | undefined> {
     const [r] = await this.db.all("SELECT value FROM score WHERE run_id = ? ORDER BY rowid DESC LIMIT 1", [runId]);
     return r ? Number(r.value) : undefined;
+  }
+
+  // ── evals: pairwise picks and the replay set ─────────────────────────────
+
+  async addPick(p: { projectId: Id | null; phase: Phase; winnerRunId: Id; loserRunId: Id; source: PickSource; note?: string; statement?: string }): Promise<PickRow> {
+    if (p.winnerRunId === p.loserRunId) throw new Error("A pick needs two different runs");
+    const row: PickRow = { id: this.ids(), projectId: p.projectId, phase: p.phase, winnerRunId: p.winnerRunId, loserRunId: p.loserRunId, source: p.source, note: p.note ?? null, createdAt: this.clock.now() };
+    await this.db.tx([
+      {
+        sql: "INSERT INTO pick (id, project_id, phase, winner_run_id, loser_run_id, source, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        params: [row.id, row.projectId, row.phase, row.winnerRunId, row.loserRunId, row.source, row.note, row.createdAt],
+      },
+      this.decisionStatement(p.projectId, "pick", p.statement ?? `Preferred one ${p.phase} output over another`, { pickId: row.id, winner: p.winnerRunId, loser: p.loserRunId }),
+    ]);
+    return row;
+  }
+
+  async listPicks(phase?: Phase): Promise<PickRow[]> {
+    const rows = await this.db.all(`SELECT * FROM pick ${phase ? "WHERE phase = ?" : ""} ORDER BY rowid`, phase ? [phase] : []);
+    return rows.map((r) => ({
+      id: str(r.id),
+      projectId: strOrNull(r.project_id),
+      phase: str(r.phase) as Phase,
+      winnerRunId: str(r.winner_run_id),
+      loserRunId: str(r.loser_run_id),
+      source: str(r.source) as PickSource,
+      note: strOrNull(r.note),
+      createdAt: str(r.created_at),
+    }));
+  }
+
+  /** Keeps a run's brief for replay. Keeping the same run twice renames it. */
+  async keepReplayCase(c: Omit<ReplayCaseRow, "id" | "retired" | "createdAt">): Promise<ReplayCaseRow> {
+    const [existing] = await this.db.all("SELECT id FROM replay_case WHERE run_id = ?", [c.runId]);
+    const row: ReplayCaseRow = { ...c, id: existing ? str(existing.id) : this.ids(), retired: false, createdAt: this.clock.now() };
+    if (existing) {
+      await this.db.run("UPDATE replay_case SET name = ?, retired = 0 WHERE id = ?", [c.name, row.id]);
+      return row;
+    }
+    await this.db.run(
+      "INSERT INTO replay_case (id, project_id, phase, recipe, run_id, name, prompt_hash, output_hash, retired, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)",
+      [row.id, row.projectId, row.phase, row.recipe, row.runId, row.name, row.promptHash, row.outputHash, row.createdAt],
+    );
+    return row;
+  }
+
+  async listReplayCases(phase?: Phase): Promise<ReplayCaseRow[]> {
+    const rows = await this.db.all(`SELECT * FROM replay_case WHERE retired = 0 ${phase ? "AND phase = ?" : ""} ORDER BY rowid`, phase ? [phase] : []);
+    return rows.map((r) => ({
+      id: str(r.id),
+      projectId: strOrNull(r.project_id),
+      phase: str(r.phase) as Phase,
+      recipe: str(r.recipe),
+      runId: str(r.run_id),
+      name: str(r.name),
+      promptHash: str(r.prompt_hash),
+      outputHash: str(r.output_hash),
+      retired: Number(r.retired) === 1,
+      createdAt: str(r.created_at),
+    }));
+  }
+
+  async retireReplayCase(id: Id): Promise<void> {
+    await this.db.run("UPDATE replay_case SET retired = 1 WHERE id = ?", [id]);
+  }
+
+  async saveReplayResult(r: { proposalId: Id; caseId: Id; outputHash?: Hash | null; status: ReplayResultRow["status"]; error?: string }, blobs: { hash: Hash; value: unknown; kind: string }[] = []): Promise<ReplayResultRow> {
+    const row: ReplayResultRow = { id: this.ids(), proposalId: r.proposalId, caseId: r.caseId, outputHash: r.outputHash ?? null, status: r.status, error: r.error ?? null, pick: null, createdAt: this.clock.now() };
+    await this.db.tx([
+      ...this.blobStatements(blobs),
+      { sql: "DELETE FROM replay_result WHERE proposal_id = ? AND case_id = ?", params: [row.proposalId, row.caseId] },
+      {
+        sql: "INSERT INTO replay_result (id, proposal_id, case_id, output_hash, status, error, pick, created_at) VALUES (?, ?, ?, ?, ?, ?, NULL, ?)",
+        params: [row.id, row.proposalId, row.caseId, row.outputHash, row.status, row.error, row.createdAt],
+      },
+    ]);
+    return row;
+  }
+
+  async setReplayPick(id: Id, pick: ReplayResultRow["pick"]): Promise<void> {
+    await this.db.run("UPDATE replay_result SET pick = ? WHERE id = ?", [pick, id]);
+  }
+
+  async replayResults(proposalId: Id): Promise<ReplayResultRow[]> {
+    const rows = await this.db.all("SELECT * FROM replay_result WHERE proposal_id = ? ORDER BY rowid", [proposalId]);
+    return rows.map((r) => ({
+      id: str(r.id),
+      proposalId: str(r.proposal_id),
+      caseId: str(r.case_id),
+      outputHash: strOrNull(r.output_hash),
+      status: str(r.status) as ReplayResultRow["status"],
+      error: strOrNull(r.error),
+      pick: (strOrNull(r.pick) as ReplayResultRow["pick"]) ?? null,
+      createdAt: str(r.created_at),
+    }));
   }
 
   /** Decisions across every project, oldest first: what the philosophy learns from. */

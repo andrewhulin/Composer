@@ -17,7 +17,7 @@ const g1 = (): Graph => graphOf([source("s"), claude("c")], [wire("s", "c", "con
 describe("migrations", () => {
   it("apply once and are idempotent", async () => {
     const { db } = setup();
-    expect(await migrate(db)).toEqual([1]);
+    expect(await migrate(db)).toEqual([1, 2]);
     expect(await migrate(db)).toEqual([]);
   });
 });
@@ -193,5 +193,35 @@ describe("craft tier", () => {
     expect(scored.map((s) => [s.run.id, s.score, s.note])).toEqual([["a", 5, "much better on reread"], ["b", 1, null]]);
     expect(scored[0]!.run.ruleIds).toEqual(["R1"]);
     expect(await repo.latestScore("a")).toBe(5);
+  });
+
+  it("records pairwise picks, keeps replay briefs and judges replays", async () => {
+    const { db, repo } = setup();
+    await migrate(db);
+    const p = await repo.createProject("P");
+    const base = { projectId: p.id, nodeId: "n", recipe: "prototype", localKey: "k", envKey: "e", inputManifestHash: null, model: "m", effort: "high", templateVersionId: null, ruleIds: [], foundationIds: [], startedSeq: 1 };
+    await repo.startRun({ ...base, id: "a" });
+    await repo.startRun({ ...base, id: "b" });
+    await expect(repo.addPick({ projectId: p.id, phase: "build", winnerRunId: "a", loserRunId: "a", source: "variants" })).rejects.toThrow();
+    await repo.addPick({ projectId: p.id, phase: "build", winnerRunId: "a", loserRunId: "b", source: "variants", note: "clearer CTA" });
+    expect((await repo.listPicks("build")).map((x) => [x.winnerRunId, x.loserRunId, x.note])).toEqual([["a", "b", "clearer CTA"]]);
+    expect(await repo.listPicks("define")).toEqual([]);
+    expect((await repo.listDecisions(p.id)).some((d) => d.kind === "pick")).toBe(true);
+
+    const c = await repo.keepReplayCase({ projectId: p.id, phase: "build", recipe: "prototype", runId: "a", name: "Recap v1", promptHash: "ph", outputHash: "oh" });
+    const again = await repo.keepReplayCase({ projectId: p.id, phase: "build", recipe: "prototype", runId: "a", name: "Recap, first pass", promptHash: "ph", outputHash: "oh" });
+    expect(again.id).toBe(c.id);
+    expect((await repo.listReplayCases("build")).map((x) => x.name)).toEqual(["Recap, first pass"]);
+
+    const prop = await repo.createProposal({ targetKind: "rule", diff: { phase: "build", text: "Lead with the moment." }, rationale: "r" });
+    const r1 = await repo.saveReplayResult({ proposalId: prop.id, caseId: c.id, outputHash: "x1", status: "done" }, [{ hash: "x1", value: { t: 1 }, kind: "artifact" }]);
+    await repo.setReplayPick(r1.id, "candidate");
+    expect((await repo.replayResults(prop.id)).map((x) => [x.caseId, x.pick])).toEqual([[c.id, "candidate"]]);
+    // Replaying the same brief again replaces the earlier result.
+    await repo.saveReplayResult({ proposalId: prop.id, caseId: c.id, status: "error", error: "timeout" });
+    expect((await repo.replayResults(prop.id)).map((x) => [x.status, x.pick])).toEqual([["error", null]]);
+
+    await repo.retireReplayCase(c.id);
+    expect(await repo.listReplayCases()).toEqual([]);
   });
 });

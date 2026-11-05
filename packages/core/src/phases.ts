@@ -51,6 +51,20 @@ export const PHASE_INFO: Record<Phase, PhaseInfo> = {
   },
 };
 
+/**
+ * How a phase is worked. Understand, Build and Share gather and combine many things, so they stay
+ * node canvases. Define is one statement written well, and Validate is metrics against evidence,
+ * so they get purpose-built workspaces over the same graph.
+ */
+export type PhaseSurface = "canvas" | "writing" | "scorecard";
+export const PHASE_SURFACE: Record<Phase, PhaseSurface> = {
+  understand: "canvas",
+  define: "writing",
+  build: "canvas",
+  validate: "scorecard",
+  share: "canvas",
+};
+
 export function phaseIndex(phase: Phase): number {
   return PHASES.indexOf(phase);
 }

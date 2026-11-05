@@ -198,6 +198,47 @@ CREATE TABLE setting (
 );
 `,
   },
+  {
+    id: 2,
+    name: "evals",
+    sql: `
+CREATE TABLE pick (
+  id TEXT PRIMARY KEY,
+  project_id TEXT,
+  phase TEXT NOT NULL,
+  winner_run_id TEXT NOT NULL REFERENCES run(id),
+  loser_run_id TEXT NOT NULL REFERENCES run(id),
+  source TEXT NOT NULL,
+  note TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX pick_phase ON pick(phase);
+CREATE TABLE replay_case (
+  id TEXT PRIMARY KEY,
+  project_id TEXT,
+  phase TEXT NOT NULL,
+  recipe TEXT NOT NULL,
+  run_id TEXT NOT NULL REFERENCES run(id),
+  name TEXT NOT NULL,
+  prompt_hash TEXT NOT NULL,
+  output_hash TEXT NOT NULL,
+  retired INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX replay_case_run ON replay_case(run_id);
+CREATE TABLE replay_result (
+  id TEXT PRIMARY KEY,
+  proposal_id TEXT NOT NULL REFERENCES proposal(id),
+  case_id TEXT NOT NULL REFERENCES replay_case(id),
+  output_hash TEXT,
+  status TEXT NOT NULL,
+  error TEXT,
+  pick TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX replay_result_proposal ON replay_result(proposal_id);
+`,
+  },
 ];
 
 /** Applies pending migrations. Each migration runs in one transaction. */

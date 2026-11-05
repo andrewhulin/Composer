@@ -16,7 +16,8 @@ import { splitUnits } from "./assembly/units";
 import { incoming } from "./graph-ops";
 import { envKeyFor, localKey, type KeyEnv } from "./keys";
 import type { LlmClient, LlmResult } from "./llm";
-import { FIDELITIES, FRAMES, recipe } from "./recipes";
+import { DIRECTIONS } from "./kit";
+import { FIDELITIES, FRAMES, recipe, type PrototypeData } from "./recipes";
 
 /** Everything a run reads that isn't on the canvas. */
 export interface RunDeps {
@@ -42,9 +43,10 @@ export class RunError extends Error {
   }
 }
 
-const OPTION_TEXT: Record<string, string> = Object.fromEntries(
-  [...Object.entries(FRAMES), ...Object.entries(FIDELITIES)].map(([k, v]) => [k, v.toLowerCase()]),
-);
+const OPTION_TEXT: Record<string, string> = {
+  ...Object.fromEntries([...Object.entries(FRAMES), ...Object.entries(FIDELITIES)].map(([k, v]) => [k, v.toLowerCase()])),
+  ...DIRECTIONS,
+};
 
 /** Fills `{option}` placeholders (e.g. `{frame}`) from the node's options before references resolve. */
 export function fillOptions(instruction: string, options: Record<string, string>): string {
@@ -86,7 +88,11 @@ export function gatherInputs(graph: Graph, node: ClaudeNode, deps: RunDeps) {
     } else if (up.kind === "claude") {
       const out = graph.outputs[up.id];
       const art = out ? (deps.readBlob(out.hash) as TextArtifact | undefined) : undefined;
-      docs.push({ alias: up.alias, title: up.title, source: "claude", kind: "note", weight: "normal", pinned: false, units: art ? splitUnits(art.text, "note") : [] });
+      const units = art ? splitUnits(art.text, "note") : [];
+      // A forked variant reads the prototype itself, not only its summary.
+      const html = art?.artifact === "prototype" ? (art.data as PrototypeData | undefined)?.html : undefined;
+      if (html) units.push({ label: "HTML", text: html });
+      docs.push({ alias: up.alias, title: up.title, source: "claude", kind: "note", weight: "normal", pinned: false, units });
     } else if (up.kind === "output" && up.mode === "inlet" && up.versionId) {
       const v = deps.version(up.versionId);
       docs.push({
@@ -101,7 +107,33 @@ export function gatherInputs(graph: Graph, node: ClaudeNode, deps: RunDeps) {
       });
     }
   }
+  const notes = notesDoc(graph, node);
+  if (notes) docs.push(notes);
   return { docs, hypothesis };
+}
+
+/** Where a note sits, in words Claude can find on its own output. */
+export function anchorLabel(a: NonNullable<ClaudeNode["notes"]>[number]["anchor"]): string {
+  if (a.kind === "field") return a.quote ? `${a.field}: “${a.quote}”` : a.field;
+  const where = [a.screen && `screen ${a.screen}`, `at ${a.x},${a.y}`].filter(Boolean).join(" ");
+  return a.element ? `${where} on ${a.element}` : where;
+}
+
+/** The designer's notes on the current output, as a heavy document for the next run. */
+export function notesDoc(graph: Graph, node: ClaudeNode): DocInput | undefined {
+  const runId = graph.outputs[node.id]?.runId;
+  const live = (node.notes ?? []).filter((n) => n.runId === runId);
+  if (!live.length) return undefined;
+  return {
+    alias: "notes",
+    title: "Designer's notes on the last output",
+    source: "notes",
+    kind: "note",
+    weight: "heavy",
+    pinned: false,
+    why: "Feedback pinned to specific spots on the output. Address each one.",
+    units: live.map((n) => ({ label: anchorLabel(n.anchor), text: n.text })),
+  };
 }
 
 /** The exact prompt a Claude node would send now. The inspector uses this for its live budget. */

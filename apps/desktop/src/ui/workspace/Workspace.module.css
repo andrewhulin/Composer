@@ -5,6 +5,8 @@
   padding: 72px 380px 88px 56px;
   overflow: auto;
   z-index: 2;
+  /* The right padding keeps content clear of the key node dock; layouts below query what's left. */
+  container-type: inline-size;
 }
 .empty { margin: 80px auto; max-width: 360px; text-align: center; font-size: var(--fs-body); color: var(--text-muted); }
 .fill { flex: 1; }
@@ -172,6 +174,18 @@
 .alternates { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: var(--r-md); border: 1px dashed var(--border-strong); }
 .alternates p { margin: 0; font-size: var(--fs-note); line-height: 1.45; color: var(--text-secondary); }
 .alternates p span { display: block; font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-muted); }
+
+/* Too narrow for the rail beside the statement (panels open, or a small window): statement first, evidence under it. */
+@container (max-width: 660px) {
+  .define { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hero" "rail" "variants"; }
+  .rail { position: static; max-height: none; overflow: visible; padding-right: 0; }
+}
+/* Narrower still: each statement label sits above its line so the text keeps its width. */
+@container (max-width: 420px) {
+  .line { grid-template-columns: minmax(0, 1fr) 26px; }
+  .lineLabel { grid-column: 1 / -1; padding-top: 0; }
+  .lineNotes, .noteForm { grid-column: 1 / -1; }
+}
 
 /* ── Validate ───────────────────────────────────────────────────────────── */
 .validate { display: flex; flex-direction: column; gap: 18px; max-width: 1120px; }

@@ -35,6 +35,9 @@ Newest first. Every milestone adds an entry. A **Decisions** list records each d
 ### Fixed
 - **`src/prototype/runtime.ts` was missing from the repo**, because `.gitignore`'s `build/` pattern caught its old folder. It is rebuilt at `src/prototype/runtime.ts`.
 - **⌘L in Define** locks through the statement form.
+- **`src/ui/build/` was missing from the repo too**, for the same reason. `.gitignore` now ignores only a top-level `/build/`.
+- **Define's statement slid under the key node** when the sidebar and inspector were open, because the evidence rail and statement needed more width than was left beside the dock. When the space is too narrow, the evidence now sits under the statement, and in very narrow windows each label sits above its line.
+- **The prototype studio let the variants board show through.** Its background is solid now.
 
 ### Decisions
 - **The first round has three directions:** direct, structural and expressive. A fork's round uses refine, layout and tone.

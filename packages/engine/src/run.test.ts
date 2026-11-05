@@ -86,7 +86,7 @@ describe("variants, notes and the kit", () => {
     const fork = claude("b", {
       phase: "build",
       recipe: "prototype",
-      instruction: "Build a {fidelity} prototype. Direction: {direction}. Start from {base}.",
+      instruction: "Build a {fidelity} prototype. Direction: {direction}. Start from {base}, the variant the designer forked.",
       options: { fidelity: "wireframe", direction: "refine" },
       ...(notes ? { notes: [{ id: "n1", runId: "run-b", anchor: { kind: "point" as const, x: 40, y: 120, screen: "Home", element: "button “Next”" }, text: "Make this the primary action.", createdAt: "t" }] } : {}),
     });

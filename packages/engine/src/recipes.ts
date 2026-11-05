@@ -170,7 +170,7 @@ RECIPES.prototype = {
 
 Return one complete, self-contained HTML document: inline <style> and <script> only, no external requests, no frameworks, no web fonts. Frame it as a phone screen (390 × 844) unless the statement is clearly about desktop. Mark each top-level screen with data-screen="Name", and put data-part="who|behavior|because|metric" on the elements that carry that part of the hypothesis. Use real words from the evidence, never lorem ipsum.
 
-Build runs as variants: sibling nodes each take a different direction, and the designer compares them side by side. Commit to your direction. If a <base> document is wired in, it is the variant the designer forked: keep what works in it and change what the direction and any notes ask. A <notes> document holds the designer's feedback pinned to spots on the last output; address every note.
+Build runs as variants: sibling nodes each take a different direction, and the designer compares them side by side. Commit to your direction; sibling variants take others. If another prototype is wired in, it is the variant the designer forked: its HTML is included, so keep what works in it and change what the direction and any notes ask. A <notes> document holds the designer's feedback pinned to spots on the last output; address every note.
 
 ${KIT_DOC}
 

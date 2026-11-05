@@ -40,6 +40,8 @@ function useItems(open: boolean): Item[] {
       ...PHASES.map((p, i) => ({ id: `phase:${p}`, group: "Actions" as const, label: `Go to ${PHASE_INFO[p].name}`, keys: `⌘${i + 1}`, phase: p, run: () => go(p) })),
       ...(selected?.kind === "claude" ? [{ id: "run", group: "Actions" as const, label: `Run ${selected.title}`, keys: "⌘↵", run: () => actions.run(selected.id) }] : []),
       { id: "add", group: "Actions", label: "Add node", keys: "N", run: () => ui.setAddMenuOpen(true) },
+      { id: "variants", group: "Actions", label: "Open Build variants", keys: "B", run: () => (void actions.setActivePhase("build"), ui.setVariantsOpen(true)) },
+      { id: "graph", group: "Actions", label: ui.showGraph ? "Show the workspace" : "Show the graph under the workspace", keys: "G", run: () => ui.setShowGraph(!ui.showGraph) },
       { id: "comment", group: "Actions", label: "Add a comment", keys: "C", run: () => ui.setTool("comment") },
       { id: "snapshot", group: "Actions", label: "Bookmark this snapshot", keys: "⌘B", run: () => ui.setBookmarkOpen(true) },
       { id: "panel-left", group: "Actions", label: `${ui.panels.left ? "Hide" : "Show"} sidebar`, keys: "⌥⌘←", run: () => ui.togglePanel("left") },
@@ -174,7 +176,7 @@ export function CommandPalette() {
 
 const MAP: { group: string; keys: [string, string][] }[] = [
   { group: "Run and lock", keys: [["⌘↵", "Run the selected Claude node (and anything stale above it)"], ["⌘.", "Cancel the run"], ["⌘L", "Lock the selected output"], ["⌘B", "Bookmark this snapshot"]] },
-  { group: "Canvas", keys: [["V", "Select"], ["H", "Pan"], ["C", "Comment"], ["N", "Add node"], ["W", "Cycle weight: mute, light, normal, heavy"], ["P", "Pin or unpin"], ["⌥ drag", "Drop without snapping"], ["⌘1–5", "Go to a phase"]] },
+  { group: "Canvas", keys: [["V", "Select"], ["H", "Pan"], ["C", "Comment"], ["N", "Add node"], ["W", "Cycle weight: mute, light, normal, heavy"], ["P", "Pin or unpin"], ["⌥ drag", "Drop without snapping"], ["⌘1–5", "Go to a phase"], ["G", "Define and Validate: workspace or graph"], ["B", "Build: variants board"], ["⌘L", "Lock the key node"]] },
   { group: "History", keys: [["⌘Z / ⇧⌘Z", "Undo and redo (never deletes runs)"], ["⇧← / ⇧→", "Previous or next bookmark"], ["← / →", "Step through playback"], ["Space", "Play or pause playback"], ["Esc", "Leave playback"]] },
   { group: "Panels", keys: [["⌥⌘←", "Show or hide the sidebar"], ["⌥⌘→", "Show or hide the inspector"], ["⌥⌘↓", "Show or hide the history bar"], ["⌘\\", "Hide every panel, or bring them all back"]] },
   { group: "App", keys: [["⌘K", "Search everything"], ["⌘,", "Settings"], ["?", "This list"]] },

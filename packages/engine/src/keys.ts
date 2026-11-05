@@ -47,6 +47,8 @@ function claudeEntry(node: ClaudeNode) {
     budget: node.budget,
     disabled: [...node.disabledInputs].sort(),
     options: node.options,
+    // Adding a note makes the node stale so the next run answers it. Absent notes leave old keys alone.
+    ...(node.notes?.length ? { notes: node.notes.map((n) => [n.id, n.text]) } : {}),
   };
 }
 

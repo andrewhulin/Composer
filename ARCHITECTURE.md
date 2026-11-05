@@ -10,15 +10,17 @@ The milestones live in [PLAN.md](PLAN.md). Decisions and defaults are logged in 
 
 ## 0. Core model
 
-**Five phases** sit on the canvas as regions. Each phase holds nodes and produces exactly one locked output.
+**Five phases** sit on the canvas as regions. Each phase holds nodes and ends in exactly one key node: a typed output whose text is exactly what the next phase's prompt reads.
 
-| Phase | Output | Purpose |
-|---|---|---|
-| 01 Understand | Weighted context | Collect everything, unfiltered. Weigh each item Mute, Light, Normal or Heavy, pin it, and note why. |
-| 02 Define | Testable statement | Hypothesis, problem statement, How Might We, or user statement. |
-| 03 Build | Prototype | Any fidelity, in code (live preview) and Figma. |
-| 04 Validate | Verdict | Success, guardrail and kill metrics against the hypothesis. A miss loops back to Understand. |
-| 05 Share | Release story | Animated walkthrough and/or PR. The only exit from the loop. |
+| Phase | Surface | Output | Purpose |
+|---|---|---|---|
+| 01 Understand | Node canvas | Weighted context | Collect everything, unfiltered. Weigh each item Mute, Light, Normal or Heavy, pin it, and note why. |
+| 02 Define | Writing workspace | Testable statement | One statement written well, in a fixed form: we believe, for whom, we'll know when. |
+| 03 Build | Node canvas + variants board | Prototype | Variants side by side at any fidelity, in code (live preview) and Figma. |
+| 04 Validate | Scorecard | Verdict | Success, guardrail and kill metrics with targets, one lane per evidence source. A miss loops back to Understand. |
+| 05 Share | Node canvas | Release story | Animated walkthrough and/or PR. The only exit from the loop. |
+
+Understand, Build and Share gather and combine many things, so they stay node canvases. Define and Validate are purpose-built workspaces over the same graph (`PHASE_SURFACE` in `packages/core/src/phases.ts`); the graph under them is one toggle away (G). Section 11 covers the workspaces and key nodes, section 12 the evals.
 
 **Principles** (from the Figma cover):
 - One phase in focus.
@@ -258,19 +260,28 @@ user      Instruction (rendered template) + output format
 
 ## 7. Build: code and Figma
 
-- **Code prototype.** The `prototype` recipe runs Claude's tool runner with `write_file`, `read_file` and `list_files` tools, scoped to `projects/<id>/prototypes/<run>/`.
-  - Claude writes a small React app that uses the design system tokens.
-  - A local Vite-less runtime (esbuild-wasm bundle) renders it in a sandboxed iframe. It appears in the inspector's live preview and as the node thumbnail.
+- **Variants by default.** Build lays out three prototype nodes side by side, each taking a different direction on the same brief (direct, structural, expressive). Each is a `prototype` Claude node with `options.direction` and `options.round`; aliases are `variant-a`, `variant-b`, and so on.
+  - **Add direction** adds a fourth (minimal, or any other) to the latest round.
+  - **Fork** a variant into the next round: three new nodes (refine, layout, tone) that are wired to the same feeds plus the forked variant, whose HTML rides in as context. Forking is a choice, so it is also recorded as picks of that variant over its siblings.
+  - **Use** points the key node at a variant; only one ships.
+  - The **variants board** (B, or Variants in the toolbar) shows every round, with run, open, use and fork per card, and a pairwise comparison mode.
+- **Code prototype.** The `prototype` recipe returns one self-contained HTML document (inline CSS and JS, no network) as structured output, not a React app or an esbuild bundle.
+  - It renders in a sandboxed iframe (`sandbox="allow-scripts"`, opaque origin), written to the app data dir by the `prototype_write` command in Tauri or served as a blob URL in the browser (`apps/desktop/src/prototype/runtime.ts`).
+  - Composer talks to the frame only by `postMessage`: `{composer:"rt", id, op}` requests and `rt-reply` / `rt-event` messages back.
   - Fidelity sets the constraints:
     - Low-fi: grayscale boxes.
     - Wireframe: structure plus real copy.
     - High-fi: full tokens.
-  - An on-system lint compares computed styles against design system tokens. That drives the "94% on-system" stat and the drift proposals in M8.
-- **Figma output.** The companion plugin (`packages/figma-plugin`) pairs with Composer over a localhost WebSocket using a token.
-  - "Send to Figma" serializes the prototype's DOM from the iframe: boxes, flex converted to auto layout, text, fills and radii. Values matching design system tokens are bound to Figma variables.
-  - The plugin builds frames on a "Design Composer" page and sends back node ids and PNGs.
-  - In the other direction, "Send selection to Composer" turns Figma frames into a Figma source.
-  - This way one generation produces both code and editable Figma frames.
+  - An on-system lint compares computed styles against design system tokens. That drives the "94% on-system" stat and the drift proposals.
+- **Interaction kit** (`apps/desktop/src/prototype/kit.ts`, documented to Claude in `packages/engine/src/kit.ts`). Injected into every prototype, so Claude writes markup and data attributes instead of logic:
+  - Screens and navigation: `data-screen`, `data-go`, `data-transition`, `data-back`.
+  - Sheets, toggles, tabs and toasts: `data-sheet`, `data-close`, `data-toggle`, `data-tab` / `data-panel`, `data-toast`.
+  - Sample data: `<template data-repeat="people|messages|tasks|products" data-limit>` with `data-sample` fields.
+  - The same script serializes the DOM for Figma, and runs the tweak and note modes below.
+- **Direct tweaks, no rerun.** The prototype studio (Open on a variant) has Interact, Tweak and Note modes.
+  - Tweak: click an element, change its copy, color, fill, font size, weight, padding, gap or radius. The kit applies each as an inline style.
+  - Save exports the edited document (kit tags and ids stripped) and stores it as a new artifact for the same run: keys don't change, so the node stays fresh and only downstream goes stale. Each save logs an `edit_output` decision listing the changes.
+- **Figma output.** "Send to Figma" serializes the prototype's DOM in the iframe (boxes, flex as auto layout, text, fills, radii, with token matches) into a `{composer:"figma-frames", v:1, title, tree, tokens}` payload on the clipboard. In Figma, the companion plugin's "Paste from Composer" builds the frames.
 
 ## 8. Share: creative output
 
@@ -301,9 +312,9 @@ user      Instruction (rendered template) + output format
   - Seeded from slingshot-design-philosophy.
   - Principles have strength and decision counts, with a changelog of sharpened, added, retired and reworded entries.
   - "Forming" candidates wait for approval.
-- **Improvement loop:** Run → Validate → Score → Propose → Approve.
-  - After each Validate verdict, a Reflect job compares high- and low-scored runs, using prompt versions, context patterns and decisions.
-  - It needs at least 5 scored runs on each side before it proposes anything, and it always shows n, to avoid overfitting.
+- **Improvement loop:** Run → Validate → Score or pick → Propose → Replay → Approve.
+  - After each Validate verdict, a Reflect job compares high- and low-scored runs and the designer's pairwise picks, using prompt versions, context patterns and decisions.
+  - It needs at least 5 scored runs on each side, or 5 pairwise picks, in a phase before it proposes a rule there, and it always shows n, to avoid overfitting.
   - It drafts LearnedRules, PromptVersion edits and philosophy changes, each with stats such as "4.3 vs 2.7 avg".
   - Andrew answers each with "Keep rule" or "Not yet". Nothing goes live without approval, and every change can be reverted from History.
 - **Sidebar:**
@@ -350,3 +361,39 @@ user      Instruction (rendered template) + output format
   - **Signals:** signal/live #55c98e, signal/hypothesis #e3c25a, signal/retired #5a5852.
   - M1 pulls type, spacing and radius values with `get_design_context` on the components: Node/Source, Node/Claude, Node/Hypothesis, Node/Output, UI/Source row and UI/Context chip.
 
+
+## 11. Workspaces and key nodes
+
+- **Key node.** Every phase ends in one Output node in output mode: the key node. Its fields are fixed per phase (`HANDOFF_SCHEMA` in `packages/engine/src/handoff.ts`), so the next phase always receives the same shape.
+  - It is pinned top right in every phase, canvas or workspace, as a dock that folds to its header. It shows the status (draft, locked vN, newer draft), each typed field with missing required fields marked, and where the handoff goes ("Goes to Build", "Loops back to Understand").
+  - **Prompt preview, the point of the dock.** It shows the exact `<doc>` block the next phase's prompt will read. Once the next phase's inlet points at the locked version, the block is pulled from that node's live assembled prompt, so trimming shows too; before that it is built with the same `docTag` the assembler uses.
+  - **Edit handoff.** The designer can rewrite the text the next phase reads. Before a lock the edit waits on the key node (`draft.text`) and ships with the lock; after a lock it becomes a new version (`edited: true`), the next phase's inlets move to it, and an `edit_output` decision is logged.
+  - Lock is blocked until every required field has a value.
+- **Define: writing workspace.**
+  - The statement is the hero, in the fixed form **we believe / for whom / we'll know when**, written on paper. `StatementData.form` holds it; older artifacts fall back to their parts.
+  - **Evidence rail** on the left: the locked Understand insights and the heavy or pinned Understand sources. **Cite** adds the item to the evidence the statement rests on and records it on the key node (`cites`).
+  - **Variants** beside the statement: Claude drafts two more versions from other angles, plus alternates in the other frames. **Use this** loads a variant into the form and logs a `keep_variant` decision.
+  - Live checks while writing: testable, specific user, measurable, cites evidence.
+  - Each line can carry a note to Claude (a field-anchored note) for the next draft. The working draft lives on the key node (`draft`), so it survives reloads.
+  - **Lock** builds the statement from the form (`defineArtifact`) and, for the hypothesis frame, enters it into the memory chain as before.
+- **Validate: scorecard.**
+  - The locked statement is pinned on top, read-only.
+  - A metrics table: kind, metric, target (`StrategyData.metrics[].target`), observed and met, filled from the verdict once it has run.
+  - One lane per method (Slack, 360 sessions, Statsig, survey) with Claude's plan, its questions, the action (post to Slack, add session notes, pull a Statsig experiment) and the evidence that has landed in that lane.
+  - The verdict bar ends it: Claude's reading, then the designer's call, **Holds → Share** or **Misses → Understand**. Overriding Claude's reading is allowed and logged.
+- **The graph stays.** Both workspaces read and write the same nodes, edges and outputs; G or the Writing/Scorecard ↔ Graph toggle shows the canvas underneath. Playback always shows the graph.
+
+## 12. Evals: training the loop with feedback
+
+- **Scores** (1–5 per run) as before.
+- **Pairwise picks** (`pick` table). The designer saw two outputs of the same brief and preferred one:
+  - Compare in pairs on the variants board, round by round.
+  - Better / Same / Worse against the previous run of the same node, in the inspector.
+  - Forking a variant (an implicit pick over its siblings).
+  - Picks go to Reflect as `<pairs>` blocks, the sharpest evidence it gets. Five picks in a phase are enough to propose a rule there.
+- **Feedback pinned to the output** (`ClaudeNode.notes`). A note anchors to a point on a prototype (screen, x, y and the element under it) or to a field of the Define statement. Notes on the current output ride into the node's next run as a heavy `notes` document and are part of its key, so adding one marks the node stale. After the rerun they no longer ride along.
+- **Replay** (`replay_case`, `replay_result`, `packages/engine/src/replay.ts`). Before a proposed rule or principle goes live:
+  - Composer reruns up to four kept briefs with the change. A run's prompt is stored whole, so a replay changes exactly one system block (the rules block, or the philosophy inside foundations) and keeps everything else as the designer saw it.
+  - Briefs are kept by hand ("Keep as replay brief" in the inspector) or, when none are kept for the phase, picked automatically from the highest-scored and picked runs.
+  - The proposal card shows baseline and candidate side by side (prototypes render live), the designer judges each brief, and the tally reads "Candidate preferred on 3 of 4". Keeping stays the designer's call; replay is evidence, not a gate.
+  - Design system proposals don't replay; they lint instead.

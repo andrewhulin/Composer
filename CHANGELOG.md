@@ -40,6 +40,52 @@ Newest first. Every milestone adds an entry. A **Decisions** list records each d
   - Not yet verified: a real install and relaunch through Tauri. That first happens when a copy with this change sees the next release.
   - On `main`, a fresh checkout fails `pnpm check` because `.gitignore`'s `build/` rule drops `apps/desktop/src/build/`. Until that's fixed (the workspaces branch moves it to `src/prototype/`), the workflow stops at `pnpm check` and publishes nothing.
 
+## M11 · Workspaces, key nodes, Build variants and evals · 2026-11-05
+
+### Added
+- **Define is a writing workspace, Validate is a scorecard.** Understand, Build and Share stay node graphs. G flips a workspace to its graph and back, and ⌘K has "Show graph".
+  - **Define:** the statement is the hero, written as we believe / for whom / we'll know when. An evidence rail on the left lists the insights from Understand and the heavy or pinned sources, and Cite adds a line to the statement's evidence. Claude's variants sit beside the statement with "Use this", plus the alternate frames. Lock is on the statement.
+  - **Validate:** the locked statement is pinned at the top. A metrics table lists success, guardrail and kill lines with their targets, what was observed and whether each was met. One lane per method (Slack, 360, Statsig, survey) holds its action and its evidence. The verdict bar ends in Holds → Share or Misses → Understand.
+- **A key node in every phase:** a dock on the right shows the phase's single output, its fields (missing ones marked), where it goes next, and a preview of the prompt the next phase will read, with a token estimate.
+  - **Edit handoff** changes the text the next phase reads without a rerun. "Reset to Claude's" goes back.
+  - Lock is disabled until the required fields are filled.
+- **Build variants by default:** a new Build phase starts as three variants in different directions, all fed by the statement. B opens the variants board.
+  - **Rounds:** Fork a variant to start the next round from it. Add a direction to a round. Run a round in one go.
+  - **Use** makes a variant the key node.
+- **Interaction kit:** prototypes are one HTML document with screens and data attributes for navigation (`data-go`, `data-back`), tabs (`data-tab`, `data-panel`), repeated sample rows (`data-repeat`) and toasts (`data-toast`), so they click through without real logic.
+- **Prototype studio:** opens a variant full height with three modes.
+  - **Interact:** click through it.
+  - **Tweak:** pick an element and change its color, background, font size, padding, gap, radius or text. Save writes the new HTML with no rerun.
+  - **Note:** pin a note to a spot on a screen. "Rerun with N notes" sends them with the next run.
+- **Notes on the statement:** ◎ beside each line of the Define form pins a note to that field.
+- **Evals:**
+  - **Pairwise picks:** "Compare in pairs" on the variants board walks every pair in the latest round. "Vs last run" in the inspector rates a rerun Better, Same or Worse.
+  - **Replay:** a proposed rule or principle can be replayed on past briefs before it is kept. Baseline and candidate sit side by side, and each brief is judged Baseline better, Same or Candidate better. "Keep it" shows when the tally favours the candidate.
+  - **Keep as replay brief** in the inspector adds a run to the replay set.
+  - Reflect counts picks as evidence alongside scores.
+- **Tests:** 155 in total.
+
+### Changed
+- **ARCHITECTURE.md:** section 0 has a Surface column, section 7 is rewritten for variants and the HTML prototype, section 9's loop includes picks and replay, and new sections 11 (Workspaces and key nodes) and 12 (Evals).
+- **The guide** mentions the key node, the writing workspace, variants, the scorecard and replay.
+- **The scripted dev model** (`?fake`) returns a different prototype per direction, metric targets, and statement variants.
+
+### Fixed
+- **`src/prototype/runtime.ts` was missing from the repo**, because `.gitignore`'s `build/` pattern caught its old folder. It is rebuilt at `src/prototype/runtime.ts`.
+- **⌘L in Define** locks through the statement form.
+- **`src/ui/build/` was missing from the repo too**, for the same reason. `.gitignore` now ignores only a top-level `/build/`.
+- **Define's statement slid under the key node** when the sidebar and inspector were open, because the evidence rail and statement needed more width than was left beside the dock. When the space is too narrow, the evidence now sits under the statement, and in very narrow windows each label sits above its line.
+- **The prototype studio let the variants board show through.** Its background is solid now.
+
+### Decisions
+- **The first round has three directions:** direct, structural and expressive. A fork's round uses refine, layout and tone.
+- **Replay picks up to four briefs** on its own from scored and picked runs when none were kept for that phase.
+- **Five picks in a phase are enough** for Reflect to propose a rule there.
+- **Replay is evidence, not a gate:** you can keep a change without replaying it.
+- **A tweak keeps the run's cache keys,** so the variant stays fresh with no rerun. Whatever reads it downstream sees the new HTML and goes stale. A rerun replaces the tweaks.
+- **Only notes on the current run** ride into the next run, so old notes don't pile up.
+- **Not run here:** `pnpm tauri build` (needs macOS) and a visual check in a browser (no headless browser in this environment). `pnpm check` and `vite build` pass.
+
 ## Collapsible panels · 2026-11-04
 
 ### Added

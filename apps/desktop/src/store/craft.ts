@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { RECIPES, applyDrift, detectDrift, foundationsFor, parseDesignSystem, parsePhilosophy, reflectGroups, reflectRequest, strengthFor, tokenSet, type BuildLint, type DesignSystem, type DriftProposal, type LintResult, type Philosophy, type Principle, type ReflectAnswer, type ScoredRun, type TokenSet } from "@composer/engine";
+import { RECIPES, pickedPhases, type PickedPair, applyDrift, detectDrift, foundationsFor, parseDesignSystem, parsePhilosophy, reflectGroups, reflectRequest, strengthFor, tokenSet, type BuildLint, type DesignSystem, type DriftProposal, type LintResult, type Philosophy, type Principle, type ReflectAnswer, type ScoredRun, type TokenSet } from "@composer/engine";
 import { PHASES, type Phase, type TextArtifact } from "@composer/core";
 import type { CraftRuleRow, FoundationRow, ProposalRow, Repo } from "@composer/data";
 import { craftHooks, llmClient, toast, useProject } from "./project";
@@ -9,7 +9,7 @@ export interface RuleDiff {
   text: string;
   why: string;
   evidence: string[];
-  stats: { highAvg: number; lowAvg: number; nHigh: number; nLow: number };
+  stats: { highAvg: number; lowAvg: number; nHigh: number; nLow: number; picks?: number };
 }
 
 export interface PrincipleDiff {
@@ -233,10 +233,37 @@ export async function score(runId: string, value: number, note?: string) {
   set((s) => ({ scores: { ...s.scores, [runId]: value }, scoredCount: s.scoredCount + (s.scores[runId] ? 0 : 1) }));
 }
 
-/** How far each phase is from enough evidence to learn from (5 high and 5 low). */
-export async function evidence(): Promise<{ phase: Phase; high: number; low: number }[]> {
+/** How far each phase is from enough evidence to learn from: 5 high and 5 low, or 5 pairwise picks. */
+export async function evidence(): Promise<{ phase: Phase; high: number; low: number; picks: number }[]> {
   const runs = await scoredRunsForReflect();
-  return PHASES.map((phase) => ({ phase, high: runs.filter((r) => r.phase === phase && r.score >= 4).length, low: runs.filter((r) => r.phase === phase && r.score <= 2).length })).filter((e) => e.high + e.low > 0);
+  const picks = await repo().listPicks();
+  return PHASES.map((phase) => ({
+    phase,
+    high: runs.filter((r) => r.phase === phase && r.score >= 4).length,
+    low: runs.filter((r) => r.phase === phase && r.score <= 2).length,
+    picks: picks.filter((p) => p.phase === phase).length,
+  })).filter((e) => e.high + e.low + e.picks > 0);
+}
+
+/** Every pairwise pick, with both runs' instruction and output, for Reflect. */
+async function pickedPairs(): Promise<PickedPair[]> {
+  const r = repo();
+  const picks = await r.listPicks();
+  if (!picks.length) return [];
+  const runs = new Map((await Promise.all([...new Set(picks.flatMap((p) => [p.winnerRunId, p.loserRunId]))].map((id) => r.getRun(id)))).flatMap((x) => (x ? [[x.id, x] as const] : [])));
+  const blobs = await r.getBlobs([...runs.values()].flatMap((x) => (x.outputHash ? [x.outputHash] : [])));
+  const { graph } = useProject.getState();
+  const side = (id: string) => {
+    const run = runs.get(id);
+    if (!run?.outputHash) return undefined;
+    const node = graph.nodes[run.nodeId];
+    return { runId: id, instruction: node?.kind === "claude" ? node.instruction : "", output: (blobs.get(run.outputHash) as TextArtifact | undefined)?.text ?? "" };
+  };
+  return picks.flatMap((p) => {
+    const winner = side(p.winnerRunId);
+    const loser = side(p.loserRunId);
+    return winner && loser ? [{ phase: p.phase, winner, loser, ...(p.note ? { note: p.note } : {}) }] : [];
+  });
 }
 
 async function scoredRunsForReflect(): Promise<ScoredRun[]> {
@@ -262,22 +289,25 @@ export async function reflect(opts: { auto?: boolean } = {}) {
   const r = repo();
   const runs = await scoredRunsForReflect();
   const groups = reflectGroups(runs);
+  const pairs = await pickedPairs();
+  const pickPhases = pickedPhases(pairs);
   const decisions = (await r.allDecisions()).filter((d) => ["verdict_override", "taste", "proposal_rejected", "proposal_accepted", "rule_kept", "swap", "lock"].some((k) => d.kind.startsWith(k)));
-  if (!groups.length && (opts.auto || decisions.length < 8)) {
-    if (!opts.auto) toast("Not enough evidence yet. Score at least 5 runs high (4–5) and 5 low (1–2) in a phase.");
+  if (!groups.length && !pickPhases.length && (opts.auto || decisions.length < 8)) {
+    if (!opts.auto) toast("Not enough evidence yet. Score 5 runs high (4–5) and 5 low (1–2) in a phase, or make 5 pairwise picks.");
     return;
   }
   set({ reflecting: true });
   try {
-    const res = await llmClient().stream(reflectRequest(groups, get().philosophy?.content ?? null, decisions.map((d) => `${d.kind}: ${d.statement}`), "claude-opus-5-5"), { signal: new AbortController().signal });
+    const res = await llmClient().stream(reflectRequest(groups, get().philosophy?.content ?? null, decisions.map((d) => `${d.kind}: ${d.statement}`), "claude-opus-5-5", pairs), { signal: new AbortController().signal });
     const answer = JSON.parse(res.text) as ReflectAnswer;
     const pending = await r.listProposals("pending");
     const has = (text: string) => pending.some((p) => (p.diff as { text?: string }).text === text);
     let n = 0;
     for (const rule of answer.rules) {
       const g = groups.find((x) => x.phase === rule.phase);
-      if (!g || has(rule.text)) continue;
-      const diff: RuleDiff = { ...rule, stats: { highAvg: g.highAvg, lowAvg: g.lowAvg, nHigh: g.high.length, nLow: g.low.length } };
+      const picks = pairs.filter((x) => x.phase === rule.phase).length;
+      if ((!g && !pickPhases.includes(rule.phase)) || has(rule.text)) continue;
+      const diff: RuleDiff = { ...rule, stats: { highAvg: g?.highAvg ?? 0, lowAvg: g?.lowAvg ?? 0, nHigh: g?.high.length ?? 0, nLow: g?.low.length ?? 0, ...(picks ? { picks } : {}) } };
       await r.createProposal({ targetKind: "rule", diff, rationale: rule.why, evidence: rule.evidence });
       n++;
     }

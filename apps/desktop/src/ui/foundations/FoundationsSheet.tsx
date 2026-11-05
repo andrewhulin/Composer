@@ -8,6 +8,7 @@ import { accept, evidence, importDesignSystem, loadCraft, importPhilosophy, lock
 import { toast, useProject } from "../../store/project";
 import { cx } from "../primitives/cx";
 import { ago, useNow } from "../../hooks/useNow";
+import { ReplayPanel } from "./ReplayPanel";
 import styles from "./FoundationsSheet.module.css";
 
 const DEFAULTS = {
@@ -197,6 +198,7 @@ function Forming({ p }: { p: ProposalRow }) {
           Not yet
         </button>
       </div>
+      <ReplayPanel p={p} onKeep={run(() => accept(p))} />
     </div>
   );
 }
@@ -485,7 +487,7 @@ function LearningPanel() {
   const proposals = useMemo(() => all.filter((p) => p.targetKind === "rule" && p.status === "pending"), [all]);
   const reflecting = useCraft((s) => s.reflecting);
   const scoredCount = useCraft((s) => s.scoredCount);
-  const [progress, setProgress] = useState<{ phase: string; high: number; low: number }[]>([]);
+  const [progress, setProgress] = useState<{ phase: string; high: number; low: number; picks: number }[]>([]);
   useEffect(() => {
     void evidence().then(setProgress);
   }, [scoredCount]);
@@ -496,7 +498,7 @@ function LearningPanel() {
           <span className={cx(styles.slotLabel, styles.share)}>Memory · learned rules</span>
           <span className={styles.panelName}>Run → Validate → Score → Propose → Approve</span>
           <span className={styles.panelMeta}>
-            {scoredCount} scored {scoredCount === 1 ? "run" : "runs"} · {rules.length} {rules.length === 1 ? "rule" : "rules"} kept · needs 5 high and 5 low in a phase before it proposes anything
+            {scoredCount} scored {scoredCount === 1 ? "run" : "runs"} · {rules.length} {rules.length === 1 ? "rule" : "rules"} kept · needs 5 high and 5 low, or 5 pairwise picks, in a phase before it proposes anything · replay a proposal on past briefs before you keep it
           </span>
         </div>
         <button type="button" className={styles.button} disabled={reflecting} onClick={() => void reflect()}>
@@ -511,7 +513,7 @@ function LearningPanel() {
               <span className={cx(styles.dot)} style={{ background: `var(--phase-${e.phase})` }} />
               <span>{PHASE_INFO[e.phase as keyof typeof PHASE_INFO].name}</span>
               <em>
-                {Math.min(e.high, 5)}/5 high · {Math.min(e.low, 5)}/5 low
+                {Math.min(e.high, 5)}/5 high · {Math.min(e.low, 5)}/5 low{e.picks ? ` · ${e.picks} picks` : ""}
               </em>
             </div>
           ))}
@@ -526,7 +528,8 @@ function LearningPanel() {
                   <div className={styles.proposalText}>
                     <span>{d.text}</span>
                     <em>
-                      {d.stats.highAvg} vs {d.stats.lowAvg} avg · n {d.stats.nHigh}/{d.stats.nLow} · {d.why}
+                      {d.stats.nHigh || d.stats.nLow ? `${d.stats.highAvg} vs ${d.stats.lowAvg} avg · n ${d.stats.nHigh}/${d.stats.nLow}` : ""}
+                      {d.stats.picks ? `${d.stats.nHigh || d.stats.nLow ? " · " : ""}${d.stats.picks} picks` : ""} · {d.why}
                     </em>
                   </div>
                   <button type="button" className={styles.light} onClick={run(() => accept(p))}>
@@ -536,6 +539,7 @@ function LearningPanel() {
                     Not yet
                   </button>
                 </div>
+                <ReplayPanel p={p} onKeep={run(() => accept(p))} />
               </div>
             );
           })}

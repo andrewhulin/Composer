@@ -1,6 +1,6 @@
 import { useState, type PointerEvent } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
-import { PHASES, PHASE_INFO, type ClaudeNode } from "@composer/core";
+import { PHASES, PHASE_INFO, PHASE_SURFACE, type ClaudeNode } from "@composer/core";
 import { FRAMES } from "@composer/engine";
 import { useProject } from "../../store/project";
 import { useUi, type CanvasTool } from "../../store/ui";
@@ -12,6 +12,10 @@ import { FlowCanvas } from "./FlowCanvas";
 import { AddNodeMenu } from "./AddNodeMenu";
 import { PlaybackBanner } from "./PlaybackBanner";
 import { usePlayback } from "../../store/playback";
+import { Workspace, SurfaceToggle } from "../workspace/Workspace";
+import { KeyNode } from "../keynode/KeyNode";
+import { VariantsBoard } from "../build/VariantsBoard";
+import { PrototypeStudio } from "../build/PrototypeStudio";
 import styles from "./Canvas.module.css";
 
 const TOOLS: { id: CanvasTool; label: string; key: string }[] = [
@@ -48,6 +52,12 @@ export function Canvas() {
   const n = PHASES.indexOf(phase) + 1;
   const output = useOutputLabel(phase);
   const playing = usePlayback((s) => s.active);
+  const showGraph = useUi((s) => s.showGraph);
+  const variantsOpen = useUi((s) => s.variantsOpen);
+  const setVariantsOpen = useUi((s) => s.setVariantsOpen);
+  const studio = useUi((s) => s.studio);
+  // Define and Validate are workspaces; the graph under them is a toggle away. Playback always shows the graph.
+  const workspace = focus && !playing && PHASE_SURFACE[phase] !== "canvas" && !showGraph;
 
   const onMove = (e: PointerEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -55,7 +65,7 @@ export function Canvas() {
   };
 
   return (
-    <main ref={ref} className={cx(styles.canvas, playing && styles.playback)} data-phase={phase} onPointerMove={onMove} onPointerLeave={() => setCursor(null)}>
+    <main ref={ref} className={cx(styles.canvas, playing && styles.playback)} data-phase={phase} onPointerMove={workspace ? undefined : onMove} onPointerLeave={() => setCursor(null)}>
       <div className={styles.grid} aria-hidden />
       <span className={styles.focusLabel} aria-hidden>
         {`PHASE 0${n} / 05  ·  ${focus ? "FOCUS" : "ALL PHASES"}  ·  LOOP ${loop}`}
@@ -65,7 +75,7 @@ export function Canvas() {
       <span className={cx(styles.bracket, styles.tr)} />
       <span className={cx(styles.bracket, styles.bl)} />
       <span className={cx(styles.bracket, styles.br)} />
-      {cursor && (
+      {cursor && !workspace && (
         <>
           <span className={styles.crossV} style={{ left: cursor.x }} />
           <span className={styles.crossH} style={{ top: cursor.y }} />
@@ -75,11 +85,19 @@ export function Canvas() {
         </>
       )}
 
-      <ReactFlowProvider>
-        <FlowCanvas />
-      </ReactFlowProvider>
+      {workspace ? (
+        <Workspace phase={phase} />
+      ) : (
+        <ReactFlowProvider>
+          <FlowCanvas />
+        </ReactFlowProvider>
+      )}
 
       {focus && <PhaseRails phase={phase} />}
+      {focus && !playing && <SurfaceToggle phase={phase} />}
+      {focus && !playing && <KeyNode phase={phase} />}
+      {variantsOpen && phase === "build" && !playing && <VariantsBoard />}
+      {studio && !playing && <PrototypeStudio nodeId={studio.nodeId} />}
       {playing && <PlaybackBanner />}
       {focus && (
         <header className={styles.header}>
@@ -90,7 +108,7 @@ export function Canvas() {
       )}
 
       <div className={styles.toolbar} role="toolbar" aria-label="Canvas tools" hidden={playing}>
-        {TOOLS.map((t) => (
+        {!workspace && TOOLS.map((t) => (
           <button key={t.id} type="button" className={cx(styles.tool, tool === t.id && styles.toolActive)} onClick={() => setTool(t.id)}>
             <span>{t.label}</span>
             <span className={styles.toolKey}>{t.key}</span>
@@ -100,7 +118,13 @@ export function Canvas() {
           <span>Add node</span>
           <span className={styles.toolKey}>N</span>
         </button>
-        <span className={styles.zoom}>{Math.round(zoom * 100)}%</span>
+        {phase === "build" && focus && (
+          <button type="button" className={cx(styles.tool, variantsOpen && styles.toolActive)} onClick={() => setVariantsOpen(!variantsOpen)}>
+            <span>Variants</span>
+            <span className={styles.toolKey}>B</span>
+          </button>
+        )}
+        {!workspace && <span className={styles.zoom}>{Math.round(zoom * 100)}%</span>}
         {addMenuOpen && <AddNodeMenu onClose={() => setAddMenuOpen(false)} />}
       </div>
     </main>

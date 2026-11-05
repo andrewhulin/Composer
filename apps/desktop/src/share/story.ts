@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { hashOf, type OutputVersion, type TextArtifact } from "@composer/core";
 import { prMarkdown, type PrData, type PrototypeData, type StoryData } from "@composer/engine";
 import type { StoryProps } from "@composer/renderer";
-import { prototypeUrl } from "../build/runtime";
+import { prototypeUrl } from "../prototype/runtime";
 import { openPr, rendererDefaultDir, renderStory, type RenderLine } from "../platform/share";
 import { toast, useProject } from "../store/project";
 

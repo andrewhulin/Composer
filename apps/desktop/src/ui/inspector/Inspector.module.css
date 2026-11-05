@@ -129,3 +129,10 @@
 .scoreDot:hover { color: var(--text-primary); border-color: var(--text-secondary); }
 .scoreOn { background: rgba(85, 201, 142, 0.14); border-color: rgba(85, 201, 142, 0.5); color: var(--signal-live); }
 .scoreHint { margin-left: 6px; font-size: var(--fs-chip); color: var(--text-muted); }
+.evals { display: flex; flex-direction: column; gap: 6px; }
+.evalRow { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.evalBtn { height: 22px; padding: 0 8px; border-radius: var(--r-sm); border: 1px solid var(--border-strong); font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-secondary); background: transparent; cursor: pointer; }
+.evalBtn:hover:not(:disabled) { color: var(--text-primary); border-color: var(--text-secondary); }
+.evalBtn:disabled { cursor: default; }
+.evalOn { background: rgba(var(--phase-rgb), 0.14); border-color: rgba(var(--phase-rgb), 0.5); color: var(--phase); }
+.workspaceNote { margin: 0; padding: 8px 10px; border-radius: var(--r-md); border: 1px dashed var(--border-strong); font-size: var(--fs-chip); line-height: 1.5; color: var(--text-secondary); }

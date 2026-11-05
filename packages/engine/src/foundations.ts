@@ -5,6 +5,7 @@
  */
 import type { Phase } from "@composer/core";
 import type { Foundations } from "./assembly/prompt";
+import { pairsBlock, type PickedPair } from "./replay";
 import { normalizeColor, type LintResult, type TokenSet } from "./lint";
 import type { LlmRequest } from "./llm";
 
@@ -375,7 +376,7 @@ export const REFLECT_SCHEMA = {
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s);
 
 /** One call that compares what scored high with what scored low and drafts rules and principle changes. */
-export function reflectRequest(groups: ReflectGroup[], philosophy: Philosophy | null, decisions: string[], model: string): LlmRequest {
+export function reflectRequest(groups: ReflectGroup[], philosophy: Philosophy | null, decisions: string[], model: string, pairs: PickedPair[] = []): LlmRequest {
   const runText = (r: ScoredRun) => `<run id="${r.runId}" score="${r.score}"${r.note ? ` note="${r.note.replace(/"/g, "'")}"` : ""}>\nInstruction: ${clip(r.instruction, 600)}\nOutput: ${clip(r.output, 1500)}\n</run>`;
   const body = groups
     .map((g) => `<phase name="${g.phase}" high_avg="${g.highAvg}" n_high="${g.high.length}" low_avg="${g.lowAvg}" n_low="${g.low.length}">\n<high>\n${g.high.map(runText).join("\n")}\n</high>\n<low>\n${g.low.map(runText).join("\n")}\n</low>\n</phase>`)
@@ -387,13 +388,13 @@ export function reflectRequest(groups: ReflectGroup[], philosophy: Philosophy | 
     system: [
       {
         type: "text",
-        text: "You are the improvement loop inside Design Composer. You compare a designer's high-scored and low-scored Claude runs and draft craft rules that would have made the low runs more like the high ones. Each rule is one imperative sentence a future run can follow, specific to its phase, and must cite the run ids that show it. Only propose what the evidence clearly supports; an empty list is a good answer. Separately, read the designer's recorded decisions and propose philosophy changes: sharpen or reword a principle the decisions keep citing, add one they imply, or retire one they keep overriding. Nothing you propose applies until the designer approves it.",
+        text: "You are the improvement loop inside Design Composer. You compare a designer's high-scored and low-scored Claude runs and draft craft rules that would have made the low runs more like the high ones. Pairwise picks are the sharpest evidence: the designer saw two outputs of the same brief side by side and preferred one, so a rule that explains a consistent preference is worth more than one inferred from absolute scores. Each rule is one imperative sentence a future run can follow, specific to its phase, and must cite the run ids that show it. Only propose what the evidence clearly supports; an empty list is a good answer. Separately, read the designer's recorded decisions and propose philosophy changes: sharpen or reword a principle the decisions keep citing, add one they imply, or retire one they keep overriding. Nothing you propose applies until the designer approves it.",
       },
     ],
     messages: [
       {
         role: "user",
-        content: `${philosophy ? `<philosophy rev="${philosophy.rev}">\n${philosophy.principles.map((p) => `${p.n}. ${p.text} (${p.strength})`).join("\n")}\n</philosophy>\n\n` : ""}<decisions>\n${decisions.slice(-60).join("\n") || "none yet"}\n</decisions>\n\n${body || "No phase has enough scored runs yet; propose rules only if the decisions alone justify them, else none."}`,
+        content: `${philosophy ? `<philosophy rev="${philosophy.rev}">\n${philosophy.principles.map((p) => `${p.n}. ${p.text} (${p.strength})`).join("\n")}\n</philosophy>\n\n` : ""}<decisions>\n${decisions.slice(-60).join("\n") || "none yet"}\n</decisions>\n\n${body || (pairs.length ? "No phase has enough scored runs yet; learn from the picks below." : "No phase has enough scored runs yet; propose rules only if the decisions alone justify them, else none.")}${pairs.length ? `\n\n${pairsBlock(pairs)}` : ""}`,
       },
     ],
     schema: REFLECT_SCHEMA as unknown as Record<string, unknown>,

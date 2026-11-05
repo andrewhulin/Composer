@@ -2,6 +2,7 @@ import { useState } from "react";
 import { PHASE_INFO } from "@composer/core";
 import { actions, useProject } from "../../store/project";
 import { useSession } from "../../store/session";
+import { GuidePill } from "../tutorial/Coach";
 import { Dot } from "../primitives/Dot";
 import styles from "./TitleBar.module.css";
 
@@ -34,6 +35,7 @@ export function TitleBar() {
         {editing ? (
           <input
             autoFocus
+            data-tour="project-name"
             className={styles.rename}
             defaultValue={project?.name ?? ""}
             onBlur={(e) => {
@@ -47,7 +49,7 @@ export function TitleBar() {
             }}
           />
         ) : (
-          <button type="button" className={styles.project} onDoubleClick={() => setEditing(true)} title="Double-click to rename">
+          <button type="button" className={styles.project} onDoubleClick={() => setEditing(true)} title="Double-click to rename" data-tour="project-name">
             {project?.name ?? "Design Composer"}
           </button>
         )}
@@ -55,6 +57,7 @@ export function TitleBar() {
         <span className={styles.phase}>{PHASE_INFO[phase].name}</span>
       </div>
       <div className={styles.right} data-tauri-drag-region>
+        <GuidePill />
         <Dot color={status.color} />
         <span className={styles.saved} title={status.text}>
           {status.text}

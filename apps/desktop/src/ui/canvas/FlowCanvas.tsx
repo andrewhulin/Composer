@@ -224,7 +224,7 @@ export function FlowCanvas() {
   }, [activePhase, focus, flow]);
 
   return (
-    <div ref={wrapper} className={styles.flow} onDragOver={onDragOver} onDrop={onDrop}>
+    <div ref={wrapper} className={styles.flow} onDragOver={onDragOver} onDrop={onDrop} data-tour="canvas">
       <ReactFlow
         nodes={nodes}
         edges={edges}

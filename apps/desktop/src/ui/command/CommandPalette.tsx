@@ -4,6 +4,7 @@ import { actions, useProject } from "../../store/project";
 import { useUi } from "../../store/ui";
 import { playback } from "../../store/playback";
 import { openFoundations, reflect } from "../../store/craft";
+import { tutorial, useTutorial } from "../../tutorial/store";
 import { cx } from "../primitives/cx";
 import styles from "./CommandPalette.module.css";
 
@@ -47,6 +48,8 @@ function useItems(open: boolean): Item[] {
       { id: "reflect", group: "Actions", label: "Reflect now", hint: "draft rules from scored runs", run: () => void reflect() },
       { id: "settings", group: "Actions", label: "Settings", keys: "⌘,", run: () => ui.setSettingsOpen(true) },
       { id: "keys", group: "Actions", label: "Keyboard shortcuts", keys: "?", run: () => ui.setKeysOpen(true) },
+      ...(useTutorial.getState().state?.status === "paused" ? [{ id: "guide-resume", group: "Actions" as const, label: "Tutorial: resume the guide", hint: "pick up where you left off", run: () => tutorial.resume() }] : []),
+      { id: "guide-restart", group: "Actions", label: "Tutorial: start from the beginning", hint: "setup and your first loop", run: () => tutorial.restart() },
     ];
     for (const n of Object.values(graph.nodes)) {
       if (n.loop !== loop) continue;

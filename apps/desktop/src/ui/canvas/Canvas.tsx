@@ -22,12 +22,6 @@ const TOOLS: { id: CanvasTool; label: string; key: string }[] = [
 
 const pad = (n: number) => String(Math.max(0, Math.round(n))).padStart(4, "0");
 
-/** 190px as in Figma, shrunk so long names ("UNDERSTAND") stay inside the canvas. */
-function watermarkSize(name: string, canvasWidth: number): number {
-  if (!canvasWidth) return 190;
-  return Math.min(190, Math.floor((canvasWidth - 120) / (name.length * 0.68)));
-}
-
 /** The define phase's output label follows the frame its Claude node drafts. */
 export function useOutputLabel(phase: (typeof PHASES)[number]): string {
   return useProject((s) => {
@@ -63,9 +57,6 @@ export function Canvas() {
   return (
     <main ref={ref} className={cx(styles.canvas, playing && styles.playback)} data-phase={phase} onPointerMove={onMove} onPointerLeave={() => setCursor(null)}>
       <div className={styles.grid} aria-hidden />
-      <span className={styles.watermark} style={{ fontSize: watermarkSize(info.name, size.width) }} aria-hidden>
-        {focus ? info.name.toUpperCase() : ""}
-      </span>
       <span className={styles.focusLabel} aria-hidden>
         {`PHASE 0${n} / 05  ·  ${focus ? "FOCUS" : "ALL PHASES"}  ·  LOOP ${loop}`}
       </span>

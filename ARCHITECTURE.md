@@ -318,7 +318,7 @@ user      Instruction (rendered template) + output format
   - **Sidebar, 248px:** ⌘K search, Sources, Memory, Foundations and Memory health.
   - **Canvas:**
     - 28px grid with 8px snap.
-    - Technical overlay with rulers, coordinate readout, corner brackets and a phase watermark.
+    - Technical overlay with rulers, coordinate readout and corner brackets.
     - 28px inlet and outlet rails.
     - Floating toolbar: Select V, Pan H, Add node N, Comment C, zoom.
     - Minimap.

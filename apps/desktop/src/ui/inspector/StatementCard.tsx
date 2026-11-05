@@ -106,7 +106,7 @@ export function StatementCard({ data, claudeId, outputId, frame }: { data: State
           </button>
         )}
         {outputId && (
-          <button type="button" className={styles.primary} onClick={() => void actions.lockStatement(outputId)}>
+          <button type="button" className={styles.primary} onClick={() => void actions.lockStatement(outputId)} data-tour="lock-statement">
             Lock {frame === "hypothesis" ? "hypothesis" : FRAMES[frame].toLowerCase()}
           </button>
         )}

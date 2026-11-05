@@ -20,7 +20,7 @@ const hhmm = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-di
 /** 150px history: transport, snapshot position, and the phase-colored timeline (or playback controls). */
 export function HistoryBar() {
   const active = usePlayback((s) => s.active);
-  return <footer className={styles.history}>{active ? <PlaybackControls /> : <Timeline />}</footer>;
+  return <footer className={styles.history} data-tour="history">{active ? <PlaybackControls /> : <Timeline />}</footer>;
 }
 
 function Timeline() {

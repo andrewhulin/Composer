@@ -2,6 +2,45 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## Guide: first-run tutorial · 2026-11-04
+
+### Added
+- **A step-by-step guide** that opens on first launch and walks a new person from setup through their first real loop.
+  - It points at the real controls with a ring and a card beside them; the app stays fully usable underneath.
+  - Steps tick themselves off as you do them. A step that's already done (a key in Keychain, a renamed project) is skipped.
+  - **Set up:**
+    - **Connect Claude:** opens Settings and rings the API key field.
+    - **Slot your foundations** and **Connect your sources:** both optional, with "Skip for now".
+  - **Your first loop:**
+    1. Name the problem, from the card or by double-clicking the title.
+    2. Bring in context: your own files or links, or **a sample interview** for people with no material handy.
+    3. Weigh a source.
+    4. Run Synthesize insights.
+    5. Score the run.
+    6. Lock the weighted context.
+    7. Draft and lock a testable statement in Define.
+  - **Finish:** a tour of the rest of the loop (Build, Validate, Share, the history bar), then ⌘K and ?.
+  - Each step teaches the keyboard way, and has a button that does the action for you.
+- **Leave and come back:**
+  - **Exit guide** pauses it, and a "Guide · 6 of 13 · Resume" pill appears in the title bar.
+  - ⌘K offers "Tutorial: resume the guide" and "Tutorial: start from the beginning".
+  - Progress is saved, so a restart resumes where you were.
+- **Placement:** the card sits beside what it points at, otherwise wherever covers the least of it. It never runs off screen in a small window.
+- **Tests:** step progression, auto-skip of finished steps, going back without bouncing forward, pausing, progress counts, and card placement. 131 in total.
+
+### Changed
+- **Removed the outlined phase name** ("UNDERSTAND", "DEFINE"…) along the bottom of each canvas section.
+- **The "Add your API key" banner** stays hidden while the guide is running, so the key step is the only prompt.
+
+### Decisions
+- **The guide doesn't dim the app between steps.** Only welcome and finish use a scrim. Every other step leaves the app usable, because doing the step is the point.
+- **The sample interview is fictional** and ships in the app (`tutorial/sample.ts`), so the first loop works without any material of your own.
+- **Verification:**
+  - The whole guide ran on a fresh database in the browser preview with the scripted model:
+    - Every step completed itself on the real action, from naming through locking the statement.
+    - Exit, the title-bar pill, ⌘K resume and Finish all work.
+  - The API key step was skipped rather than given a key. Its completion is covered by tests.
+
 ## M10 · Polish and packaging · 2026-11-04
 
 ### Added

@@ -104,7 +104,7 @@ function storyHashFor(graph: Graph, _s: unknown, node: GraphNode): string | null
 function ScoreRun({ runId }: { runId: Id }) {
   const value = useCraft((c) => c.scores[runId]);
   return (
-    <div className={styles.score}>
+    <div className={styles.score} data-tour="score">
       <span className={styles.scoreLabel}>Score</span>
       {[1, 2, 3, 4, 5].map((n) => (
         <button key={n} type="button" className={cx(styles.scoreDot, value !== undefined && n <= value && styles.scoreOn)} aria-label={`Score ${n} of 5`} onClick={() => void score(runId, n)}>
@@ -374,7 +374,7 @@ function Actions({ node, running, claudeId }: { node: GraphNode | undefined; run
   return (
     <footer className={styles.actions}>
       {output ? (
-        <button type="button" className={styles.run} onClick={() => void actions.lock(output.id)}>
+        <button type="button" className={styles.run} onClick={() => void actions.lock(output.id)} data-tour="primary-action">
           <span>Lock {output.title.toLowerCase()}</span>
           <span className={styles.runKey}>⌘L</span>
         </button>
@@ -385,7 +385,7 @@ function Actions({ node, running, claudeId }: { node: GraphNode | undefined; run
             <span className={styles.runKey}>⌘.</span>
           </button>
         ) : (
-          <button type="button" className={styles.run} onClick={() => actions.run(claudeId)}>
+          <button type="button" className={styles.run} onClick={() => actions.run(claudeId)} data-tour="primary-action">
             <span>Run node</span>
             <span className={styles.runKey}>⌘↵</span>
           </button>

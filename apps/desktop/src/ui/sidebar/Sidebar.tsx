@@ -116,7 +116,7 @@ export function Sidebar() {
         ))}
       </section>
 
-      <section className={cx(styles.section, styles.foundations)}>
+      <section className={cx(styles.section, styles.foundations)} data-tour="foundations">
         <header className={styles.heading}>
           <span className="caps">Foundations</span>
         </header>

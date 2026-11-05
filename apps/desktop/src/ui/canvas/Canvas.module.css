@@ -15,18 +15,6 @@
   background-size: var(--grid) var(--grid);
   pointer-events: none;
 }
-.watermark {
-  position: absolute;
-  right: 40px;
-  bottom: -30px;
-  font-weight: 700;
-  line-height: 0.8;
-  letter-spacing: -0.04em;
-  color: transparent;
-  -webkit-text-stroke: 1px rgba(var(--phase-rgb), 0.16);
-  white-space: nowrap;
-  pointer-events: none;
-}
 .focusLabel {
   position: absolute;
   right: 40px;

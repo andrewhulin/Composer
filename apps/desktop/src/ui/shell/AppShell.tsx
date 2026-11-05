@@ -13,6 +13,8 @@ import { HistoryBar } from "../history/HistoryBar";
 import { SettingsDialog } from "../settings/SettingsDialog";
 import { FoundationsSheet } from "../foundations/FoundationsSheet";
 import { CommandPalette, KeyboardMap } from "../command/CommandPalette";
+import { Coach } from "../tutorial/Coach";
+import { useTutorial } from "../../tutorial/store";
 import { KeyBanner, Toasts } from "../feedback/Toasts";
 import { CompareView } from "../history/CompareView";
 import { playback, usePlayback } from "../../store/playback";
@@ -127,6 +129,7 @@ export function AppShell() {
   const phase = useProject((s) => s.activePhase);
   const ready = useProject((s) => s.ready);
   const session = useSession();
+  const guiding = useTutorial((s) => s.state?.status === "active");
   const settingsOpen = useUi((s) => s.settingsOpen);
   const setSettingsOpen = useUi((s) => s.setSettingsOpen);
   const [hasKey, setHasKey] = useState(true);
@@ -146,10 +149,11 @@ export function AppShell() {
       <SettingsDialog />
       <FoundationsSheet />
       <CommandPalette />
+      <Coach />
       <KeyboardMap />
       <CompareView />
       <Toasts />
-      {ready && !hasKey && !settingsOpen && !(import.meta.env.DEV && location.search.includes("fake")) && <KeyBanner onAdd={() => setSettingsOpen(true)} />}
+      {ready && !hasKey && !settingsOpen && !guiding && !(import.meta.env.DEV && location.search.includes("fake")) && <KeyBanner onAdd={() => setSettingsOpen(true)} />}
     </div>
   );
 }

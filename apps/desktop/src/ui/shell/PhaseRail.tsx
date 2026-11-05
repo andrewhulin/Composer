@@ -41,7 +41,7 @@ export function PhaseRail() {
   const toggleFocus = useUi((s) => s.toggleFocus);
 
   return (
-    <nav className={styles.rail} aria-label="Phases">
+    <nav className={styles.rail} aria-label="Phases" data-tour="phase-rail">
       {PHASES.map((phase, i) => (
         <Fragment key={phase}>
           {i > 0 && (

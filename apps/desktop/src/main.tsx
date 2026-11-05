@@ -9,6 +9,7 @@ import { storyProps } from "./share/story";
 import * as craft from "./store/craft";
 import { loadCraft } from "./store/craft";
 import { loadComments } from "./store/comments";
+import { initTutorial, tutorial as tutorialApi, useTutorial } from "./tutorial/store";
 
 boot()
   .then(async (booted) => {
@@ -16,6 +17,7 @@ boot()
     await loadProject(booted);
     await loadCraft();
     await loadComments();
+    await initTutorial();
   })
   .catch((e: unknown) => useSession.setState({ status: "error", message: e instanceof Error ? e.message : String(e) }));
 
@@ -26,4 +28,4 @@ createRoot(document.getElementById("root")!).render(
 );
 
 // Dev builds expose the store for scripted UI checks from the console.
-if (import.meta.env.DEV) Object.assign(window, { __composer: { actions, useProject, storyProps, craft } });
+if (import.meta.env.DEV) Object.assign(window, { __composer: { actions, useProject, storyProps, craft, tutorial: { ...tutorialApi, useTutorial } } });

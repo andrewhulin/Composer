@@ -53,7 +53,7 @@ export function SettingsDialog() {
             esc
           </button>
         </header>
-        <section className={styles.section}>
+        <section className={styles.section} data-tour="settings-key">
           <span className="caps">Anthropic API key</span>
           <p className={styles.note}>
             Every Claude node runs on Claude Opus 5.5 with this key. It lives in your macOS Keychain under com.andrewhulin.composer and is never written to disk or the repo.
@@ -94,7 +94,7 @@ export function SettingsDialog() {
             )}
           </div>
         </section>
-        <section className={styles.section}>
+        <section className={styles.section} data-tour="settings-sources">
           <span className="caps">Sources</span>
           <p className={styles.note}>Paste or drop a link from any of these and Composer pulls it through the API. Tokens live in Keychain.</p>
           {CONNECTORS.map((c) => (

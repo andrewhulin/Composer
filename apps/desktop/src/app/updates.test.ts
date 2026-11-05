@@ -2,12 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createUpdates, type UpdateDeps } from "./updates";
 import type { FoundUpdate, Updater } from "../platform/updater";
 
-function harness(opts: { found?: string | null; checkError?: string; downloadError?: string; installError?: string } = {}) {
+function harness(opts: { found?: string | null; checkError?: string; downloadError?: string; installError?: string; relaunchError?: string } = {}) {
   const log: string[] = [];
   const notes: { text: string; tone: string }[] = [];
   let busy: string | null = null;
   const watchers = new Set<() => void>();
-  const failNext = { download: opts.downloadError, install: opts.installError };
+  const failNext = { download: opts.downloadError, install: opts.installError, relaunch: opts.relaunchError };
   const hooks: { onSave?: () => void } = {};
   const update = (version: string): FoundUpdate => ({
     version,
@@ -29,7 +29,10 @@ function harness(opts: { found?: string | null; checkError?: string; downloadErr
       if (opts.checkError) throw new Error(opts.checkError);
       return opts.found ? update(opts.found) : null;
     },
-    relaunch: async () => void log.push("relaunch"),
+    relaunch: async () => {
+      log.push("relaunch");
+      if (failNext.relaunch) throw new Error(failNext.relaunch);
+    },
   };
   const deps: UpdateDeps = {
     updater,
@@ -97,10 +100,18 @@ describe("checking", () => {
   });
 
   it("records when it last checked", async () => {
+    vi.useFakeTimers({ now: new Date("2026-11-05T12:00:00Z") });
     const h = harness();
     expect(h.updates.store.getState().checkedAt).toBeNull();
     await h.updates.check({ manual: false });
-    expect(h.updates.store.getState().checkedAt).toEqual(expect.any(Number));
+    expect(h.updates.store.getState().checkedAt).toBe(Date.parse("2026-11-05T12:00:00Z"));
+  });
+
+  it("ignores a second check while one is running", async () => {
+    const h = harness({ found: "0.1.1" });
+    await Promise.all([h.updates.check({ manual: false }), h.updates.check({ manual: true })]);
+    expect(h.log).toEqual(["check"]);
+    expect(h.state()).toEqual({ status: "available", version: "0.1.1" });
   });
 
   it("checks after the launch delay, then on every interval", async () => {
@@ -135,6 +146,23 @@ describe("restarting", () => {
     await h.updates.restart();
     expect(h.log).toEqual(["check", "download", "save", "install", "relaunch"]);
     expect(h.state()).toEqual({ status: "restarting", version: "0.1.1" });
+  });
+
+  it("downloads once when Restart is clicked twice", async () => {
+    const h = harness({ found: "0.1.1" });
+    await h.updates.check({ manual: false });
+    await Promise.all([h.updates.restart(), h.updates.restart()]);
+    expect(h.log).toEqual(["check", "download", "save", "install", "relaunch"]);
+  });
+
+  it("retries a failed relaunch without installing again", async () => {
+    const h = harness({ found: "0.1.1", relaunchError: "couldn't spawn" });
+    await h.updates.check({ manual: false });
+    await h.updates.restart();
+    expect(h.state()).toEqual({ status: "failed", version: "0.1.1", message: "couldn't spawn" });
+    h.failNext.relaunch = undefined;
+    await h.updates.restart();
+    expect(h.log).toEqual(["check", "download", "save", "install", "relaunch", "save", "relaunch"]);
   });
 
   it("does nothing before an update is found", async () => {

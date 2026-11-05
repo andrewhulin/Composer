@@ -15,7 +15,11 @@ Newest first. Every milestone adds an entry. A **Decisions** list records each d
 - **Release workflow** (`.github/workflows/release.yml`): pushing a `v*` tag checks that the tag matches the app version, runs `pnpm check`, builds one universal app (Apple Silicon and Intel), signs the update and publishes a GitHub Release with the `.app.tar.gz`, its `.sig` and `latest.json`.
 - **README:** how to cut a release, the one-time signing secrets, and how to install from a release.
 - **Browser preview:** updating is a no-op without Tauri. `?update=0.1.1` scripts a found update; `?update=latest`, `?update=error` and `&install=error` script the other outcomes.
-- **Tests:** quiet and manual checks, the launch delay and interval, waiting for a run, a run starting during the save, cancel, and retrying a failed download or install. 145 in total.
+- **Tests:**
+  - **The update lifecycle:** quiet and manual checks, the launch delay and interval, waiting for a run, a run starting during the save, cancel, a double-clicked Restart, and retrying a failed download, install or relaunch.
+  - **Against the real stores:** a restart waits for a Claude run, Reflect or a video render, and saves the working graph first. Also the ⌘K entry, and that a development copy never checks on its own.
+  - **The updater:** download progress from the Tauri plugin, and each scripted outcome in the browser preview.
+  - 167 in total.
 
 ### Changed
 - **The title bar's two sides share the spare width** instead of 420px each, so the update pill, the Guide pill, the panel toggles and the save status fit at the default window size. The project name stays centered.

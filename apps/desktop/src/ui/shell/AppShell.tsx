@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties } from "react";
-import { PHASES, type ClaudeNode, type OutputNode } from "@composer/core";
+import { PHASES, PHASE_SURFACE, type ClaudeNode, type OutputNode } from "@composer/core";
 import { actions, useProject } from "../../store/project";
 import { useUi } from "../../store/ui";
 import { useSession } from "../../store/session";
@@ -108,7 +108,8 @@ function useShortcuts() {
       }
       if (e.metaKey && e.key.toLowerCase() === "l" && node?.kind === "output") {
         e.preventDefault();
-        void actions.lock(node.id);
+        if (node.phase === "define") void actions.lockStatement(node.id);
+        else void actions.lock(node.id);
         return;
       }
       if (e.metaKey && /^[1-5]$/.test(e.key)) {
@@ -125,7 +126,12 @@ function useShortcuts() {
       else if (k === "c") ui.setTool("comment");
       else if (e.key === "?") ui.setKeysOpen(!ui.keysOpen);
       else if (k === "n") ui.setAddMenuOpen(!ui.addMenuOpen);
-      else if (k === "escape") {
+      else if (k === "b" && useProject.getState().activePhase === "build") ui.setVariantsOpen(!ui.variantsOpen);
+      else if (k === "g" && PHASE_SURFACE[useProject.getState().activePhase] !== "canvas") ui.setShowGraph(!ui.showGraph);
+      else if (k === "escape" && (ui.studio || ui.variantsOpen)) {
+        if (ui.studio) ui.setStudio(null);
+        else ui.setVariantsOpen(false);
+      } else if (k === "escape") {
         ui.setAddMenuOpen(false);
         actions.select(null);
       }

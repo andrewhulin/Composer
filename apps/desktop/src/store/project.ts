@@ -14,6 +14,8 @@ import {
   type HypothesisBlock,
   type Id,
   type OutputNode,
+  type OutputNote,
+  type NoteAnchor,
   type OutputVersion,
   type Phase,
   type SourceContent,
@@ -51,10 +53,16 @@ import {
   type NodeStatus,
   type ProjectMemory,
   type RunDeps,
+  defineArtifact,
+  statementForm,
+  FORK_ROUND,
+  type DefineDraft,
+  type Direction,
+  type StatementData,
 } from "@composer/engine";
 import type { BranchRow, ProjectRow, Repo, RunRow, SnapshotRow } from "@composer/data";
 import type { Booted } from "../app/boot";
-import { evidenceTarget, newClaude, newSource, nextSourcePosition, phaseHasNodes, primaryClaude, scaffoldPhase } from "../app/scaffold";
+import { evidenceTargets, keySource, newClaude, newSource, newVariant, nextSourcePosition, phaseHasNodes, primaryClaude, roundOf, scaffoldPhase, variantsOf } from "../app/scaffold";
 import type { Ingested } from "../app/ingest";
 import { AnthropicLlm } from "../llm/anthropic";
 import { demoLlm } from "../llm/demo";
@@ -382,8 +390,7 @@ export const actions = {
     set((s) => ({ blobs: new Map(s.blobs).set(hash, ing.content) }));
     const node = { ...newSource(graph, activePhase, loop, ing.platform, ing.title, hash, position ?? nextSourcePosition(graph, activePhase, loop)), config: ing.config ?? {} };
     let g = addNode<SourceNode>(graph, node);
-    const target = evidenceTarget(g, activePhase, loop);
-    if (target) {
+    for (const target of evidenceTargets(g, activePhase, loop)) {
       const r = connectNodes(g, node.id, target.id, ulid);
       if (r.ok) g = r.graph;
     }
@@ -655,7 +662,7 @@ export const actions = {
    * Locks an Output node: a new immutable version, a snapshot, and the next phase's inlet now
    * points at it (scaffolding that phase the first time).
    */
-  async lock(outputId: Id, call?: "holds" | "misses") {
+  async lock(outputId: Id, call?: "holds" | "misses", given?: TextArtifact) {
     const { repo, project, graph, loop } = get();
     const node = graph.nodes[outputId] as OutputNode | undefined;
     if (!repo || !project || node?.kind !== "output" || node.mode !== "output") return;
@@ -665,11 +672,14 @@ export const actions = {
     }
     const edge = incoming(graph, outputId)[0];
     const out = edge ? graph.outputs[edge.from] : undefined;
-    let artifact = out ? (get().blobs.get(out.hash) as TextArtifact | undefined) : undefined;
-    if (!out || !artifact) {
+    let artifact = given ?? (out ? (get().blobs.get(out.hash) as TextArtifact | undefined) : undefined);
+    if (!artifact) {
       toast("Run the Claude node first; there's nothing to lock yet.", "error");
       return;
     }
+    // A hand edit of the handoff text (made in the key node before locking) is what ships.
+    const handEdit = node.draft?.text;
+    if (handEdit && handEdit.trim() && handEdit !== artifact.text) artifact = { ...artifact, text: handEdit, edited: true };
     // A verdict is the designer's call: overriding Claude's reading is allowed and logged.
     const claimed = (artifact.data as { verdict?: string } | undefined)?.verdict;
     if (node.phase === "validate" && call && claimed && call !== claimed) {
@@ -682,8 +692,14 @@ export const actions = {
       toast(`v${latest.version} is already locked.`);
       return;
     }
-    const version = await repo.lockOutput({ projectId: project.id, familyId: node.familyId, phase: node.phase, loop: node.loop, content: artifact, runId: out.runId });
-    set((s) => ({ versions: { ...s.versions, [version.id]: version }, blobs: new Map(s.blobs).set(version.contentHash, artifact) }));
+    const locked = artifact;
+    const version = await repo.lockOutput({ projectId: project.id, familyId: node.familyId, phase: node.phase, loop: node.loop, content: locked, ...(out ? { runId: out.runId } : {}) });
+    set((s) => ({ versions: { ...s.versions, [version.id]: version }, blobs: new Map(s.blobs).set(version.contentHash, locked) }));
+    if (handEdit) {
+      const { text: _t, ...rest } = node.draft ?? {};
+      setGraph(patchNode<OutputNode>(get().graph, outputId, { draft: rest }), false);
+      await repo.decide(project.id, "edit_output", `Edited the ${PHASE_INFO[node.phase].output.toLowerCase()} handoff by hand before locking`, { outputId, versionId: version.id });
+    }
     if (verdict) craftHooks.afterVerdict(verdict);
 
     if (verdict === "misses") {
@@ -730,21 +746,198 @@ export const actions = {
    */
   async lockStatement(outputId: Id) {
     const { graph, blobs } = get();
-    const edge = incoming(graph, outputId)[0];
-    const out = edge ? graph.outputs[edge.from] : undefined;
-    const artifact = out ? (blobs.get(out.hash) as TextArtifact | undefined) : undefined;
-    await actions.lock(outputId);
-    const data = artifact?.data as { frame?: string; statement?: string; parts?: Record<string, string> } | undefined;
-    if (data?.frame === "hypothesis" && data.statement && get().repo && get().project) {
+    const node = graph.nodes[outputId] as OutputNode | undefined;
+    const src = keySource(graph, outputId);
+    const out = src ? graph.outputs[src.id] : undefined;
+    const base = out ? ((blobs.get(out.hash) as TextArtifact | undefined)?.data as StatementData | undefined) : undefined;
+    const form = base ? statementForm(base) : { believe: "", whom: "", know_when: "" };
+    const draft: DefineDraft = { ...form, ...(node?.draft ?? {}) } as DefineDraft;
+    if (!draft.believe?.trim() || !draft.whom?.trim() || !draft.know_when?.trim()) {
+      toast("Fill in all three lines of the statement before locking.", "error");
+      return;
+    }
+    const artifact = defineArtifact(draft, base);
+    const before = latestVersionOf(node?.familyId ?? "")?.id;
+    await actions.lock(outputId, undefined, artifact);
+    if (latestVersionOf(node?.familyId ?? "")?.id === before) return;
+    const data = artifact.data as StatementData;
+    if (data.frame === "hypothesis" && get().repo && get().project) {
       const { repo, project, hypotheses } = get();
       const label = `H${Object.keys(hypotheses).length + 1}`;
-      const vars = (["who", "behavior", "because", "metric"] as const)
-        .filter((k) => data.parts?.[k])
-        .map((k) => ({ key: k === "who" ? "audience" : k === "metric" ? "signal" : k, value: data.parts![k]! }));
+      const vars = [
+        { key: "audience", value: data.form!.whom },
+        { key: "behavior", value: data.form!.believe },
+        { key: "signal", value: data.form!.know_when },
+      ].filter((v) => v.value);
       const block = await repo!.createHypothesis({ projectId: project!.id, label, statement: data.statement, vars, status: "testing", confidence: 0.5 });
       set((s) => ({ hypotheses: { ...s.hypotheses, [block.id]: block } }));
       toast(`${label} entered the memory chain`, "success");
     }
+  },
+
+  // ── workspaces and key nodes ─────────────────────────────────────────────
+
+  /** The writing workspace's working draft, kept on the key node so it survives reloads and undo. */
+  setDraft(outputId: Id, patch: Record<string, string | undefined>) {
+    const node = get().graph.nodes[outputId];
+    if (node?.kind !== "output") return;
+    const draft: Record<string, string> = { ...(node.draft ?? {}) };
+    for (const [k, v] of Object.entries(patch)) {
+      if (v === undefined) delete draft[k];
+      else draft[k] = v;
+    }
+    setGraph(patchNode<OutputNode>(get().graph, outputId, { draft }), false);
+  },
+
+  toggleCite(outputId: Id, cite: string) {
+    const node = get().graph.nodes[outputId];
+    if (node?.kind !== "output") return;
+    const cites = node.cites ?? [];
+    setGraph(patchNode<OutputNode>(get().graph, outputId, { cites: cites.includes(cite) ? cites.filter((c) => c !== cite) : [...cites, cite] }), false);
+  },
+
+  /**
+   * Edits the handoff the next phase reads. Before a lock the edit waits on the key node and ships
+   * with the lock; after a lock it becomes a new version and the next phase's inlets move to it.
+   */
+  async reviseHandoff(outputId: Id, text: string, lockedVersionId?: Id) {
+    const { repo, project, graph } = get();
+    const node = graph.nodes[outputId] as OutputNode | undefined;
+    if (!repo || !project || node?.kind !== "output") return;
+    const latest = lockedVersionId ? get().versions[lockedVersionId] : undefined;
+    if (!latest) {
+      actions.setDraft(outputId, { text });
+      toast("Handoff edited · it ships with the next lock");
+      return;
+    }
+    const content = get().blobs.get(latest.contentHash) as TextArtifact | undefined;
+    if (!content || content.text === text) return;
+    const edited: TextArtifact = { ...content, text, edited: true };
+    const version = await repo.lockOutput({ projectId: project.id, familyId: node.familyId, phase: node.phase, loop: node.loop, content: edited, ...(latest.runId ? { runId: latest.runId } : {}) });
+    set((s) => ({ versions: { ...s.versions, [version.id]: version }, blobs: new Map(s.blobs).set(version.contentHash, edited) }));
+    let g = get().graph;
+    for (const inlet of Object.values(g.nodes).filter((n): n is OutputNode => n.kind === "output" && n.mode === "inlet" && n.familyId === node.familyId && n.versionId === latest.id)) {
+      g = patchNode<OutputNode>(g, inlet.id, { versionId: version.id });
+    }
+    setGraph(g);
+    await repo.decide(project.id, "edit_output", `Edited the ${PHASE_INFO[node.phase].output.toLowerCase()} handoff by hand (v${latest.version} → v${version.version})`, { outputId, from: latest.id, to: version.id });
+    const snap = await takeSnapshot("lock", version.id, `${PHASE_INFO[node.phase].output} v${version.version} · edited`);
+    if (snap) await repo.setVersionSnapshot(version.id, snap.id);
+    toast(`${PHASE_INFO[node.phase].output} v${version.version} · the next phase reads your edit`, "success");
+  },
+
+  // ── Build variants ───────────────────────────────────────────────────────
+
+  /** Points the key node at this variant: it's the one that ships. */
+  useVariant(nodeId: Id) {
+    const { graph } = get();
+    const v = graph.nodes[nodeId];
+    if (v?.kind !== "claude") return;
+    const out = Object.values(graph.nodes).find((n): n is OutputNode => n.kind === "output" && n.mode === "output" && n.phase === v.phase && n.loop === v.loop);
+    if (!out) return;
+    let g = graph;
+    for (const e of incoming(g, out.id)) g = disconnectEdge(g, e.id);
+    const r = connectNodes(g, nodeId, out.id, ulid);
+    if (!r.ok) return toast(r.reason, "error");
+    setGraph(r.graph);
+    toast(`${v.title} feeds the key node`);
+  },
+
+  /** One more direction in the latest round. */
+  addDirection(direction: Direction = "minimal") {
+    const { graph, loop } = get();
+    const all = variantsOf(graph, loop);
+    const round = Math.max(1, ...all.map(roundOf));
+    const siblings = all.filter((n) => roundOf(n) === round);
+    const model = siblings[0];
+    const node = newVariant(graph, loop, direction, round, siblings.length, { x: (model?.position.x ?? 600), y: Math.max(72, ...siblings.map((n) => n.position.y)) + 220 }, model && round > 1 ? (graph.nodes[incoming(graph, model.id).find((e) => graph.nodes[e.from]?.kind === "claude")?.from ?? ""] as ClaudeNode | undefined) : undefined);
+    let g = addNode<ClaudeNode>(graph, node);
+    for (const e of model ? incoming(graph, model.id) : []) {
+      const r = connectNodes(g, e.from, node.id, ulid);
+      if (r.ok) g = r.graph;
+    }
+    setGraph(g);
+    set({ selection: node.id });
+  },
+
+  /**
+   * Forks a variant into the next round: three new directions that start from it. Forking is a
+   * choice, so it's also recorded as picks of this variant over its siblings.
+   */
+  async forkVariant(nodeId: Id) {
+    const { graph, loop, repo, project } = get();
+    const base = graph.nodes[nodeId];
+    if (base?.kind !== "claude" || base.recipe !== "prototype") return;
+    const round = Math.max(...variantsOf(graph, loop).map(roundOf)) + 1;
+    const feeds = incoming(graph, base.id).filter((e) => graph.nodes[e.from]?.kind !== "claude");
+    let g = graph;
+    const made: Id[] = [];
+    FORK_ROUND.forEach((direction, i) => {
+      const v = newVariant(g, loop, direction, round, i, { x: base.position.x + 380, y: 72 + i * 220 }, base);
+      g = addNode<ClaudeNode>(g, v);
+      made.push(v.id);
+      for (const e of [...feeds, { from: base.id }]) {
+        const r = connectNodes(g, e.from, v.id, ulid);
+        if (r.ok) g = r.graph;
+      }
+    });
+    setGraph(g);
+    set({ selection: made[0] ?? null });
+    const winner = graph.outputs[base.id]?.runId;
+    if (repo && project && winner) {
+      for (const sib of variantsOf(graph, loop).filter((n) => roundOf(n) === roundOf(base) && n.id !== base.id)) {
+        const loser = graph.outputs[sib.id]?.runId;
+        if (loser) await repo.addPick({ projectId: project.id, phase: "build", winnerRunId: winner, loserRunId: loser, source: "variants", statement: `Forked ${base.title} over ${sib.title}` });
+      }
+    }
+    toast(`Round ${round}: three directions from ${base.title}. Run them to compare.`, "success");
+  },
+
+  /** Records that the designer preferred one output over another of the same brief. */
+  async pick(winnerRunId: Id, loserRunId: Id, phase: Phase, source: "variants" | "rerun", note?: string, statement?: string) {
+    const { repo, project } = get();
+    if (!repo || !project) return;
+    await repo.addPick({ projectId: project.id, phase, winnerRunId, loserRunId, source, ...(note ? { note } : {}), ...(statement ? { statement } : {}) });
+  },
+
+  // ── notes and tweaks on an output ───────────────────────────────────────
+
+  addNote(nodeId: Id, anchor: NoteAnchor, text: string) {
+    const { graph } = get();
+    const node = graph.nodes[nodeId];
+    const runId = graph.outputs[nodeId]?.runId;
+    if (node?.kind !== "claude" || !runId || !text.trim()) return;
+    const note: OutputNote = { id: ulid(), runId, anchor, text: text.trim(), createdAt: new Date().toISOString() };
+    setGraph(patchNode<ClaudeNode>(graph, nodeId, { notes: [...(node.notes ?? []), note] }));
+  },
+
+  removeNote(nodeId: Id, noteId: Id) {
+    const { graph } = get();
+    const node = graph.nodes[nodeId];
+    if (node?.kind !== "claude") return;
+    const notes = (node.notes ?? []).filter((n) => n.id !== noteId);
+    const { notes: _n, ...rest } = node;
+    setGraph(patchNode<ClaudeNode>(graph, nodeId, notes.length ? { notes } : ({ ...rest, notes: undefined } as Partial<ClaudeNode>)));
+  },
+
+  /**
+   * Saves direct tweaks to a prototype as a new artifact for the same run. Keys don't change, so the
+   * node stays fresh (no rerun); downstream sees new content and goes stale.
+   */
+  async saveTweaks(nodeId: Id, html: string, changes: string[]) {
+    const { repo, project, graph, blobs } = get();
+    const out = graph.outputs[nodeId];
+    const art = out ? (blobs.get(out.hash) as TextArtifact | undefined) : undefined;
+    if (!repo || !project || !out || !art) return;
+    const data = art.data as { html?: string } | undefined;
+    if (data?.html === html) return toast("Nothing changed.");
+    const next: TextArtifact = { ...art, data: { ...(art.data as object), html }, edited: true };
+    const hash = await repo.putBlob(next, "artifact");
+    const g = get().graph;
+    set((s) => ({ graph: { ...g, outputs: { ...g.outputs, [nodeId]: { ...out, hash } } }, blobs: new Map(s.blobs).set(hash, next) }));
+    scheduleSave();
+    await repo.decide(project.id, "edit_output", `Tweaked ${graph.nodes[nodeId]?.title ?? "a prototype"} by hand: ${changes.slice(0, 6).join("; ")}`, { nodeId, runId: out.runId, from: out.hash, to: hash });
+    toast(`Saved ${changes.length} tweak${changes.length === 1 ? "" : "s"} without a rerun`, "success");
   },
 };
 

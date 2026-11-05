@@ -4,7 +4,7 @@ import { claude, graphOf, hypothesis, source, wire } from "@composer/core/testin
 import { emptyEnv, localKey } from "./keys";
 import { updateNode } from "./graph-ops";
 import { AbortError, FakeLlm } from "./llm";
-import { runClaudeNode, RunError, type RunDeps } from "./run";
+import { buildPrompt, runClaudeNode, RunError, type RunDeps } from "./run";
 
 const content: SourceContent = {
   v: 1,
@@ -73,5 +73,54 @@ describe("runClaudeNode", () => {
     const p = runClaudeNode(g, "c", "r", deps, { signal: ctrl.signal });
     setTimeout(() => ctrl.abort(), 10);
     await expect(p).rejects.toBeInstanceOf(AbortError);
+  });
+});
+
+describe("variants, notes and the kit", () => {
+  const proto = { title: "Recap", fidelity: "wireframe", html: "<section data-screen=\"Home\">Hi</section>", screens: [{ name: "Home", purpose: "x" }], rationale: "r", tests: "t" };
+  const protoArt = { v: 1 as const, kind: "text" as const, artifact: "prototype", text: "Prototype (Wireframe): Recap", data: proto };
+  const protoHash = hashOf(protoArt);
+
+  function variants(notes = false) {
+    const base = claude("a", { phase: "build", recipe: "prototype", alias: "base" });
+    const fork = claude("b", {
+      phase: "build",
+      recipe: "prototype",
+      instruction: "Build a {fidelity} prototype. Direction: {direction}. Start from {base}, the variant the designer forked.",
+      options: { fidelity: "wireframe", direction: "refine" },
+      ...(notes ? { notes: [{ id: "n1", runId: "run-b", anchor: { kind: "point" as const, x: 40, y: 120, screen: "Home", element: "button “Next”" }, text: "Make this the primary action.", createdAt: "t" }] } : {}),
+    });
+    const g = graphOf([base, fork], [wire("a", "b", "context")]);
+    g.outputs.a = { runId: "run-a", hash: protoHash, localKey: "k", envKey: "e" };
+    g.outputs.b = { runId: "run-b", hash: protoHash, localKey: "k", envKey: "e" };
+    const deps: RunDeps = { llm: new FakeLlm([]), readBlob: (h) => (h === protoHash ? protoArt : undefined), env: emptyEnv, foundations: {}, rules: [], memory: { outputs: [], chain: [] }, block: () => undefined, version: () => undefined };
+    return { g, deps };
+  }
+
+  it("fills the direction and hands a forked variant the base prototype's HTML", () => {
+    const { g, deps } = variants();
+    const p = buildPrompt(g, "b", deps);
+    const text = JSON.stringify(p.messages);
+    expect(text).toContain("Direction: Refine: keep the base variant's idea");
+    expect(text).toContain("HTML: <section data-screen=\\\"Home\\\">Hi</section>");
+    expect(p.unknownRefs).toEqual([]);
+  });
+
+  it("puts notes on the current output into the next prompt and marks the node stale", () => {
+    const plain = variants();
+    const noted = variants(true);
+    expect(localKey(plain.g, "b")).not.toBe(localKey(noted.g, "b"));
+    const text = JSON.stringify(buildPrompt(noted.g, "b", noted.deps).messages);
+    expect(text).toContain('alias=\\"notes\\"');
+    expect(text).toContain("screen Home at 40,120 on button “Next”: Make this the primary action.");
+    // Once the node reruns, the notes were answered and stop riding along.
+    noted.g.outputs.b = { ...noted.g.outputs.b!, runId: "run-c" };
+    expect(JSON.stringify(buildPrompt(noted.g, "b", noted.deps).messages)).not.toContain('alias=\\"notes\\"');
+  });
+
+  it("keeps keys of nodes without notes unchanged", () => {
+    const { g } = variants();
+    const withEmpty = { ...g, nodes: { ...g.nodes, b: { ...g.nodes.b!, notes: [] } } } as typeof g;
+    expect(localKey(withEmpty, "b")).toBe(localKey(g, "b"));
   });
 });

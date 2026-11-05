@@ -11,7 +11,7 @@ import {
   type SourceNode,
   type SourcePlatform,
 } from "@composer/core";
-import { addNode, connect, recipe } from "@composer/engine";
+import { addNode, connect, DIRECTIONS, FIRST_ROUND, incoming, recipe, type Direction } from "@composer/engine";
 
 export const DEFAULT_MODEL = "claude-opus-5-5";
 export const MODELS = [
@@ -63,8 +63,46 @@ export function newClaude(graph: Graph, phase: Phase, loop: number, recipeId: Re
     effort: r.effort,
     budget: DEFAULT_BUDGET,
     disabledInputs: [],
-    options: recipeId === "draft_statement" ? { frame: "hypothesis" } : recipeId === "prototype" ? { fidelity: "wireframe" } : {},
+    options: recipeId === "draft_statement" ? { frame: "hypothesis" } : recipeId === "prototype" ? { fidelity: "wireframe", direction: "direct", round: "1" } : {},
   };
+}
+
+const LETTERS = "ABCDEFGH";
+
+/** A Build variant: a prototype node that takes one direction in one round. */
+export function newVariant(graph: Graph, loop: number, direction: Direction, round: number, index: number, position: { x: number; y: number }, base?: ClaudeNode): NewNode<ClaudeNode> {
+  const name = DIRECTIONS[direction].split(":")[0]!;
+  const title = `${round > 1 ? `R${round} ` : ""}${LETTERS[index] ?? index + 1} · ${name}`;
+  const node = newClaude(graph, "build", loop, "prototype", position, title);
+  const instruction = base ? `${node.instruction} Start from {${base.alias}}, the variant the designer forked.` : node.instruction;
+  return {
+    ...node,
+    alias: uniqueAlias(`variant-${round > 1 ? `r${round}-` : ""}${(LETTERS[index] ?? String(index + 1)).toLowerCase()}`, graph, loop),
+    instruction,
+    options: { fidelity: base?.options.fidelity ?? "wireframe", direction, round: String(round) },
+  };
+}
+
+function uniqueAlias(base: string, graph: Graph, loop: number): string {
+  const taken = new Set(Object.values(graph.nodes).filter((n) => n.phase === "build" && n.loop === loop).map((n) => n.alias));
+  if (!taken.has(base)) return base;
+  for (let i = 2; ; i++) if (!taken.has(`${base}-${i}`)) return `${base}-${i}`;
+}
+
+/** The Build variants of a loop, by round. */
+export function variantsOf(graph: Graph, loop: number): ClaudeNode[] {
+  return Object.values(graph.nodes)
+    .filter((n): n is ClaudeNode => n.kind === "claude" && n.recipe === "prototype" && n.phase === "build" && n.loop === loop)
+    .sort((a, b) => Number(a.options.round ?? 1) - Number(b.options.round ?? 1) || a.createdSeq - b.createdSeq);
+}
+
+export const roundOf = (n: ClaudeNode) => Number(n.options.round ?? 1);
+
+/** The Claude node the phase's key node reads from. */
+export function keySource(graph: Graph, outputId: Id): ClaudeNode | undefined {
+  const e = incoming(graph, outputId)[0];
+  const n = e ? graph.nodes[e.from] : undefined;
+  return n?.kind === "claude" ? n : undefined;
 }
 
 export function newOutput(graph: Graph, phase: Phase, loop: number, position: { x: number; y: number }, familyId: Id = ulid()): NewNode<OutputNode> {
@@ -131,6 +169,18 @@ export function nextSourcePosition(graph: Graph, phase: Phase, loop: number): { 
 
 const RECIPE_FOR: Partial<Record<Phase, RecipeId>> = { understand: "synthesize_insights", define: "draft_statement", build: "prototype", validate: "test_strategy", share: "release_story" };
 
+/** Every node new evidence feeds: in Build, each variant of the latest round; elsewhere one node. */
+export function evidenceTargets(graph: Graph, phase: Phase, loop: number): ClaudeNode[] {
+  if (phase === "build") {
+    const all = variantsOf(graph, loop);
+    const last = Math.max(0, ...all.map(roundOf));
+    const latest = all.filter((n) => roundOf(n) === last);
+    if (latest.length) return latest;
+  }
+  const one = evidenceTarget(graph, phase, loop);
+  return one ? [one] : [];
+}
+
 /** Where evidence dropped into a phase is wired: Validate's verdict step, else the phase's first step. */
 export function evidenceTarget(graph: Graph, phase: Phase, loop: number): ClaudeNode | undefined {
   if (phase === "validate") {
@@ -148,6 +198,7 @@ export function scaffoldPhase(graph: Graph, phase: Phase, loop: number, inlet?: 
   const recipeId = RECIPE_FOR[phase];
   if (!recipeId) return graph;
   let g = graph;
+  if (phase === "build") return scaffoldBuild(g, loop, inlet);
   const claude = newClaude(g, phase, loop, recipeId, { x: 600, y: 248 });
   g = addNode(g, claude);
   let last: { id: Id } = claude;
@@ -175,6 +226,30 @@ export function scaffoldPhase(graph: Graph, phase: Phase, loop: number, inlet?: 
     g = addNode(g, node);
     const r2 = connect(g, node.id, claude.id, ulid);
     if (r2.ok) g = r2.graph;
+  }
+  return g;
+}
+
+/** Build starts as three variants side by side, each a different direction, all fed by the inlet. */
+function scaffoldBuild(graph: Graph, loop: number, inlet?: { familyId: Id; versionId: Id; phase: Phase }): Graph {
+  let g = graph;
+  const ids: Id[] = [];
+  FIRST_ROUND.forEach((direction, i) => {
+    const v = newVariant(g, loop, direction, 1, i, { x: 600, y: 72 + i * 220 });
+    g = addNode(g, v);
+    ids.push(v.id);
+  });
+  const out = newOutput(g, "build", loop, { x: 1000, y: 292 });
+  g = addNode(g, out);
+  const r1 = connect(g, ids[0]!, out.id, ulid);
+  if (r1.ok) g = r1.graph;
+  if (inlet) {
+    const node = newInlet(g, "build", loop, inlet, { x: 72, y: 292 });
+    g = addNode(g, node);
+    for (const id of ids) {
+      const r = connect(g, node.id, id, ulid);
+      if (r.ok) g = r.graph;
+    }
   }
   return g;
 }

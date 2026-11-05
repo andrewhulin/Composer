@@ -85,6 +85,23 @@ export interface ClaudeNode extends NodeBase {
   disabledInputs: Id[];
   /** Recipe options, e.g. `{ frame: "problem_statement" }` or `{ fidelity: "wireframe" }`. */
   options: Record<string, string>;
+  /** Feedback pinned to a spot on this node's output. Present notes ride into the next run. */
+  notes?: OutputNote[];
+}
+
+/** Where on an output a note is pinned. */
+export type NoteAnchor =
+  | { kind: "point"; x: number; y: number; screen?: string | null; element?: string }
+  | { kind: "field"; field: string; quote?: string };
+
+/** Feedback pinned to one run's output: the designer's words on a specific spot. */
+export interface OutputNote {
+  id: Id;
+  /** The run whose output the note was written against. */
+  runId: Id;
+  anchor: NoteAnchor;
+  text: string;
+  createdAt: string;
 }
 
 export interface HypothesisNode extends NodeBase {
@@ -99,6 +116,10 @@ export interface OutputNode extends NodeBase, Partial<Weighing> {
   familyId: Id;
   /** For inlets: the exact locked version consumed. */
   versionId?: Id;
+  /** Writing workspaces: the designer's working draft of the key output, before it is locked. */
+  draft?: Record<string, string>;
+  /** Writing workspaces: ids of evidence the draft cites. */
+  cites?: string[];
 }
 
 export type GraphNode = SourceNode | ClaudeNode | HypothesisNode | OutputNode;
@@ -173,6 +194,8 @@ export interface TextArtifact {
   artifact: string;
   text: string;
   data?: unknown;
+  /** True when the designer edited this artifact by hand (a handoff edit or a direct tweak). */
+  edited?: boolean;
 }
 
 export type HypothesisStatus = "draft" | "testing" | "held" | "failed" | "retired";

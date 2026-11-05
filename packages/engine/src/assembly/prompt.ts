@@ -101,7 +101,8 @@ In the instruction, a name in angle brackets such as <interviews> refers to the 
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
-function docTag(d: DocInput, body: string): string {
+/** One document as Claude sees it. Exported so a key node can preview its exact handoff. */
+export function docTag(d: DocInput, body: string): string {
   const attrs = [
     `alias="${esc(d.alias)}"`,
     `title="${esc(d.title)}"`,
@@ -113,7 +114,7 @@ function docTag(d: DocInput, body: string): string {
   return `<doc ${attrs.join(" ")}>\n${body}\n</doc>`;
 }
 
-function foundationsBlock(f: Foundations): string {
+export function foundationsBlock(f: Foundations): string {
   const parts: string[] = [];
   if (f.philosophy) {
     parts.push(
@@ -128,7 +129,7 @@ function foundationsBlock(f: Foundations): string {
     : "No design system or design philosophy is slotted yet.";
 }
 
-function rulesBlock(phase: Phase, rules: { id: string; text: string }[]): string {
+export function rulesBlock(phase: Phase, rules: { id: string; text: string }[]): string {
   const name = PHASE_INFO[phase].name;
   if (!rules.length) return `No learned rules for ${name} yet.`;
   return `Rules learned from the designer's scored runs in ${name}. Apply them:\n${rules.map((r) => `[${r.id}] ${r.text}`).join("\n")}`;

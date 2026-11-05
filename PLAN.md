@@ -1,6 +1,6 @@
 # Design Composer: milestone plan
 
-**Status:** M0–M10 shipped on 2026-11-04. What each milestone delivered, and every default picked along the way, is in [CHANGELOG.md](CHANGELOG.md).
+**Status:** M0–M10 shipped on 2026-11-04. M11 (workspaces, key nodes, Build variants, evals) built on 2026-11-05 on a branch, waiting on review. What each milestone delivered, and every default picked along the way, is in [CHANGELOG.md](CHANGELOG.md).
 
 This is the plan of attack. The design behind it is in [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -27,6 +27,7 @@ Each milestone ends with: tests green, app run and checked against Figma, CHANGE
 | M8 | Share | Remotion renderer (4 chapters, real graph, prototype in device frame, metrics), player, MP4/GIF/poster, voiceover, PR via gh |
 | M9 | Foundations + improvement | DS + philosophy slots with seed import, changelogs, proposal review flow, scoring, Reflect job, approval queue, memory health, Craft memory across projects |
 | M10 | Polish + package | keyboard map, empty/error states, performance pass, app icon, `pnpm tauri build` .app |
+| M11 | Workspaces + evals | Define as a writing workspace (fixed form, evidence rail, variants, Lock) and Validate as a scorecard (pinned statement, metrics with targets, lanes per source, verdict); a key node pinned in every phase with an editable prompt preview of the handoff; Build variants by default with fork rounds, the interaction kit and direct tweaks without a rerun; pairwise picks, pinned notes and replay of past briefs before a rule or principle is kept |
 
 - **Questions back to Andrew** happen only when a choice changes the product. Every other default goes into CHANGELOG.md under "Decisions".
 

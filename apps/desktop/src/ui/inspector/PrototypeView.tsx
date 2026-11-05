@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Hash, Id } from "@composer/core";
 import { FIDELITIES, lintAgainstTokens, type Fidelity, type PrototypeData } from "@composer/engine";
 import { actions, toast } from "../../store/project";
-import { figmaPayload, prototypeUrl, serialize } from "../../build/runtime";
+import { figmaPayload, prototypeUrl, serialize } from "../../prototype/runtime";
 import { currentTokens, recordLint } from "../../store/craft";
 import { cx } from "../primitives/cx";
 import styles from "./PrototypeView.module.css";
@@ -61,7 +61,7 @@ export function PrototypeView({ data, hash, claudeId }: { data: PrototypeData; h
     try {
       const s = await serialize(frame.current);
       if (!s.tree.length) throw new Error("The prototype hasn't laid out yet. Open it large, then send again.");
-      await navigator.clipboard.writeText(figmaPayload(s, currentTokens()));
+      await navigator.clipboard.writeText(figmaPayload(s, currentTokens(), data.title));
       toast(`Copied ${s.tree.length} screen${s.tree.length === 1 ? "" : "s"} for Figma. In Figma, run Design Composer → Paste from Composer.`, "success");
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "error");

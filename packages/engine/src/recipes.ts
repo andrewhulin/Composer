@@ -1,4 +1,5 @@
 import type { Effort, Phase, RecipeId } from "@composer/core";
+import { KIT_DOC } from "./kit";
 
 export interface Recipe {
   id: RecipeId;
@@ -39,13 +40,31 @@ export interface InsightsData {
   open_questions: string[];
 }
 
+/** The statement in Define's fixed form: what the writing workspace edits and the key node hands off. */
+export interface StatementForm {
+  believe: string;
+  whom: string;
+  know_when: string;
+}
+
 export interface StatementData {
   frame: Frame;
+  /** The fixed form. Older artifacts predate it; `statementForm` fills it from the parts. */
+  form?: StatementForm;
+  /** Variants of the same statement from different angles, shown beside it. */
+  variants?: (StatementForm & { angle: string })[];
   statement: string;
   parts: { who: string; behavior: string; because: string; metric: string };
   support: { label: string; text: string }[];
   checks: { testable: boolean; specific_user: boolean; measurable: boolean; heavy_sources: string[] };
   alternates: { frame: Frame; statement: string }[];
+}
+
+/** The fixed form for any statement, falling back to its parts for artifacts written before the form existed. */
+export function statementForm(d: StatementData): StatementForm {
+  if (d.form) return d.form;
+  const behavior = [d.parts.behavior, d.parts.because && `because ${d.parts.because}`].filter(Boolean).join(" ");
+  return { believe: behavior || d.statement, whom: d.parts.who, know_when: d.parts.metric };
 }
 
 export const FIDELITIES = { lofi: "Low-fi", wireframe: "Wireframe", hifi: "High-fi" } as const;
@@ -109,11 +128,13 @@ export const RECIPES: Partial<Record<RecipeId, Recipe>> = {
     artifact: "testable_statement",
     effort: "high",
     charter:
-      "This phase aligns on something testable. Its one output is a testable statement in the frame the designer picked: a hypothesis (We believe [who] will [behavior] if [because]. We will know when [metric].), a problem statement, a How might we, or a user statement. It must be specific about who, measurable, and traceable to the heavy evidence.",
+      "This phase aligns on something testable. Its one output is a testable statement in the frame the designer picked: a hypothesis (We believe [who] will [behavior] if [because]. We will know when [metric].), a problem statement, a How might we, or a user statement. It must be specific about who, measurable, and traceable to the heavy evidence. Always also return it in the fixed form the designer writes in: believe (the change and the behavior it causes), whom (one specific user, never \"users\"), know_when (an observable, measurable signal with a threshold). Then give three variants of the same form from genuinely different angles (a narrower user, a different behavior, a stricter signal), each naming its angle in a few words.",
     defaultInstruction:
       "Draft one {frame} from {insights}. Hold it against the active hypothesis if one is wired. Quote people directly. Then draft two alternates in other frames.",
     schema: obj({
       frame: { type: "string", enum: Object.keys(FRAMES) },
+      form: obj({ believe: str, whom: str, know_when: str }),
+      variants: arr(obj({ angle: str, believe: str, whom: str, know_when: str })),
       statement: str,
       parts: obj({ who: str, behavior: str, because: str, metric: str }),
       support: arr(obj({ label: str, text: str })),
@@ -129,6 +150,7 @@ export const RECIPES: Partial<Record<RecipeId, Recipe>> = {
       const d = data as StatementData;
       return [
         `${FRAMES[d.frame]}: ${d.statement}`,
+        ...(d.form ? [`We believe: ${d.form.believe}`, `For whom: ${d.form.whom}`, `We'll know when: ${d.form.know_when}`] : []),
         ...d.support.map((s) => `${s.label}: ${s.text}`),
         d.parts.metric ? `Metric: ${d.parts.metric}` : "",
       ]
@@ -148,8 +170,12 @@ RECIPES.prototype = {
 
 Return one complete, self-contained HTML document: inline <style> and <script> only, no external requests, no frameworks, no web fonts. Frame it as a phone screen (390 × 844) unless the statement is clearly about desktop. Mark each top-level screen with data-screen="Name", and put data-part="who|behavior|because|metric" on the elements that carry that part of the hypothesis. Use real words from the evidence, never lorem ipsum.
 
+Build runs as variants: sibling nodes each take a different direction, and the designer compares them side by side. Commit to your direction; sibling variants take others. If another prototype is wired in, it is the variant the designer forked: its HTML is included, so keep what works in it and change what the direction and any notes ask. A <notes> document holds the designer's feedback pinned to spots on the last output; address every note.
+
+${KIT_DOC}
+
 ${FIDELITY_RULES}`,
-  defaultInstruction: "Build a {fidelity} prototype that tests {statement}. Hold it against the active hypothesis if one is wired. Show the moment the hypothesis is about, and nothing that doesn't serve it.",
+  defaultInstruction: "Build a {fidelity} prototype that tests {statement}. Direction: {direction}. Hold it against the active hypothesis if one is wired. Show the moment the hypothesis is about, and nothing that doesn't serve it.",
   schema: obj({
     title: str,
     fidelity: { type: "string", enum: Object.keys(FIDELITIES) },
@@ -171,7 +197,8 @@ export type Method = keyof typeof METHODS;
 export const METHOD_ORDER: Method[] = ["slack", "360", "statsig", "survey"];
 
 export interface StrategyData {
-  metrics: { kind: MetricKind; text: string }[];
+  /** `target` is the threshold that decides it, e.g. "≥ 40% within 7 days". Older strategies lack it. */
+  metrics: { kind: MetricKind; text: string; target?: string }[];
   methods: { method: Method; use: boolean; plan: string; questions: string[] }[];
   decision_rule: string;
 }
@@ -192,16 +219,16 @@ RECIPES.test_strategy = {
   effort: "high",
   charter:
     "This phase crafts the test strategy and reaches a verdict. This step writes the strategy: success metrics tied to the hypothesis, guardrails that must not get worse, a kill criterion that sends the work back to Understand, and the cheapest methods that can prove or disprove it. Methods available: internal feedback in Slack, 360 user sessions, an A/B test in Statsig, an unmoderated survey. Only switch on the methods this hypothesis needs.",
-  defaultInstruction: "Write the test strategy for {prototype}, held against the active hypothesis. Name one success metric with its threshold, the guardrails, and the kill criterion. For each method, say whether to use it, the plan, and the exact questions to ask.",
+  defaultInstruction: "Write the test strategy for {prototype}, held against the active hypothesis. Name one success metric with its target threshold, the guardrails, and the kill criterion. For each method, say whether to use it, the plan, and the exact questions to ask.",
   schema: obj({
-    metrics: arr(obj({ kind: { type: "string", enum: ["success", "guardrail", "kill"] }, text: str })),
+    metrics: arr(obj({ kind: { type: "string", enum: ["success", "guardrail", "kill"] }, text: str, target: str })),
     methods: arr(obj({ method: { type: "string", enum: METHOD_ORDER }, use: { type: "boolean" }, plan: str, questions: arr(str) })),
     decision_rule: str,
   }),
   render: (data) => {
     const d = data as StrategyData;
     return [
-      ...d.metrics.map((m) => `${m.kind}: ${m.text}`),
+      ...d.metrics.map((m) => `${m.kind}: ${m.text}${m.target ? ` (target ${m.target})` : ""}`),
       ...d.methods.filter((m) => m.use).map((m) => `${METHODS[m.method]}: ${m.plan}`),
       `Decision: ${d.decision_rule}`,
     ].join("\n");

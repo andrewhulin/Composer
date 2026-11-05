@@ -5,6 +5,7 @@ import { toast, useProject } from "../../store/project";
 import { AnthropicLlm } from "../../llm/anthropic";
 import { CONNECTORS, type Connector } from "../../connectors";
 import { rendererDefaultDir } from "../../platform/share";
+import { UpdatesSection } from "./UpdatesSection";
 import styles from "./SettingsDialog.module.css";
 
 /** ⌘, — the Anthropic API key (stored in Keychain) and a connection check. */
@@ -107,6 +108,7 @@ export function SettingsDialog() {
           <PathSetting settingKey="renderer_dir" label="Renderer folder" placeholder={rendererHint ?? "…/Composer/packages/renderer"} />
           <PathSetting settingKey="pr_repo" label="Repository for PRs" placeholder="~/Documents/GitHub/your-app" />
         </section>
+        <UpdatesSection />
       </div>
     </div>
   );

@@ -22,7 +22,7 @@ export interface UpdatesSnapshot {
 
 export interface UpdateDeps {
   updater: Updater | null;
-  /** What's in flight that a restart would cut off ("a Claude run"), or null when it's safe. */
+  /** What's in flight that a restart would cut off ("the Claude run"), or null when it's safe. */
   busy: () => string | null;
   /** Calls back whenever anything `busy` reads changes. Returns an unsubscribe. */
   watchBusy: (changed: () => void) => () => void;

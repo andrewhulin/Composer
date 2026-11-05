@@ -14,4 +14,5 @@ export * from "./assembly/units";
 export * from "./memory";
 export * from "./history";
 export * from "./lint";
+export * from "./kit";
 export * from "./foundations";

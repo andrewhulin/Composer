@@ -1,7 +1,8 @@
 /**
  * Renders a release story. Run with the system Node (type stripping):
  *   node render.ts --props story.json --out ./out [--no-voice] [--no-gif]
- * Prints one JSON object per line: {stage, progress?} … then {stage: "done", mp4, gif, poster} or {stage: "error", message}.
+ * Prints one JSON object per line: {stage, progress?} … then {stage: "done", mp4, gif, poster, check} or {stage: "error", message}.
+ * `check` is ffprobe's read of the MP4 against the composition: size, frame rate, length and sound.
  */
 import { bundle } from "@remotion/bundler";
 import { ensureBrowser, renderMedia, renderStill, selectComposition } from "@remotion/renderer";
@@ -10,6 +11,8 @@ import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { timeline, type StoryProps } from "./src/story.ts";
+import { checkRender, type RenderCheck } from "./src/probe.ts";
+import { runFf } from "./ff.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -69,6 +72,15 @@ async function main() {
   const mp4 = path.join(out, "story.mp4");
   await renderMedia({ composition, serveUrl, codec: "h264", outputLocation: mp4, inputProps: props, onProgress: ({ progress }) => emit({ stage: "mp4", progress }) });
 
+  emit({ stage: "check" });
+  let check: RenderCheck;
+  try {
+    const { stdout } = await runFf("ffprobe", ["-v", "error", "-print_format", "json", "-show_streams", "-show_format", mp4]);
+    check = checkRender(JSON.parse(stdout), { width: composition.width, height: composition.height, fps: composition.fps, frames: composition.durationInFrames, audio: !!props.voice?.some(Boolean) });
+  } catch (e) {
+    check = { summary: "not checked", problems: [`ffprobe couldn't read the file: ${e instanceof Error ? e.message : String(e)}`] };
+  }
+
   let gif: string | null = null;
   if (!flag("no-gif")) {
     gif = path.join(out, "story.gif");
@@ -78,7 +90,7 @@ async function main() {
   const proof = timeline(props).segments.find((s) => s.id === "proof")!;
   const poster = path.join(out, "poster.png");
   await renderStill({ composition, serveUrl, output: poster, inputProps: props, frame: Math.min(composition.durationInFrames - 1, proof.from + 75) });
-  emit({ stage: "done", mp4, gif, poster });
+  emit({ stage: "done", mp4, gif, poster, check });
 }
 
 main().catch((e: unknown) => {

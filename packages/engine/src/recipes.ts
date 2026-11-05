@@ -23,7 +23,9 @@ const obj = (properties: Record<string, unknown>) => ({
   properties,
 });
 const str = { type: "string" };
+const num = { type: "number" };
 const arr = (items: unknown) => ({ type: "array", items });
+const nullable = (schema: unknown) => ({ anyOf: [schema, { type: "null" }] });
 
 export const FRAMES = {
   hypothesis: "Hypothesis",
@@ -270,9 +272,23 @@ export interface StoryData {
   problem: { quote: string; who: string; context: string };
   process: { caption: string };
   ui: { caption: string; beats: { part: Part; note: string }[] };
-  proof: { caption: string; metrics: { label: string; value: string; target: string; met: "yes" | "no" | "unknown" }[] };
+  proof: { caption: string; metrics: { label: string; value: string; target: string; met: "yes" | "no" | "unknown"; chart?: StoryMetricChart | null }[] };
   /** One spoken line per chapter: problem, process, UI, proof. */
   voiceover: string[];
+  /** Stories scripted before motion existed have none, and play with fades at the default pacing. */
+  motion?: { transition: StoryTransition; pacing: Record<StorySegment, number> | null } | null;
+}
+
+export type StoryTransition = "fade" | "slide" | "wipe" | "cut";
+export type StorySegment = "title" | "problem" | "process" | "ui" | "proof" | "end";
+
+/** A metric as numbers, so the proof chapter can chart it: observed, its confidence range, and the target. */
+export interface StoryMetricChart {
+  unit: string;
+  observed: number;
+  low: number | null;
+  high: number | null;
+  target: number | null;
 }
 
 export interface PrData {
@@ -294,7 +310,7 @@ RECIPES.release_story = {
   artifact: "release_story",
   effort: "high",
   charter:
-    "This phase shares what shipped. It is the only way out of Composer. This step scripts a short release video in four chapters: the problem (the single most telling quote, verbatim, with who said it), the process (one line over the real graph rebuilding itself), the UI (the moments of the prototype that carry the hypothesis, in order), and the proof (the metrics against their targets, exactly as validated). Write for people who weren't in the room. Every claim must trace to a locked output; never invent a number or a quote.",
+    "This phase shares what shipped. It is the only way out of Composer. This step scripts a short release video in four chapters: the problem (the single most telling quote, verbatim, with who said it), the process (one line over the real graph rebuilding itself), the UI (the moments of the prototype that carry the hypothesis, in order), and the proof (the metrics against their targets, exactly as validated). Write for people who weren't in the room. Every claim must trace to a locked output; never invent a number or a quote. Give each metric as numbers in `chart` when the evidence states them: the observed value, the confidence interval's low and high if reported, and the target, all in one unit (\"%\" for a percent change). Leave a number null, or `chart` null, rather than estimate one. `motion` sets how the video moves. If a reference video is wired in, match its rhythm: choose the transition from how its shots change (hard cuts → cut, crossfades → fade, pushes → slide, reveals → wipe) and set `pacing` in seconds per segment from its shot lengths. With no reference, use fade and null pacing.",
   defaultInstruction: "Script the release story from {verdict} and the locked outputs in memory. Pick the quote that makes the problem obvious. Walk the prototype beat by beat. Show the proof with real numbers. Write one voiceover line per chapter, under 22 words each.",
   schema: obj({
     title: str,
@@ -302,8 +318,23 @@ RECIPES.release_story = {
     problem: obj({ quote: str, who: str, context: str }),
     process: obj({ caption: str }),
     ui: obj({ caption: str, beats: arr(obj({ part: { type: "string", enum: ["who", "behavior", "because", "metric"] }, note: str })) }),
-    proof: obj({ caption: str, metrics: arr(obj({ label: str, value: str, target: str, met: { type: "string", enum: ["yes", "no", "unknown"] } })) }),
+    proof: obj({
+      caption: str,
+      metrics: arr(
+        obj({
+          label: str,
+          value: str,
+          target: str,
+          met: { type: "string", enum: ["yes", "no", "unknown"] },
+          chart: nullable(obj({ unit: str, observed: num, low: nullable(num), high: nullable(num), target: nullable(num) })),
+        }),
+      ),
+    }),
     voiceover: arr(str),
+    motion: obj({
+      transition: { type: "string", enum: ["fade", "slide", "wipe", "cut"] },
+      pacing: nullable(obj({ title: num, problem: num, process: num, ui: num, proof: num, end: num })),
+    }),
   }),
   render: (data) => {
     const d = data as StoryData;

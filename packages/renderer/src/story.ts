@@ -2,6 +2,31 @@
 export type Phase = "understand" | "define" | "build" | "validate" | "share";
 export type Part = "who" | "behavior" | "because" | "metric";
 export type Met = "yes" | "no" | "unknown";
+export type Transition = "fade" | "slide" | "wipe" | "cut";
+
+/** A metric as numbers, so the proof can be charted: the observed change, its confidence range and the target. */
+export interface MetricChart {
+  /** How values read: "%" for percent change, otherwise a unit word like "s" or "pts". */
+  unit: string;
+  observed: number;
+  low: number | null;
+  high: number | null;
+  target: number | null;
+}
+
+export interface Metric {
+  label: string;
+  value: string;
+  target: string;
+  met: Met;
+  chart?: MetricChart | null;
+}
+
+/** How the video moves: the cut between chapters, and seconds per segment (null keeps the defaults). */
+export interface Motion {
+  transition: Transition;
+  pacing: Record<SegmentId, number> | null;
+}
 
 export interface Story {
   title: string;
@@ -9,9 +34,11 @@ export interface Story {
   problem: { quote: string; who: string; context: string };
   process: { caption: string };
   ui: { caption: string; beats: { part: Part; note: string }[] };
-  proof: { caption: string; metrics: { label: string; value: string; target: string; met: Met }[] };
+  proof: { caption: string; metrics: Metric[] };
   /** One spoken line per chapter: problem, process, UI, proof. */
   voiceover: string[];
+  /** Stories scripted before motion existed have none, and get fades at the default pacing. */
+  motion?: Motion | null;
 }
 
 export interface ProcessNode {
@@ -73,24 +100,39 @@ export interface Segment {
   chapter: number | null;
 }
 
-const BASE_SECONDS: Record<SegmentId, number> = { title: 2.5, problem: 6, process: 7, ui: 8, proof: 6, end: 2.5 };
+export const BASE_SECONDS: Record<SegmentId, number> = { title: 2.5, problem: 6, process: 7, ui: 8, proof: 6, end: 2.5 };
 const CHAPTERS: SegmentId[] = ["problem", "process", "ui", "proof"];
+/** Paced seconds are kept between these, whatever a reference video suggests. */
+const PACE_MIN = 1.5;
+const PACE_MAX = 15;
 
-/** Segment lengths: each chapter is long enough for its voiceover and its content, never shorter than its base. */
+export const transitionOf = (story: Story): Transition => story.motion?.transition ?? "fade";
+
+/** Frames two neighbouring segments share while one gives way to the next. A cut shares none. */
+export const transitionFrames = (story: Story, fps = FPS): number => (transitionOf(story) === "cut" ? 0 : Math.round(0.5 * fps));
+
+/**
+ * Segment lengths: the story's pacing (or the defaults), stretched to fit each chapter's voiceover
+ * and content. Transitions overlap neighbours, so each segment starts before the last one ends.
+ */
 export function timeline(props: Pick<StoryProps, "story" | "voice">, fps = FPS): { segments: Segment[]; total: number } {
   const order: SegmentId[] = ["title", ...CHAPTERS, "end"];
+  const pacing = props.story.motion?.pacing;
+  const overlap = transitionFrames(props.story, fps);
   let from = 0;
   const segments = order.map((id) => {
     const chapter = CHAPTERS.indexOf(id);
-    let seconds = BASE_SECONDS[id];
+    const paced = pacing?.[id];
+    let seconds = typeof paced === "number" && Number.isFinite(paced) ? Math.min(PACE_MAX, Math.max(PACE_MIN, paced)) : BASE_SECONDS[id];
     if (id === "ui") seconds = Math.max(seconds, 1.5 + props.story.ui.beats.length * 2.2);
     if (id === "proof") seconds = Math.max(seconds, 2 + props.story.proof.metrics.length * 1.2);
     const voice = chapter >= 0 ? props.voice?.[chapter] : null;
     if (voice) seconds = Math.max(seconds, voice.seconds + 1);
     const frames = Math.round(seconds * fps);
     const seg: Segment = { id, from, frames, chapter: chapter >= 0 ? chapter : null };
-    from += frames;
+    from += frames - overlap;
     return seg;
   });
-  return { segments, total: from };
+  const last = segments[segments.length - 1]!;
+  return { segments, total: last.from + last.frames };
 }

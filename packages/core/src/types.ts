@@ -28,7 +28,8 @@ export type SourcePlatform =
   | "data"
   | "slack"
   | "statsig"
-  | "findings";
+  | "findings"
+  | "video";
 
 export type RecipeId =
   | "synthesize_insights"

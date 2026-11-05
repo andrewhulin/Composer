@@ -289,7 +289,7 @@ user      Instruction (rendered template) + output format
   1. **The problem:** the heaviest quote, in animated type.
   2. **The process:** the real graph rebuilding itself from history.
   3. **The UI:** the prototype running in a device frame, with a scripted cursor and taps.
-  4. **The proof:** metrics animating against the hypothesis.
+  4. **The proof:** metrics animating against the hypothesis. When the evidence gives numbers, each metric is charted with D3 scales: the observed change, its confidence range and a target line, one shared axis per unit.
 - **Renderer:** `packages/renderer` is a Remotion project.
   - It imports the same node components as the canvas, so the process chapter is the actual graph rather than a mock.
   - It also renders the React prototype directly.
@@ -298,6 +298,9 @@ user      Instruction (rendered template) + output format
   - **Captions** are burned in.
   - Composer runs the render with the system Node through a scoped shell command.
 - **In-app player.** The same composition plays through `@remotion/player`, with Preview / Share as in Figma.
+- **Motion.** The story carries `motion`: the transition between chapters (fade, slide, wipe or cut, through `@remotion/transitions`) and optional seconds per segment. Transitions overlap neighbouring chapters, so the timeline subtracts them. The UI chapter's cursor trails with `@remotion/motion-blur`.
+- **Reference video.** In Share, a video can be wired into the release story as a source. `reference.ts` reads it with Remotion's own ffmpeg: tiny grayscale frames, ten a second, compared one to the next to find cuts, then up to ten stills. Claude sees the rhythm in words and the stills as images, and sets the transition and pacing to match. Remotion's ffmpeg build has no scene or fps filter, which is why the cuts are found in code.
+- **Delivery check.** After the MP4 renders, ffprobe reads it back and the result is compared with the composition: size, frame rate, length and whether the voiceover made it in. The Share view shows the summary, or what's off.
 - **PR path:** `gh` creates a branch, commits the prototype and GIF, and opens the PR with a Claude-drafted description: before/after, rationale and metric.
 
 ## 9. Foundations and improvement loop

@@ -13,11 +13,34 @@ const story: Story = {
 };
 
 describe("timeline", () => {
-  it("lays the six segments end to end", () => {
+  it("lays the six segments in order, each fading into the next over half a second", () => {
     const { segments, total } = timeline({ story });
     expect(segments.map((s) => s.id)).toEqual(["title", "problem", "process", "ui", "proof", "end"]);
-    segments.slice(1).forEach((s, i) => expect(s.from).toBe(segments[i]!.from + segments[i]!.frames));
+    segments.slice(1).forEach((s, i) => expect(s.from).toBe(segments[i]!.from + segments[i]!.frames - 15));
     expect(total).toBe(segments.at(-1)!.from + segments.at(-1)!.frames);
+    expect(total).toBe(segments.reduce((sum, s) => sum + s.frames, 0) - 5 * 15);
+  });
+
+  it("butts segments end to end when the story cuts", () => {
+    const cut: Story = { ...story, motion: { transition: "cut", pacing: null } };
+    const { segments, total } = timeline({ story: cut });
+    segments.slice(1).forEach((s, i) => expect(s.from).toBe(segments[i]!.from + segments[i]!.frames));
+    expect(total).toBe(segments.reduce((sum, s) => sum + s.frames, 0));
+  });
+
+  it("follows the story's pacing, within sane bounds", () => {
+    const paced: Story = { ...story, motion: { transition: "slide", pacing: { title: 1.8, problem: 4.5, process: 30, ui: 7, proof: 5, end: 0.2 } } };
+    const at = (id: string) => timeline({ story: paced }).segments.find((s) => s.id === id)!.frames;
+    expect(at("title")).toBe(54);
+    expect(at("problem")).toBe(135);
+    expect(at("process")).toBe(15 * 30);
+    expect(at("end")).toBe(45);
+  });
+
+  it("still makes room for a voiceover that runs longer than the pacing", () => {
+    const paced: Story = { ...story, motion: { transition: "fade", pacing: { title: 2, problem: 3, process: 4, ui: 5, proof: 4, end: 2 } } };
+    const problem = timeline({ story: paced, voice: [{ src: "v/0.wav", seconds: 6 }, null, null, null] }).segments.find((s) => s.id === "problem")!;
+    expect(problem.frames).toBe(7 * 30);
   });
 
   it("stretches a chapter to fit its voiceover, and never shortens one", () => {

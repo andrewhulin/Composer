@@ -108,6 +108,43 @@ pub async fn story_render(app: AppHandle, id: String, props: String, renderer_di
     .map_err(|e| e.to_string())?
 }
 
+/// Video files a reference can be read from.
+const VIDEO_EXTENSIONS: [&str; 7] = ["mp4", "mov", "m4v", "webm", "mkv", "avi", "gif"];
+
+/// Runs `node reference.ts` on a video the designer picked: ffmpeg finds its cuts and pulls a few
+/// stills into the app's stories folder. Returns the script's JSON line.
+#[tauri::command]
+pub async fn reference_frames(app: AppHandle, video: String, renderer_dir: String) -> Result<String, String> {
+    let dir = PathBuf::from(&renderer_dir);
+    if !dir.join("reference.ts").exists() {
+        return Err(format!("No reference reader at {renderer_dir}. Point Settings at packages/renderer in the Composer repo."));
+    }
+    let path = PathBuf::from(&video);
+    let ext = path.extension().and_then(|e| e.to_str()).map(|e| e.to_ascii_lowercase()).unwrap_or_default();
+    if !path.is_file() || !VIDEO_EXTENSIONS.contains(&ext.as_str()) {
+        return Err("Pick a video file: MP4, MOV, M4V, WebM, MKV, AVI or GIF.".into());
+    }
+    let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
+    let out = app.path().app_data_dir().map_err(|e| e.to_string())?.join("stories").join(format!("ref-{stamp}"));
+    std::fs::create_dir_all(&out).map_err(|e| e.to_string())?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut c = cmd("node");
+        c.current_dir(&dir).arg("reference.ts").arg("--video").arg(&path).arg("--out").arg(&out);
+        let output = c.output().map_err(|e| format!("Couldn't start Node ({e}). Install Node 22.6 or later."))?;
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let last = stdout.lines().rev().find(|l| l.starts_with('{')).map(str::to_string);
+        match last {
+            Some(line) => Ok(line),
+            None => {
+                let err = String::from_utf8_lossy(&output.stderr);
+                Err(err.trim().lines().last().unwrap_or("couldn't read the video").to_string())
+            }
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[derive(Deserialize)]
 pub struct PrFile {
     /// File name inside the PR's folder.

@@ -86,8 +86,18 @@ ${card}
           { part: "metric", note: "Opens are tracked within 24 hours" },
         ],
       },
-      proof: { caption: "Opens rose without shortening sessions.", metrics: [{ label: "Recap opened within 24h", value: "+44%", target: "+40%", met: "yes" }, { label: "Session length", value: "+1.2%", target: "no drop", met: "yes" }] },
+      proof: {
+        caption: "Opens rose without shortening sessions.",
+        metrics: [
+          { label: "Recap opened within 24h", value: "+44%", target: "+40%", met: "yes", chart: { unit: "%", observed: 44, low: 31, high: 57, target: 40 } },
+          { label: "Session length", value: "+1.2%", target: "no drop", met: "yes", chart: { unit: "%", observed: 1.2, low: -2.1, high: 4.5, target: 0 } },
+        ],
+      },
       voiceover: ["Returning users kept asking what changed since last time.", "We ran it twice: the first recap got skimmed, the second got opened.", "Now a short recap waits at the top of the next session.", "Opens rose forty-four percent, and sessions didn't get shorter."],
+      // A wired-in reference video sets a quicker, cut-driven rhythm; without one, the defaults.
+      motion: all.includes("Reference · ")
+        ? { transition: "slide", pacing: { title: 1.8, problem: 4.5, process: 5, ui: 7, proof: 5, end: 2 } }
+        : { transition: "fade", pacing: null },
     };
     const pr = {
       title: "Add a session recap for returning users",

@@ -2,6 +2,28 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## Share: transitions, a real proof chart, reference pacing and a delivery check · 2026-11-05
+
+### Added
+- **Transitions between chapters** (`@remotion/transitions`): fade, slide, wipe or a hard cut, chosen by the story. Neighbouring chapters overlap for half a second, so the video runs a little shorter and never pauses on black.
+- **Motion blur on the UI chapter's cursor** (`@remotion/motion-blur`): the arrow leaves a short trail while it moves, and only the arrow, so the prototype isn't re-rendered.
+- **A real chart in the Proof chapter** (D3 scales and number formats): each metric's observed change as a dot, its confidence range as a bar, and a dashed target line, on one axis per unit so metrics measured the same way compare at a glance. Stories without numbers keep the big-number cards.
+- **Match a reference video** (in the Share view): pick any MP4, MOV, WebM or GIF, and Remotion's own ffmpeg reads where its shots change and pulls up to ten stills. It lands as a Share source wired into the release story. Claude reads the rhythm in words and sees the stills, then sets the transition and seconds per chapter to match on the next run.
+- **Every render is checked with ffprobe:** size, frame rate, length against the timeline, and whether the voiceover made it in. The Share view shows "Checked with ffprobe · 1920×1080 · 30 fps · 29.6 s · H.264 + AAC · 7.1 MB", or what's off.
+- **Tests:** transitions and pacing in the timeline, the chart scales and number formats, the ffprobe check, cut finding and still picking, the reference as a source, and the story schema. 233 in total.
+
+### Changed
+- **The release story schema** asks for `motion` (transition and pacing, pacing null when there's no reference) and, per metric, `chart` (numbers, each null rather than guessed).
+- **The reference reader** (`reference.ts`) lives next to `render.ts` in `packages/renderer` and runs through the same Node.
+- **Tauri's dialog plugin** is added for the video picker (open only).
+
+### Decisions
+- **Half-second transitions, fade by default.** Old stories with no `motion` play with fades at the old pacing.
+- **Paced seconds are kept between 1.5 and 15 per segment,** and a chapter still stretches to fit its voiceover and content.
+- **Cuts are found in code, not by ffmpeg.** Remotion's ffmpeg build has no scene, select or fps filter. Frames are sampled at 10 per second as 64×36 grayscale; a cut is the largest change within 0.2 s that's at least 2% and three times the typical change in the surrounding 1.5 s, so a slide counts once and a scrolling recording counts never.
+- **Stills go inline** as JPEG data URLs, so the app needs no file access to show or send them, and only the first three minutes of a reference are read.
+- **Zero reads "0%", not "+0%".**
+
 ## Feature requests to the Dev queue · 2026-11-05
 
 ### Added

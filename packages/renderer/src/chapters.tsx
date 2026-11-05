@@ -1,8 +1,11 @@
 import { useCallback, useState } from "react";
 import { AbsoluteFill, Easing, IFrame, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { Trail } from "@remotion/motion-blur";
 import { ChapterLabel, MONO, SANS, Stage } from "./chrome";
 import { formatMetric, layoutProcess, parseMetric, revealFrame, type PlacedNode } from "./process";
-import { COLORS, HEIGHT, PHASES, WIDTH, type Part, type ProcessGraph, type Story, type StoryProps } from "./story";
+import type { ScaleLinear } from "d3-scale";
+import { chartOf, chartScales, formatChartValue } from "./proof";
+import { COLORS, HEIGHT, PHASES, WIDTH, type Metric, type Part, type ProcessGraph, type Story, type StoryProps } from "./story";
 
 const PHASE_NAMES = { understand: "Understand", define: "Define", build: "Build", validate: "Validate", share: "Share" } as const;
 const PART_COLOR: Record<Part, string> = { who: COLORS.phase.understand, behavior: COLORS.phase.build, because: COLORS.hypothesis, metric: COLORS.phase.validate };
@@ -170,6 +173,39 @@ export function Process({ graph, caption, frames }: { graph: ProcessGraph; capti
 type Rects = Partial<Record<Part, { x: number; y: number }>>;
 const DEVICE = { w: 390, h: 844 };
 
+interface CursorPath {
+  /** Frames per beat. */
+  per: number;
+  count: number;
+  /** Where beat i points, in device pixels. */
+  target: (i: number) => { x: number; y: number };
+}
+
+/** Where the scripted cursor is at a frame: it springs from beat to beat, then taps. */
+function cursorAt(frame: number, fps: number, path: CursorPath): { x: number; y: number; tap: number } {
+  const active = Math.min(path.count - 1, Math.max(0, Math.floor((frame - 15) / path.per)));
+  const step = Math.max(0, frame - 15 - active * path.per);
+  const move = spring({ frame: step, fps, config: { damping: 22, stiffness: 120 } });
+  const prev = path.target(Math.max(0, active - 1));
+  const next = path.target(active);
+  const tap = interpolate(step, [14, 18, 26], [0, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return { x: prev.x + (next.x - prev.x) * move, y: prev.y + (next.y - prev.y) * move, tap };
+}
+
+/** The arrow, placed from its own frame so a trail can render it at earlier moments. */
+function CursorArrow({ path, scale }: { path: CursorPath; scale: number }) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const { x, y } = cursorAt(frame, fps, path);
+  return (
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
+      <svg width="28" height="28" viewBox="0 0 24 24" style={{ position: "absolute", left: x * scale - 4, top: y * scale - 2, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.4))" }}>
+        <path d="M4 2 L4 19 L8.5 14.5 L11.5 21 L14 20 L11 13.5 L17 13.5 Z" fill="#0b0b0a" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
+      </svg>
+    </AbsoluteFill>
+  );
+}
+
 export function Ui({ story, prototype, frames }: { story: Story; prototype: StoryProps["prototype"]; frames: number }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -200,13 +236,8 @@ export function Ui({ story, prototype, frames }: { story: Story; prototype: Stor
     const r = b ? rects[b.part] : undefined;
     return r ?? { x: DEVICE.w * (0.35 + 0.3 * (i % 2)), y: DEVICE.h * (0.22 + 0.16 * i) };
   };
-  const step = Math.max(0, frame - 15 - active * per);
-  const move = spring({ frame: step, fps, config: { damping: 22, stiffness: 120 } });
-  const prev = target(Math.max(0, active - 1));
-  const next = target(active);
-  const cx = prev.x + (next.x - prev.x) * move;
-  const cy = prev.y + (next.y - prev.y) * move;
-  const tap = interpolate(step, [14, 18, 26], [0, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const path: CursorPath = { per, count: beats.length, target };
+  const { x: cx, y: cy, tap } = cursorAt(frame, fps, path);
   const enter = spring({ frame, fps, config: { damping: 200 } });
   return (
     <Stage style={{ gap: 28 }}>
@@ -226,12 +257,15 @@ export function Ui({ story, prototype, frames }: { story: Story; prototype: Stor
               <AbsoluteFill style={{ background: COLORS.raised, alignItems: "center", justifyContent: "center", fontFamily: MONO, color: COLORS.muted }}>no prototype locked</AbsoluteFill>
             )}
             {beats.length > 0 && (
-              <div style={{ position: "absolute", left: cx * scale, top: cy * scale, pointerEvents: "none" }}>
-                <div style={{ position: "absolute", left: -22, top: -22, width: 44, height: 44, borderRadius: "50%", border: `2px solid ${PART_COLOR[beats[active]!.part]}`, opacity: tap, transform: `scale(${0.6 + tap * 0.8})` }} />
-                <svg width="28" height="28" viewBox="0 0 24 24" style={{ position: "absolute", left: -4, top: -2, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.4))" }}>
-                  <path d="M4 2 L4 19 L8.5 14.5 L11.5 21 L14 20 L11 13.5 L17 13.5 Z" fill="#0b0b0a" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
-                </svg>
-              </div>
+              <>
+                <div style={{ position: "absolute", left: cx * scale, top: cy * scale, pointerEvents: "none" }}>
+                  <div style={{ position: "absolute", left: -22, top: -22, width: 44, height: 44, borderRadius: "50%", border: `2px solid ${PART_COLOR[beats[active]!.part]}`, opacity: tap, transform: `scale(${0.6 + tap * 0.8})` }} />
+                </div>
+                {/* Only the arrow trails: copies at slightly earlier frames read as motion blur while it moves. */}
+                <Trail layers={6} lagInFrames={0.35} trailOpacity={0.45}>
+                  <CursorArrow path={path} scale={scale} />
+                </Trail>
+              </>
             )}
           </div>
         </div>
@@ -253,9 +287,90 @@ export function Ui({ story, prototype, frames }: { story: Story; prototype: Stor
   );
 }
 
+const TRACK = 900;
+const metTone = (met: Metric["met"]) => (met === "yes" ? COLORS.live : met === "no" ? COLORS.phase.define : COLORS.muted);
+const metText = (met: Metric["met"]) => (met === "yes" ? "✓ met" : met === "no" ? "✕ missed" : "? open");
+
+/** One metric on its scale: the observed change, its confidence range, and the target it was held to. */
+function ChartRow({ m, i, scale }: { m: Metric; i: number; scale: ScaleLinear<number, number> | undefined }) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const c = chartOf(m);
+  const tone = metTone(m.met);
+  const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
+  const enter = spring({ frame: frame - 8 - i * 10, fps, config: { damping: 200 } });
+  const count = interpolate(frame, [12 + i * 10, 42 + i * 10], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
+  const range = interpolate(frame, [32 + i * 10, 48 + i * 10], [0, 1], clamp);
+  const targetIn = interpolate(frame, [6 + i * 10, 22 + i * 10], [0, 1], clamp);
+  const [lo, hi] = scale?.domain() ?? [0, 1];
+  const start = lo! <= 0 && hi! >= 0 ? 0 : lo!;
+  const now = c ? start + (c.observed - start) * count : 0;
+  const x = (v: number) => scale?.(v) ?? 0;
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: `380px ${TRACK}px auto`, alignItems: "center", gap: 36, opacity: enter, transform: `translateY(${(1 - enter) * 24}px)` }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <span style={{ fontSize: 26, lineHeight: 1.25, color: COLORS.secondary }}>{m.label}</span>
+        <span style={{ fontSize: 64, fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1, color: tone, fontVariantNumeric: "tabular-nums" }}>{c ? formatChartValue(now, c.unit) : m.value}</span>
+      </div>
+      {c && scale ? (
+        <svg width={TRACK} height={112} style={{ overflow: "visible" }}>
+          <line x1={0} x2={TRACK} y1={58} y2={58} stroke={COLORS.borderStrong} strokeWidth={2} />
+          {scale.ticks(5).map((t) => (
+            <g key={t}>
+              <line x1={x(t)} x2={x(t)} y1={52} y2={64} stroke={COLORS.borderStrong} strokeWidth={2} />
+              <text x={x(t)} y={98} textAnchor="middle" fontFamily={MONO} fontSize={17} fill={COLORS.muted}>
+                {formatChartValue(t, c.unit)}
+              </text>
+            </g>
+          ))}
+          {lo! <= 0 && hi! >= 0 && <line x1={x(0)} x2={x(0)} y1={34} y2={82} stroke={COLORS.secondary} strokeWidth={2} />}
+          {c.target !== null && Number.isFinite(c.target) && (
+            <g opacity={targetIn}>
+              <line x1={x(c.target)} x2={x(c.target)} y1={26} y2={26 + 64 * targetIn} stroke={COLORS.hypothesis} strokeWidth={3} strokeDasharray="7 6" />
+              <text x={x(c.target)} y={16} textAnchor="middle" fontFamily={MONO} fontSize={18} fill={COLORS.hypothesis}>
+                target {formatChartValue(c.target, c.unit)}
+              </text>
+            </g>
+          )}
+          {c.low !== null && c.high !== null && Number.isFinite(c.low) && Number.isFinite(c.high) && (
+            <rect
+              x={x(c.observed) - (x(c.observed) - x(c.low)) * range}
+              width={(x(c.high) - x(c.low)) * range}
+              y={50}
+              height={16}
+              rx={8}
+              fill={tone}
+              opacity={0.3}
+            />
+          )}
+          <circle cx={x(now)} cy={58} r={13} fill={tone} stroke={COLORS.panel} strokeWidth={4} />
+        </svg>
+      ) : (
+        <span style={{ fontFamily: MONO, fontSize: 22, color: COLORS.muted }}>target {m.target}</span>
+      )}
+      <span style={{ justifySelf: "start", whiteSpace: "nowrap", padding: "6px 14px", borderRadius: 8, fontFamily: MONO, fontSize: 22, background: `${tone}22`, color: tone, opacity: count }}>{metText(m.met)}</span>
+    </div>
+  );
+}
+
 export function Proof({ story }: { story: Story }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  if (story.proof.metrics.some((m) => chartOf(m))) {
+    const scales = chartScales(story.proof.metrics, TRACK);
+    return (
+      <Stage style={{ gap: 40 }}>
+        <ChapterLabel n={4} title="The proof" color={COLORS.phase.validate} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 26, padding: "34px 40px", borderRadius: 16, background: COLORS.panel, border: `1px solid ${COLORS.borderSubtle}` }}>
+          {story.proof.metrics.map((m, i) => {
+            const c = chartOf(m);
+            return <ChartRow key={i} m={m} i={i} scale={c ? scales.get(c.unit) : undefined} />;
+          })}
+        </div>
+        {story.proof.caption && <div style={{ fontSize: 34, color: COLORS.secondary, maxWidth: 1400, lineHeight: 1.35 }}>{story.proof.caption}</div>}
+      </Stage>
+    );
+  }
   return (
     <Stage style={{ gap: 40 }}>
       <ChapterLabel n={4} title="The proof" color={COLORS.phase.validate} />

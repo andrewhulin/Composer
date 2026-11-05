@@ -4,11 +4,13 @@ import { CHAPTERS, type PrData, type StoryData } from "@composer/engine";
 import { FPS, HEIGHT, ReleaseStory, timeline, WIDTH, type StoryProps } from "@composer/renderer";
 import { fileUrl, openUrl, revealPath } from "../../platform/share";
 import { openPullRequest, prPlan, renderRelease, storyProps, useShare } from "../../share/story";
-import { toast } from "../../store/project";
+import { addReferenceVideo } from "../../share/reference";
+import { toast, useProject } from "../../store/project";
 import { cx } from "../primitives/cx";
 import styles from "./ShareViews.module.css";
 
-const STAGE: Record<string, string> = { voice: "Recording voiceover", bundle: "Bundling", browser: "Starting the renderer", mp4: "Rendering MP4", gif: "Rendering GIF", done: "Done", error: "Failed" };
+const STAGE: Record<string, string> = { voice: "Recording voiceover", bundle: "Bundling", browser: "Starting the renderer", mp4: "Rendering MP4", check: "Checking the file", gif: "Rendering GIF", done: "Done", error: "Failed" };
+const TRANSITION_NAME = { fade: "Fades", slide: "Slides", wipe: "Wipes", cut: "Hard cuts" } as const;
 
 function usePlayerProps(data: StoryData): StoryProps | null {
   const [props, setProps] = useState<StoryProps | null>(null);
@@ -41,6 +43,36 @@ function StoryPlayer({ props, large }: { props: StoryProps; large?: boolean }) {
   );
 }
 
+/** How the video moves, and the reference it was paced from, if one is wired into Share. */
+function Pacing({ data }: { data: StoryData }) {
+  const graph = useProject((s) => s.graph);
+  const loop = useProject((s) => s.loop);
+  const reference = useMemo(() => Object.values(graph.nodes).find((n) => n.kind === "source" && n.platform === "video" && n.phase === "share" && n.loop === loop), [graph, loop]);
+  const [busy, setBusy] = useState(false);
+  const motion = data.motion;
+  const pick = async () => {
+    setBusy(true);
+    try {
+      await addReferenceVideo();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className={styles.pacing}>
+      <div className={styles.pacingText}>
+        <span>{TRANSITION_NAME[motion?.transition ?? "fade"]} between chapters · {motion?.pacing ? "paced from the reference" : "default pacing"}</span>
+        <em>{reference ? `Reference: ${reference.title.replace(/^Reference · /, "")}` : "No reference video. Add one to match its rhythm."}</em>
+      </div>
+      <button type="button" className={styles.secondary} disabled={busy} onClick={() => void pick()}>
+        {busy ? "Reading video…" : reference ? "Use another video" : "Match a reference video"}
+      </button>
+    </div>
+  );
+}
+
 /** Figma 07 · Share: the release video, playable here, then rendered to MP4, GIF and a poster. */
 export function StoryView({ data, hash }: { data: StoryData; hash: string }) {
   const props = usePlayerProps(data);
@@ -70,6 +102,7 @@ export function StoryView({ data, hash }: { data: StoryData; hash: string }) {
           </li>
         ))}
       </ol>
+      <Pacing data={data} />
       <div className={styles.render}>
         <button type="button" className={styles.primary} disabled={render?.running} onClick={() => void renderRelease(hash, data)}>
           {render?.running ? "Rendering…" : done ? "Render again" : "Render MP4 + GIF"}
@@ -98,6 +131,15 @@ export function StoryView({ data, hash }: { data: StoryData; hash: string }) {
                   <span className={styles.reveal}>Reveal</span>
                 </button>
               ) : null,
+            )}
+            {done.check && (
+              <div className={cx(styles.check, done.check.problems.length > 0 && styles.checkWarn)}>
+                <span>{done.check.problems.length ? "ffprobe found a problem" : "Checked with ffprobe"}</span>
+                <em>{done.check.summary}</em>
+                {done.check.problems.map((p) => (
+                  <p key={p}>{p}</p>
+                ))}
+              </div>
             )}
           </div>
         )}

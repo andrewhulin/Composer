@@ -11,6 +11,7 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&dir)?;
@@ -28,6 +29,7 @@ pub fn run() {
             secrets::secret_delete,
             share::renderer_default_dir,
             share::story_render,
+            share::reference_frames,
             share::pr_open,
             share::reveal_path,
             share::open_url,

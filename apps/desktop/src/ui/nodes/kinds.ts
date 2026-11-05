@@ -32,6 +32,7 @@ export const PLATFORM_LABEL: Record<SourcePlatform, string> = {
   slack: "Slack",
   statsig: "Statsig",
   findings: "Findings",
+  video: "Reference video",
 };
 
 export const PORT_COLOR: Record<PortType, string> = {

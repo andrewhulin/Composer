@@ -78,6 +78,20 @@ describe("share recipes", () => {
     expect(text).toContain("Opens: +44% (target +40%, met)");
   });
 
+  it("asks for chartable numbers and the video's motion, with null wherever Claude would have to guess", () => {
+    const r = recipe("release_story");
+    const schema = r.schema as { required: string[]; properties: Record<string, { properties: Record<string, unknown>; required: string[] }> };
+    expect(schema.required).toContain("motion");
+    const motion = schema.properties.motion!;
+    expect(motion.required).toEqual(["transition", "pacing"]);
+    expect(JSON.stringify(motion.properties.transition)).toContain('["fade","slide","wipe","cut"]');
+    expect(motion.properties.pacing).toMatchObject({ anyOf: [{ type: "object" }, { type: "null" }] });
+    const metric = (schema.properties.proof!.properties.metrics as { items: { properties: Record<string, unknown> } }).items;
+    expect(metric.properties.chart).toMatchObject({ anyOf: [{ type: "object", required: ["unit", "observed", "low", "high", "target"] }, { type: "null" }] });
+    expect(r.charter).toContain("rather than estimate");
+    expect(r.charter).toContain("reference video");
+  });
+
   it("writes the PR as GitHub markdown with before, after, why and what to watch", () => {
     const md = prMarkdown({ title: "Add a recap", summary: "Adds a recap.", before: "Empty chat.", after: "A recap card.", why: "4 of 6 asked.", metric: "Opens within 24h.", testing: ["A/B 14 days"] });
     expect(md).toContain("- **Before:** Empty chat.");

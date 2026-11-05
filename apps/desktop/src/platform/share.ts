@@ -1,14 +1,17 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import type { ReferenceInfo, RenderCheck } from "@composer/renderer";
 import { inTauri } from "./env";
 
 export interface RenderLine {
-  stage: "voice" | "bundle" | "browser" | "mp4" | "gif" | "done" | "error";
+  stage: "voice" | "bundle" | "browser" | "mp4" | "check" | "gif" | "done" | "error";
   progress?: number;
   mp4?: string;
   gif?: string | null;
   poster?: string;
   message?: string;
+  /** ffprobe's read of the MP4 against the composition. */
+  check?: RenderCheck;
 }
 
 const desktopOnly = () => new Error("Rendering and PRs need the desktop app (pnpm dev), not the browser preview.");
@@ -63,4 +66,20 @@ export const fileUrl = (path: string): string => (inTauri() ? convertFileSrc(pat
 export async function readTextFile(path: string): Promise<string> {
   if (!inTauri()) throw desktopOnly();
   return invoke<string>("read_text_file", { path });
+}
+
+/** The native open panel, for a video to use as a pacing reference. */
+export async function pickVideo(): Promise<string | null> {
+  if (!inTauri()) throw desktopOnly();
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const picked = await open({ multiple: false, directory: false, title: "Choose a reference video", filters: [{ name: "Video", extensions: ["mp4", "mov", "m4v", "webm", "mkv", "avi", "gif"] }] });
+  return typeof picked === "string" ? picked : null;
+}
+
+/** Finds a video's cuts and pulls stills from it with Remotion's ffmpeg. */
+export async function referenceFrames(video: string, rendererDir: string): Promise<ReferenceInfo> {
+  if (!inTauri()) throw desktopOnly();
+  const line = JSON.parse(await invoke<string>("reference_frames", { video, rendererDir })) as ReferenceInfo & { stage: string; message?: string };
+  if (line.stage !== "done") throw new Error(line.message ?? "Couldn't read the video");
+  return line;
 }

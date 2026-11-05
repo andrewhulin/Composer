@@ -93,7 +93,7 @@ export function Canvas() {
         </ReactFlowProvider>
       )}
 
-      {focus && !workspace && <PhaseRails phase={phase} />}
+      {focus && <PhaseRails phase={phase} />}
       {focus && !playing && <SurfaceToggle phase={phase} />}
       {focus && !playing && <KeyNode phase={phase} />}
       {variantsOpen && phase === "build" && !playing && <VariantsBoard />}

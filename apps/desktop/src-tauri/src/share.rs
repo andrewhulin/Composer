@@ -205,3 +205,21 @@ pub fn open_url(url: String) -> Result<(), String> {
     c.arg(url);
     run(c).map(|_| ())
 }
+
+/// Reads a markdown or JSON file the designer chose to import (foundations). `~` is the home folder.
+#[tauri::command]
+pub fn read_text_file(path: String) -> Result<String, String> {
+    let expanded = match path.strip_prefix("~/") {
+        Some(rest) => PathBuf::from(std::env::var("HOME").map_err(|e| e.to_string())?).join(rest),
+        None => PathBuf::from(&path),
+    };
+    let ok = expanded.extension().and_then(|e| e.to_str()).is_some_and(|e| matches!(e, "md" | "json" | "txt"));
+    if !ok {
+        return Err("Only .md, .json and .txt files can be imported.".into());
+    }
+    let meta = std::fs::metadata(&expanded).map_err(|e| format!("{}: {e}", expanded.display()))?;
+    if meta.len() > 2_000_000 {
+        return Err("That file is over 2 MB.".into());
+    }
+    std::fs::read_to_string(&expanded).map_err(|e| e.to_string())
+}

@@ -2,6 +2,7 @@ import { PHASE_INFO, type HypothesisBlock, type OutputVersion, type SourceConten
 import { actions, useProject } from "../../store/project";
 import { useUi } from "../../store/ui";
 import { Dot } from "../primitives/Dot";
+import { openFoundations, useCraft } from "../../store/craft";
 import { cx } from "../primitives/cx";
 import { PLATFORM_LABEL } from "../nodes/kinds";
 import searchIcon from "../../assets/icons/search.svg";
@@ -19,6 +20,10 @@ const HYP_DOT: Record<HypothesisBlock["status"], string> = {
 
 /** 248px left panel: search, sources, memory, foundations, memory health. */
 export function Sidebar() {
+  const craft = useCraft();
+  const pending = craft.proposals.filter((p) => p.status === "pending").length;
+  const dsPending = craft.proposals.filter((p) => p.status === "pending" && p.targetKind === "design_system").length;
+  const latestRule = craft.rules.at(-1);
   const phase = useProject((s) => s.activePhase);
   const loop = useProject((s) => s.loop);
   const graph = useProject((s) => s.graph);
@@ -95,11 +100,11 @@ export function Sidebar() {
             <span className={styles.meta}>{h.status}</span>
           </div>
         ))}
-        <div className={styles.memoryRow}>
+        <button type="button" className={cx(styles.memoryRow, styles.clickable)} onClick={() => openFoundations()}>
           <Dot color="var(--text-secondary)" size={7} />
           <span className={styles.memoryLabel}>Learned rules</span>
-          <span className={styles.meta}>0</span>
-        </div>
+          <span className={styles.meta}>{craft.rules.length}</span>
+        </button>
         {[...latestByPhase.values()].map((v) => (
           <div key={v.id} className={styles.memoryRow}>
             <Dot color={`var(--phase-${v.phase})`} size={7} />
@@ -115,7 +120,7 @@ export function Sidebar() {
         <header className={styles.heading}>
           <span className="caps">Foundations</span>
         </header>
-        <div className={styles.slot}>
+        <button type="button" className={styles.slot} onClick={() => openFoundations()}>
           <span className={styles.tile} aria-hidden>
             <i style={{ left: 5, top: 5, background: "var(--phase-understand)" }} />
             <i style={{ left: 13, top: 5, background: "var(--phase-define)" }} />
@@ -123,26 +128,42 @@ export function Sidebar() {
             <i style={{ left: 13, top: 13, background: "var(--phase-validate)" }} />
           </span>
           <div className={styles.slotText}>
-            <span className={styles.slotTitle}>Design system</span>
-            <span className={styles.slotMeta}>not slotted yet</span>
+            <span className={styles.slotTitle}>{craft.ds ? craft.ds.content.name : "Design system"}</span>
+            <span className={styles.slotMeta}>{craft.ds ? `v${craft.ds.content.version} · ${craft.ds.content.tokens.length} tokens${dsPending ? ` · ${dsPending} to review` : ""}` : "not slotted yet"}</span>
           </div>
-        </div>
-        <div className={styles.slot}>
+        </button>
+        <button type="button" className={styles.slot} onClick={() => openFoundations()}>
           <span className={cx(styles.tile, styles.glyphTile)} aria-hidden>
             ¶
           </span>
           <div className={styles.slotText}>
             <span className={styles.slotTitle}>Design philosophy</span>
-            <span className={styles.slotMeta}>not slotted yet</span>
+            <span className={styles.slotMeta}>{craft.philosophy ? `rev ${craft.philosophy.content.rev} · ${craft.philosophy.content.principles.length} principles` : "not slotted yet"}</span>
           </div>
-        </div>
+        </button>
       </section>
 
-      <div className={styles.health}>
+      <button type="button" className={styles.health} onClick={() => openFoundations()}>
         <span className="caps">Memory</span>
-        <span className={styles.healthTitle}>No rules learned yet</span>
-        <p className={styles.healthBody}>Score runs after Validate and Composer proposes rules from what scored higher. Nothing applies until you keep it.</p>
-      </div>
+        {pending > 0 ? (
+          <>
+            <span className={styles.healthTitle}>{pending} {pending === 1 ? "proposal" : "proposals"} to review</span>
+            <p className={styles.healthBody}>Drafted from your scored runs and calls. Nothing applies until you keep it.</p>
+          </>
+        ) : latestRule ? (
+          <>
+            <span className={styles.healthTitle}>Latest rule · {PHASE_INFO[latestRule.phase].name}</span>
+            <p className={styles.healthBody}>{latestRule.body}</p>
+          </>
+        ) : (
+          <>
+            <span className={styles.healthTitle}>No rules learned yet</span>
+            <p className={styles.healthBody}>
+              Score runs after Validate and Composer proposes rules from what scored higher. Nothing applies until you keep it. {craft.scoredCount > 0 && `${craft.scoredCount} scored so far.`}
+            </p>
+          </>
+        )}
+      </button>
     </aside>
   );
 }

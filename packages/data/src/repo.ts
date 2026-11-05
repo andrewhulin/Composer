@@ -87,6 +87,55 @@ export interface RunRow {
   endedAt: string | null;
 }
 
+
+export type FoundationSlot = "design_system" | "philosophy";
+
+export interface FoundationRow {
+  id: Id;
+  slot: FoundationSlot;
+  version: string;
+  contentHash: Hash;
+  /** What changed in this version, in the designer's terms. */
+  changelog: { kind: string; title: string; text: string } | null;
+  parentId: Id | null;
+  createdAt: string;
+}
+
+export type ProposalTarget = "design_system" | "philosophy" | "rule";
+export type ProposalStatus = "pending" | "accepted" | "rejected" | "deferred";
+
+export interface ProposalRow<D = unknown> {
+  id: Id;
+  targetKind: ProposalTarget;
+  targetId: Id | null;
+  baseVersion: string | null;
+  diff: D;
+  diffHash: Hash;
+  rationale: string;
+  evidence: unknown[];
+  status: ProposalStatus;
+  resolvedVersionId: Id | null;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+export interface CraftRuleRow {
+  id: Id;
+  lineageId: Id;
+  phase: Phase;
+  version: number;
+  body: string;
+  status: "active" | "retired";
+  proposalId: Id | null;
+  createdAt: string;
+}
+
+export interface ScoredRunRow {
+  run: RunRow;
+  score: number;
+  note: string | null;
+}
+
 const str = (v: SqlValue | undefined): string => (v == null ? "" : String(v));
 const strOrNull = (v: SqlValue | undefined): string | null => (v == null ? null : String(v));
 const json = <T>(v: SqlValue | undefined, fallback: T): T => (v == null ? fallback : (JSON.parse(String(v)) as T));
@@ -448,6 +497,109 @@ export class Repo {
     await this.db.run("INSERT OR REPLACE INTO token_count (hash, model_family, tokens) VALUES (?, ?, ?)", [hash, family, tokens]);
   }
 
+  // ── craft: foundations, proposals, rules, scores ─────────────────────────
+
+  /** A new version of a slot. Content is a blob; earlier versions stay as they were. */
+  async saveFoundation(slot: FoundationSlot, version: string, content: unknown, changelog: FoundationRow["changelog"], parentId: Id | null): Promise<FoundationRow> {
+    const contentHash = hashOf(content);
+    const row: FoundationRow = { id: this.ids(), slot, version, contentHash, changelog, parentId, createdAt: this.clock.now() };
+    await this.db.tx([
+      ...this.blobStatements([{ hash: contentHash, value: content, kind: slot }]),
+      {
+        sql: "INSERT INTO foundation_version (id, slot, version, content_hash, changelog, parent_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        params: [row.id, slot, version, contentHash, changelog ? JSON.stringify(changelog) : null, parentId, row.createdAt],
+      },
+      this.decisionStatement(null, "foundation", `${slot === "design_system" ? "Design system" : "Philosophy"} ${version}${changelog ? `: ${changelog.title}` : ""}`, { versionId: row.id }),
+    ]);
+    return row;
+  }
+
+  async listFoundations(slot: FoundationSlot): Promise<FoundationRow[]> {
+    return (await this.db.all("SELECT * FROM foundation_version WHERE slot = ? ORDER BY rowid", [slot])).map(toFoundation);
+  }
+
+  async latestFoundation<T>(slot: FoundationSlot): Promise<{ row: FoundationRow; content: T } | undefined> {
+    const [r] = await this.db.all("SELECT * FROM foundation_version WHERE slot = ? ORDER BY rowid DESC LIMIT 1", [slot]);
+    if (!r) return undefined;
+    const row = toFoundation(r);
+    const content = await this.getBlob<T>(row.contentHash);
+    return content === undefined ? undefined : { row, content };
+  }
+
+  async createProposal<D>(p: { targetKind: ProposalTarget; targetId?: Id | null; baseVersion?: string | null; diff: D; rationale: string; evidence?: unknown[] }): Promise<ProposalRow<D>> {
+    const diffHash = hashOf(p.diff);
+    const row: ProposalRow<D> = { id: this.ids(), targetKind: p.targetKind, targetId: p.targetId ?? null, baseVersion: p.baseVersion ?? null, diff: p.diff, diffHash, rationale: p.rationale, evidence: p.evidence ?? [], status: "pending", resolvedVersionId: null, createdAt: this.clock.now(), resolvedAt: null };
+    await this.db.tx([
+      ...this.blobStatements([{ hash: diffHash, value: p.diff, kind: "proposal_diff" }]),
+      {
+        sql: "INSERT INTO proposal (id, target_kind, target_id, base_version, diff_hash, rationale, evidence, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)",
+        params: [row.id, row.targetKind, row.targetId, row.baseVersion, diffHash, row.rationale, JSON.stringify(row.evidence), row.createdAt],
+      },
+    ]);
+    return row;
+  }
+
+  /** Proposals, newest first, with their diffs. A diff already proposed and still pending isn't proposed twice. */
+  async listProposals(status?: ProposalStatus): Promise<ProposalRow[]> {
+    const rows = await this.db.all(`SELECT * FROM proposal ${status ? "WHERE status = ?" : ""} ORDER BY rowid DESC`, status ? [status] : []);
+    const diffs = await this.getBlobs(rows.map((r) => str(r.diff_hash)));
+    return rows.map((r) => toProposal(r, diffs.get(str(r.diff_hash))));
+  }
+
+  async resolveProposal(id: Id, status: Exclude<ProposalStatus, "pending">, reason: string, resolvedVersionId?: Id | null): Promise<void> {
+    await this.db.tx([
+      { sql: "UPDATE proposal SET status = ?, resolved_version_id = ?, resolved_at = ? WHERE id = ?", params: [status, resolvedVersionId ?? null, this.clock.now(), id] },
+      this.decisionStatement(null, `proposal_${status}`, reason, { proposalId: id, versionId: resolvedVersionId ?? null }),
+    ]);
+  }
+
+  async addRule(phase: Phase, body: string, proposalId: Id | null, lineageId?: Id): Promise<CraftRuleRow> {
+    const id = this.ids();
+    const lineage = lineageId ?? id;
+    const [v] = await this.db.all("SELECT COALESCE(MAX(version), 0) AS v FROM craft_rule WHERE lineage_id = ?", [lineage]);
+    const row: CraftRuleRow = { id, lineageId: lineage, phase, version: Number(v?.v ?? 0) + 1, body, status: "active", proposalId, createdAt: this.clock.now() };
+    await this.db.tx([
+      { sql: "INSERT INTO craft_rule (id, lineage_id, phase, version, body, status, proposal_id, created_at) VALUES (?, ?, ?, ?, ?, 'active', ?, ?)", params: [row.id, row.lineageId, phase, row.version, body, proposalId, row.createdAt] },
+      this.decisionStatement(null, "rule_kept", body, { ruleId: id, phase }),
+    ]);
+    return row;
+  }
+
+  async listRules(status: CraftRuleRow["status"] = "active"): Promise<CraftRuleRow[]> {
+    return (await this.db.all("SELECT * FROM craft_rule WHERE status = ? ORDER BY rowid", [status])).map(toRule);
+  }
+
+  async retireRule(id: Id, reason: string): Promise<void> {
+    await this.db.tx([{ sql: "UPDATE craft_rule SET status = 'retired' WHERE id = ?", params: [id] }, this.decisionStatement(null, "rule_retired", reason, { ruleId: id })]);
+  }
+
+  /** Every finished run with its latest score, across projects: the improvement loop's evidence. */
+  async scoredRuns(): Promise<ScoredRunRow[]> {
+    const rows = await this.db.all(
+      `SELECT r.*, s.value AS score_value, s.note AS score_note FROM run r
+       JOIN score s ON s.run_id = r.id
+       WHERE s.rowid = (SELECT MAX(s2.rowid) FROM score s2 WHERE s2.run_id = r.id)
+       ORDER BY r.started_seq`,
+    );
+    return rows.map((r) => ({ run: toRun(r), score: Number(r.score_value), note: strOrNull(r.score_note) }));
+  }
+
+  async latestScore(runId: Id): Promise<number | undefined> {
+    const [r] = await this.db.all("SELECT value FROM score WHERE run_id = ? ORDER BY rowid DESC LIMIT 1", [runId]);
+    return r ? Number(r.value) : undefined;
+  }
+
+  /** Decisions across every project, oldest first: what the philosophy learns from. */
+  async allDecisions(limit = 200): Promise<{ kind: string; statement: string; createdAt: string }[]> {
+    const rows = await this.db.all("SELECT kind, statement, created_at FROM decision ORDER BY rowid DESC LIMIT ?", [limit]);
+    return rows.reverse().map((r) => ({ kind: str(r.kind), statement: str(r.statement), createdAt: str(r.created_at) }));
+  }
+
+  async settingsWithPrefix<T>(prefix: string): Promise<{ key: string; value: T }[]> {
+    const rows = await this.db.all("SELECT key, value FROM setting WHERE key LIKE ? ORDER BY key", [`${prefix.replace(/[%_]/g, "")}%`]);
+    return rows.map((r) => ({ key: str(r.key), value: JSON.parse(str(r.value)) as T }));
+  }
+
   async getSetting<T>(key: string): Promise<T | undefined> {
     const [r] = await this.db.all("SELECT value FROM setting WHERE key = ?", [key]);
     return r ? (JSON.parse(str(r.value)) as T) : undefined;
@@ -554,4 +706,29 @@ function toBlock(r: Row): HypothesisBlock {
     ...(r.parent_id != null ? { parentId: str(r.parent_id) } : {}),
     ...(r.note != null ? { note: str(r.note) } : {}),
   };
+}
+
+function toFoundation(r: Row): FoundationRow {
+  return { id: str(r.id), slot: str(r.slot) as FoundationSlot, version: str(r.version), contentHash: str(r.content_hash), changelog: json(r.changelog, null), parentId: strOrNull(r.parent_id), createdAt: str(r.created_at) };
+}
+
+function toProposal(r: Row, diff: unknown): ProposalRow {
+  return {
+    id: str(r.id),
+    targetKind: str(r.target_kind) as ProposalTarget,
+    targetId: strOrNull(r.target_id),
+    baseVersion: strOrNull(r.base_version),
+    diff,
+    diffHash: str(r.diff_hash),
+    rationale: str(r.rationale),
+    evidence: json(r.evidence, []),
+    status: str(r.status) as ProposalStatus,
+    resolvedVersionId: strOrNull(r.resolved_version_id),
+    createdAt: str(r.created_at),
+    resolvedAt: strOrNull(r.resolved_at),
+  };
+}
+
+function toRule(r: Row): CraftRuleRow {
+  return { id: str(r.id), lineageId: str(r.lineage_id), phase: str(r.phase) as Phase, version: Number(r.version), body: str(r.body), status: str(r.status) as CraftRuleRow["status"], proposalId: strOrNull(r.proposal_id), createdAt: str(r.created_at) };
 }

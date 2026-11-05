@@ -58,3 +58,9 @@ export async function openUrl(url: string): Promise<void> {
 }
 
 export const fileUrl = (path: string): string => (inTauri() ? convertFileSrc(path) : path);
+
+/** Reads a file to import (foundations). In the browser preview, use the file picker instead. */
+export async function readTextFile(path: string): Promise<string> {
+  if (!inTauri()) throw desktopOnly();
+  return invoke<string>("read_text_file", { path });
+}

@@ -3,6 +3,7 @@ import type { Hash, Id } from "@composer/core";
 import { FIDELITIES, lintAgainstTokens, type Fidelity, type PrototypeData } from "@composer/engine";
 import { actions, toast } from "../../store/project";
 import { figmaPayload, prototypeUrl, serialize } from "../../build/runtime";
+import { currentTokens, recordLint } from "../../store/craft";
 import { cx } from "../primitives/cx";
 import styles from "./PrototypeView.module.css";
 
@@ -46,7 +47,10 @@ export function PrototypeView({ data, hash, claudeId }: { data: PrototypeData; h
     if (!frame.current) return;
     try {
       const s = await serialize(frame.current);
-      setOnSystem(lintAgainstTokens(s.used, null).pct);
+      const lint = lintAgainstTokens(s.used, currentTokens());
+      setOnSystem(lint.pct);
+      // Each check is evidence: the same override across builds becomes a design-system proposal.
+      if (lint.pct !== null) await recordLint(hash, data.title, lint);
     } catch {
       setOnSystem(undefined);
     }
@@ -57,7 +61,7 @@ export function PrototypeView({ data, hash, claudeId }: { data: PrototypeData; h
     try {
       const s = await serialize(frame.current);
       if (!s.tree.length) throw new Error("The prototype hasn't laid out yet. Open it large, then send again.");
-      await navigator.clipboard.writeText(figmaPayload(s, null));
+      await navigator.clipboard.writeText(figmaPayload(s, currentTokens()));
       toast(`Copied ${s.tree.length} screen${s.tree.length === 1 ? "" : "s"} for Figma. In Figma, run Design Composer → Paste from Composer.`, "success");
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "error");

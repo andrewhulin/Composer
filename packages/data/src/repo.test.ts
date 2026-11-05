@@ -141,3 +141,57 @@ describe("Repo", () => {
     expect(await repo.getSetting("a")).toBeUndefined();
   });
 });
+
+describe("craft tier", () => {
+  it("versions each foundation slot and serves the latest", async () => {
+    const { db, repo } = setup();
+    await migrate(db);
+    const v1 = await repo.saveFoundation("design_system", "3.2", { name: "Pebble", radius: 12 }, null, null);
+    await repo.saveFoundation("philosophy", "rev 1", { rev: 1 }, null, null);
+    await repo.saveFoundation("design_system", "3.3", { name: "Pebble", radius: 8 }, { kind: "change", title: "radius/card 12 → 8", text: "7 overrides" }, v1.id);
+    const latest = await repo.latestFoundation<{ radius: number }>("design_system");
+    expect(latest?.row.version).toBe("3.3");
+    expect(latest?.content.radius).toBe(8);
+    expect(latest?.row.changelog?.title).toBe("radius/card 12 → 8");
+    expect((await repo.listFoundations("design_system")).map((r) => r.version)).toEqual(["3.2", "3.3"]);
+    expect((await repo.allDecisions()).filter((d) => d.kind === "foundation")).toHaveLength(3);
+  });
+
+  it("keeps proposals pending until resolved, and logs the decision", async () => {
+    const { db, repo } = setup();
+    await migrate(db);
+    const p = await repo.createProposal({ targetKind: "design_system", baseVersion: "3.2", diff: { token: "radius/card", from: "12px", to: "8px" }, rationale: "7 overrides across 3 builds", evidence: ["b1", "b2", "b3"] });
+    expect((await repo.listProposals("pending")).map((x) => x.diff)).toEqual([{ token: "radius/card", from: "12px", to: "8px" }]);
+    await repo.resolveProposal(p.id, "rejected", "Wrong idea: corners stay soft");
+    expect(await repo.listProposals("pending")).toEqual([]);
+    expect((await repo.listProposals())[0]).toMatchObject({ status: "rejected", evidence: ["b1", "b2", "b3"] });
+    expect((await repo.allDecisions()).at(-1)).toMatchObject({ kind: "proposal_rejected", statement: "Wrong idea: corners stay soft" });
+  });
+
+  it("keeps rules in lineages and retires them without deleting", async () => {
+    const { db, repo } = setup();
+    await migrate(db);
+    const r1 = await repo.addRule("define", "Quote people verbatim.", null);
+    const r2 = await repo.addRule("define", "Quote people verbatim, with who said it.", null, r1.lineageId);
+    expect(r2.version).toBe(2);
+    await repo.retireRule(r1.id, "Superseded");
+    expect((await repo.listRules()).map((r) => r.body)).toEqual(["Quote people verbatim, with who said it."]);
+    expect((await repo.listRules("retired")).map((r) => r.id)).toEqual([r1.id]);
+  });
+
+  it("lists runs with their latest score", async () => {
+    const { db, repo } = setup();
+    await migrate(db);
+    const p = await repo.createProject("P");
+    const base = { projectId: p.id, nodeId: "n", recipe: "draft_statement", localKey: "k", envKey: "e", inputManifestHash: null, model: "m", effort: "high", templateVersionId: null, ruleIds: ["R1"], foundationIds: [], startedSeq: 1 };
+    await repo.startRun({ ...base, id: "a" });
+    await repo.startRun({ ...base, id: "b", startedSeq: 2 });
+    await repo.score("a", 2);
+    await repo.score("a", 5, "much better on reread");
+    await repo.score("b", 1);
+    const scored = await repo.scoredRuns();
+    expect(scored.map((s) => [s.run.id, s.score, s.note])).toEqual([["a", 5, "much better on reread"], ["b", 1, null]]);
+    expect(scored[0]!.run.ruleIds).toEqual(["R1"]);
+    expect(await repo.latestScore("a")).toBe(5);
+  });
+});

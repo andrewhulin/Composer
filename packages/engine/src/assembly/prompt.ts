@@ -27,7 +27,7 @@ export const IMAGE_TOKENS = 1100;
 
 export interface Foundations {
   designSystem?: { version: string; digest: string };
-  philosophy?: { rev: number; principles: { n: number; text: string; strength: string }[] };
+  philosophy?: { rev: number; principles: { n: number; text: string; strength: string }[]; doc?: string };
 }
 
 export interface ProjectMemory {
@@ -119,7 +119,7 @@ function foundationsBlock(f: Foundations): string {
     parts.push(
       `<philosophy rev="${f.philosophy.rev}">\n${f.philosophy.principles
         .map((p) => `${String(p.n).padStart(2, "0")}. ${p.text} (${p.strength})`)
-        .join("\n")}\n</philosophy>`,
+        .join("\n")}${f.philosophy.doc ? `\n\nIn the designer's words:\n${f.philosophy.doc}` : ""}\n</philosophy>`,
     );
   }
   if (f.designSystem) parts.push(`<design_system version="${esc(f.designSystem.version)}">\n${f.designSystem.digest}\n</design_system>`);

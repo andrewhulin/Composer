@@ -122,3 +122,10 @@
 .sourceTitle { font-size: var(--fs-body); font-weight: 500; color: var(--text-primary); }
 .units { display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-chip); line-height: 16px; color: var(--text-secondary); }
 .units span { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+
+.score { display: flex; align-items: center; gap: 4px; }
+.scoreLabel { margin-right: 4px; font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 500; letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-muted); }
+.scoreDot { width: 20px; height: 20px; border-radius: var(--r-sm); border: 1px solid var(--border-strong); font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.scoreDot:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+.scoreOn { background: rgba(85, 201, 142, 0.14); border-color: rgba(85, 201, 142, 0.5); color: var(--signal-live); }
+.scoreHint { margin-left: 6px; font-size: var(--fs-chip); color: var(--text-muted); }

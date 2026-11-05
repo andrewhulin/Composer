@@ -29,6 +29,7 @@ import {
   connect as connectNodes,
   disconnect as disconnectEdge,
   emptyEnv,
+  type Foundations,
   envKeyFor,
   incoming,
   localKey,
@@ -130,6 +131,19 @@ const set = useProject.setState;
 
 const llm: LlmClient =
   import.meta.env.DEV && new URLSearchParams(location.search).has("fake") ? demoLlm() : new AnthropicLlm(() => getSecret(SECRET.anthropic));
+
+/** The Claude client every node uses; the improvement loop borrows it. */
+export const llmClient = (): LlmClient => llm;
+
+/**
+ * The Craft tier (foundations and learned rules) lives in its own store and plugs in here, so
+ * every run carries the current slots and its phase's rules.
+ */
+export const craftHooks: {
+  foundations: () => Foundations;
+  rules: (phase: Phase) => { id: string; text: string }[];
+  afterVerdict: (verdict: string) => void;
+} = { foundations: () => ({}), rules: () => [], afterVerdict: () => {} };
 
 // ── persistence ────────────────────────────────────────────────────────────
 
@@ -305,8 +319,8 @@ export function runDeps(phase: Phase): RunDeps {
     llm,
     readBlob: (h) => s.blobs.get(h),
     env: s.env,
-    foundations: {},
-    rules: [],
+    foundations: craftHooks.foundations(),
+    rules: craftHooks.rules(phase),
     memory: memoryFor(phase, s.loop),
     block: (id) => s.hypotheses[id],
     version: (id) => {
@@ -670,6 +684,7 @@ export const actions = {
     }
     const version = await repo.lockOutput({ projectId: project.id, familyId: node.familyId, phase: node.phase, loop: node.loop, content: artifact, runId: out.runId });
     set((s) => ({ versions: { ...s.versions, [version.id]: version }, blobs: new Map(s.blobs).set(version.contentHash, artifact) }));
+    if (verdict) craftHooks.afterVerdict(verdict);
 
     if (verdict === "misses") {
       const snap = await takeSnapshot("lock", version.id, `Verdict v${version.version} · missed`);
@@ -849,7 +864,7 @@ async function runOne(id: Id, signal: AbortSignal): Promise<void> {
     model: node.model,
     effort: node.effort,
     templateVersionId: node.templateVersionId,
-    ruleIds: [],
+    ruleIds: env.rules[node.phase] ?? [],
     foundationIds: env.foundations,
     startedSeq: (get().project?.seq ?? 0) + 1,
   });

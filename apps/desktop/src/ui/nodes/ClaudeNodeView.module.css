@@ -6,6 +6,9 @@
 .stale { border: 1.5px solid var(--signal-warn); }
 .stale .line { color: var(--signal-warn); }
 .stale .fill { background: var(--signal-warn); }
+.env { border: 1.5px dashed rgba(224, 154, 69, 0.55); }
+.env .line { color: rgba(224, 154, 69, 0.8); }
+.env .fill { background: rgba(224, 154, 69, 0.45); }
 .over, .failed { border: 1.5px solid var(--phase-define); }
 .over .line, .failed .line { color: var(--phase-define); }
 .over .fill, .failed .fill { background: var(--phase-define); }

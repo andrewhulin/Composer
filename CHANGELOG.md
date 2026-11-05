@@ -2,6 +2,57 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## M9 · Foundations and the improvement loop · 2026-11-04
+
+### Added
+- **Two always-on slots** (Figma 06), versioned in the Craft tier and shared across projects:
+  - **Design system:**
+    - Imported from a token reference and its usage guide (markdown). A generic table parser reads color ramps, semantic tokens in both modes, the type scale, spacing and radii, and finds component names in the guide.
+    - Read only to Composer: it changes only through an accepted proposal.
+    - Seeded from Sundial 2.0: 155 tokens, 16 type styles, 10 components.
+  - **Philosophy:**
+    - Imported from the designer's own writing. The "How to apply" list becomes the numbered principles, and the full text rides along in every prompt.
+    - Each principle shows its strength (forming, steady, strong or locked) and the decisions behind it.
+    - **Edit principles** saves a new rev, and Lock keeps a principle out of future proposals.
+- **Every run carries the foundations:**
+  - The cached foundations block of the prompt now holds the principles, the philosophy text, the usage guide and the exact token values.
+  - Each phase's kept rules ride in their own block.
+  - Runs record the foundation versions and rule ids they used.
+  - When a slot or a rule changes, affected nodes turn **stale_env**: a dashed, softer badge reading "Foundations or rules changed", not the full stale amber.
+- **Detect → propose → review → log:**
+  - Every on-system check of a prototype is stored. The same off-system value used at least 3 times across at least 3 builds becomes a proposal: change the nearest semantic token, or add a new one.
+  - **Review** shows before and after, with **Accept**, **Edit value** and **Reject**. Reject asks "wrong value, or wrong idea?", and a wrong idea is recorded as a taste decision.
+  - Accepting writes the next design-system version with a changelog entry. Every resolution is a decision row.
+- **Scoring:** a 1–5 control under every finished run in the inspector ("how close to what you'd ship?").
+- **Reflect** (the improvement loop):
+  - Runs after each Validate verdict, once some phase has at least 5 runs scored 4–5 and 5 scored 1–2. **Reflect now** runs it on demand.
+  - One structured Claude call compares the high and low runs (instructions, outputs, notes) and the designer's recorded decisions.
+  - It drafts craft rules with their evidence and stats (for example "4.6 vs 1.4 avg · n 5/5") and philosophy changes (sharpened, added, retired, reworded).
+  - Every draft waits for **Keep** or **Not yet**. Kept rules can be retired later.
+- **Sidebar:**
+  - Foundations rows show the slotted system and philosophy, and open the sheet.
+  - The Learned rules count is live.
+  - Memory health shows proposals waiting for review, or the latest kept rule.
+- **Inspector · Always on:** pills for the slotted system and philosophy rev, plus the phase's rule count.
+- **Rust:** `read_text_file` imports `.md`, `.json` and `.txt` only, up to 2 MB. In the browser preview, a file picker does the same.
+- **Tests:** the markdown table parser, design-system and philosophy import, the token set for lint, prompt inclusion, versions and strength, drift detection and its thresholds, applying a proposal, Reflect's evidence gate and request, plus repo tests for foundation versions, proposals, rule lineages and scored runs. 120 in total.
+
+### Fixed
+- **Color drift only proposes changes to semantic tokens**, never a palette step like `sand-light/3`.
+
+### Decisions
+- **Andrew's skill files are imported at runtime and never committed.** This repo is public and those files are internal. The import fields default to their paths in `~/Documents/GitHub/slingshot-design-skills`.
+- **Reflect needs 5 high and 5 low scored runs in a phase.** Below that, it proposes nothing on its own, because small samples overfit.
+- **Principles imported from the designer's own writing start as "steady"**, labelled "from your writing", rather than "forming" with no decisions.
+- **Verification:**
+  - In the browser preview with the scripted model:
+    - Both slots were imported from the real files, and Define runs carried them.
+    - Ten scored Define runs led to Reflect, a kept rule and a sharpened principle.
+    - Three builds with the same 10px radius led to a proposal. Accepting it produced Sundial v2.1.
+    - Another proposal was rejected as "wrong idea".
+    - The Build node showed soft staleness.
+  - Not checked: Reflect with real Claude output.
+
 ## M8 · Share: the release video and the PR · 2026-11-04
 
 ### Added

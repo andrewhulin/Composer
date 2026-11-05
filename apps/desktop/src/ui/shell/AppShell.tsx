@@ -10,6 +10,7 @@ import { Canvas } from "../canvas/Canvas";
 import { Inspector } from "../inspector/Inspector";
 import { HistoryBar } from "../history/HistoryBar";
 import { SettingsDialog } from "../settings/SettingsDialog";
+import { FoundationsSheet } from "../foundations/FoundationsSheet";
 import { KeyBanner, Toasts } from "../feedback/Toasts";
 import { CompareView } from "../history/CompareView";
 import { playback, usePlayback } from "../../store/playback";
@@ -133,6 +134,7 @@ export function AppShell() {
       <Inspector />
       <HistoryBar />
       <SettingsDialog />
+      <FoundationsSheet />
       <CompareView />
       <Toasts />
       {ready && !hasKey && !settingsOpen && !(import.meta.env.DEV && location.search.includes("fake")) && <KeyBanner onAdd={() => setSettingsOpen(true)} />}

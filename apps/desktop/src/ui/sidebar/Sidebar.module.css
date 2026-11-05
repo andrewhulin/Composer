@@ -91,3 +91,6 @@
 .healthBody { font-size: var(--fs-chip); line-height: 16px; color: var(--text-secondary); }
 .empty { padding: 4px 10px 6px; font-size: var(--fs-chip); line-height: 16px; color: var(--text-muted); }
 .clickable:hover { background: var(--bg-hover); }
+button.slot, button.health, .clickable { width: 100%; text-align: left; }
+button.slot:hover, .clickable:hover { background: var(--bg-hover); }
+button.health:hover { border-color: var(--border-strong); }

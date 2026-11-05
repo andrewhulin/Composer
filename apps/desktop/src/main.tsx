@@ -6,11 +6,14 @@ import { boot } from "./app/boot";
 import { useSession } from "./store/session";
 import { actions, loadProject, useProject } from "./store/project";
 import { storyProps } from "./share/story";
+import * as craft from "./store/craft";
+import { loadCraft } from "./store/craft";
 
 boot()
   .then(async (booted) => {
     useSession.setState({ status: "ready", booted });
     await loadProject(booted);
+    await loadCraft();
   })
   .catch((e: unknown) => useSession.setState({ status: "error", message: e instanceof Error ? e.message : String(e) }));
 
@@ -21,4 +24,4 @@ createRoot(document.getElementById("root")!).render(
 );
 
 // Dev builds expose the store for scripted UI checks from the console.
-if (import.meta.env.DEV) Object.assign(window, { __composer: { actions, useProject, storyProps } });
+if (import.meta.env.DEV) Object.assign(window, { __composer: { actions, useProject, storyProps, craft } });

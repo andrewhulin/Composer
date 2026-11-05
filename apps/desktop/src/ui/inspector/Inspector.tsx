@@ -16,6 +16,7 @@ import { InsightsCard } from "./InsightsCard";
 import { StatementCard } from "./StatementCard";
 import { PrototypeView } from "./PrototypeView";
 import { StrategyView, VerdictView } from "./ValidateViews";
+import { openFoundations, score, useCraft } from "../../store/craft";
 import { PrView, StoryView } from "./ShareViews";
 import { NodeTab } from "./NodeTab";
 import { PromptTab } from "./PromptTab";
@@ -97,6 +98,22 @@ function storyHashFor(graph: Graph, _s: unknown, node: GraphNode): string | null
   return story ? (graph.outputs[story.id]?.hash ?? null) : null;
 }
 
+/** 1–5, how close this run is to what you'd ship. Scores feed the improvement loop. */
+function ScoreRun({ runId }: { runId: Id }) {
+  const value = useCraft((c) => c.scores[runId]);
+  return (
+    <div className={styles.score}>
+      <span className={styles.scoreLabel}>Score</span>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button key={n} type="button" className={cx(styles.scoreDot, value !== undefined && n <= value && styles.scoreOn)} aria-label={`Score ${n} of 5`} onClick={() => void score(runId, n)}>
+          {n}
+        </button>
+      ))}
+      <span className={styles.scoreHint}>{value ? "kept for the improvement loop" : "how close to what you'd ship?"}</span>
+    </div>
+  );
+}
+
 function Empty({ text }: { text: string }) {
   return <p className={styles.emptyText}>{text}</p>;
 }
@@ -174,6 +191,7 @@ function Preview({ node, graph }: { node: GraphNode | undefined; graph: Graph })
         </article>
       )}
       {artifact && at && live?.status !== "running" && <span className={styles.meta}>Rendered {ago(at, now)}</span>}
+      {claude && !playing && s.lastRuns[claude.id]?.status === "succeeded" && live?.status !== "running" && <ScoreRun runId={s.lastRuns[claude.id]!.id} />}
     </section>
   );
 }
@@ -255,6 +273,7 @@ function HypothesisPreview({ node }: { node: HypothesisNode }) {
 }
 
 function ContextSection({ claude, prompt }: { claude: ClaudeNode; prompt: AssembledPrompt }) {
+  const craft = useCraft();
   const graph = useProject((s) => s.graph);
   const r = prompt.report;
   const wired = incoming(graph, claude.id).filter((e) => e.toPort === "context");
@@ -299,7 +318,25 @@ function ContextSection({ claude, prompt }: { claude: ClaudeNode; prompt: Assemb
       <div className={styles.alwaysOn}>
         <span className={styles.alwaysLabel}>ALWAYS ON</span>
         <span className={styles.fill} />
-        <span className={styles.pillMuted}>No foundations slotted</span>
+        {craft.ds || craft.philosophy ? (
+          <>
+            {craft.ds && (
+              <button type="button" className={styles.pill} onClick={() => openFoundations()}>
+                {craft.ds.content.name} v{craft.ds.content.version}
+              </button>
+            )}
+            {craft.philosophy && (
+              <button type="button" className={styles.pill} onClick={() => openFoundations()}>
+                ¶ rev {craft.philosophy.content.rev}
+              </button>
+            )}
+            {(craft.rules.filter((r) => r.phase === claude.phase).length > 0) && <span className={styles.pillMuted}>{craft.rules.filter((r) => r.phase === claude.phase).length} rules</span>}
+          </>
+        ) : (
+          <button type="button" className={styles.pillMuted} onClick={() => openFoundations()}>
+            No foundations slotted
+          </button>
+        )}
       </div>
       {chips.map((c) => (
         <ContextChip key={c.id} chip={c} onToggle={() => actions.toggleInput(claude.id, c.id)} onSelect={() => actions.select(c.id)} />

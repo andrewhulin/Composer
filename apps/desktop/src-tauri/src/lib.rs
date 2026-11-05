@@ -29,6 +29,7 @@ pub fn run() {
             share::pr_open,
             share::reveal_path,
             share::open_url,
+            share::read_text_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Design Composer");

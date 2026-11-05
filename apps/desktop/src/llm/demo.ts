@@ -81,7 +81,11 @@ button{margin-top:auto;padding:14px;border:0;border-radius:10px;background:#1919
       metric: "Recap opens within 24h, and session length as a guardrail.",
       testing: ["Statsig recap_v2 vs control, 50/50, 14 days", "5 moderated sessions with returning users"],
     };
-    const answer = schemaText.includes('"voiceover"') ? story : schemaText.includes('"before"') ? pr : schemaText.includes('"decision_rule"') ? strategy : schemaText.includes('"findings"') ? verdict : schemaText.includes('"html"') ? proto : schemaText.includes("insights")
+    const reflection = {
+      rules: [{ phase: "define", text: "Quote people verbatim and name who said it; never paraphrase the problem.", why: "Every high-scored statement quoted a participant; every low one summarized.", evidence: ["high runs", "low runs"] }],
+      principles: [{ change: "sharpened", n: 2, text: "Apply the essentialism test, and in Define keep the raw quote over the summary.", why: "You kept raw quotes over summaries in three statements." }],
+    };
+    const answer = schemaText.includes('"principles"') ? reflection : schemaText.includes('"voiceover"') ? story : schemaText.includes('"before"') ? pr : schemaText.includes('"decision_rule"') ? strategy : schemaText.includes('"findings"') ? verdict : schemaText.includes('"html"') ? proto : schemaText.includes("insights")
       ? {
           summary: `Returning people lose the thread between sessions and want proof of progress, not a transcript. (${heavy} heavy sources)`,
           insights: [

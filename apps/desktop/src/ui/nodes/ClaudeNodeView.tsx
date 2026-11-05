@@ -48,7 +48,7 @@ export const ClaudeNodeView = memo(function ClaudeNodeView({ id, selected }: Nod
   const hypLabel = hypNode?.kind === "hypothesis" ? (hypotheses[hypNode.blockId]?.label ?? "H?") : "—";
   const over = prompt?.report.overBudget;
 
-  let tone: "idle" | "running" | "stale" | "over" | "failed" | "fresh" = "idle";
+  let tone: "idle" | "running" | "stale" | "env" | "over" | "failed" | "fresh" = "idle";
   let line = "Not run yet";
   let fill = 0;
   if (live?.status === "running") {
@@ -71,8 +71,9 @@ export const ClaudeNodeView = memo(function ClaudeNodeView({ id, selected }: Nod
     line = "Inputs changed · rerun";
     fill = 1;
   } else if (status === "stale_env") {
-    tone = "stale";
-    line = "Rules changed · rerun";
+    // Softer than stale: inputs are the same; only the foundations or learned rules moved.
+    tone = "env";
+    line = "Foundations or rules changed";
     fill = 1;
   } else if (status === "fresh" && lastRun) {
     tone = "fresh";

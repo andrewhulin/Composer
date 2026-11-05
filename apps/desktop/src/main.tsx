@@ -22,7 +22,6 @@ boot()
   })
   .catch((e: unknown) => useSession.setState({ status: "error", message: e instanceof Error ? e.message : String(e) }));
 
-// Independent of boot, so a release that fixes a broken database can still arrive.
 startUpdateChecks();
 
 createRoot(document.getElementById("root")!).render(

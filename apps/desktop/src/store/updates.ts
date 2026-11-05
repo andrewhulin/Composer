@@ -6,9 +6,9 @@ import { useCraft } from "./craft";
 import { useShare } from "../share/story";
 
 const HOUR = 60 * 60 * 1000;
+const OUTLAST_SAVE_DEBOUNCE_MS = 400;
 
-/** Work a restart would cut off. Add a store here when it starts long-running work. */
-const BUSY: { label: string; active: () => boolean; subscribe: (cb: () => void) => () => void }[] = [
+const RESTART_WAITS_FOR: { label: string; active: () => boolean; subscribe: (cb: () => void) => () => void }[] = [
   { label: "the Claude run", active: () => Object.values(useProject.getState().live).some((r) => r.status === "running"), subscribe: useProject.subscribe },
   { label: "Reflect", active: () => useCraft.getState().reflecting, subscribe: useCraft.subscribe },
   { label: "the video render", active: () => Object.values(useShare.getState().renders).some((r) => r.running), subscribe: useShare.subscribe },
@@ -16,16 +16,15 @@ const BUSY: { label: string; active: () => boolean; subscribe: (cb: () => void) 
 
 export const updates = createUpdates({
   updater: platformUpdater(),
-  busy: () => BUSY.find((b) => b.active())?.label ?? null,
+  busy: () => RESTART_WAITS_FOR.find((b) => b.active())?.label ?? null,
   watchBusy: (changed) => {
-    const offs = BUSY.map((b) => b.subscribe(changed));
+    const offs = RESTART_WAITS_FOR.map((b) => b.subscribe(changed));
     return () => offs.forEach((off) => off());
   },
   beforeRestart: async () => {
     const { repo, project, graph } = useProject.getState();
     if (repo && project) await repo.saveWorking(project.id, graph);
-    // Comment edits save on a 300ms debounce.
-    await new Promise((done) => setTimeout(done, 400));
+    await new Promise((done) => setTimeout(done, OUTLAST_SAVE_DEBOUNCE_MS));
   },
   notify: toast,
 });

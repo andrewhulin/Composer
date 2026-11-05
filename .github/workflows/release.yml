@@ -48,9 +48,8 @@ jobs:
 
       - run: pnpm check
 
-      # One universal app for Apple Silicon and Intel. tauri-action points both darwin
-      # entries in latest.json at it. The release config turns on the signed updater bundle.
-      - uses: tauri-apps/tauri-action@v1
+      - name: Build the universal app, sign the update and publish the release
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}

@@ -97,8 +97,7 @@ export function createUpdates(deps: UpdateDeps): Updates {
     deps.notify(`Couldn't update to v${version} · ${message(e)}`, "error");
   };
 
-  // Installs and relaunches once nothing is running; otherwise waits for `busy` to clear.
-  const finish = async (version: string): Promise<void> => {
+  const installWhenIdle = async (version: string): Promise<void> => {
     const reason = deps.busy();
     if (reason) {
       if (state().status !== "waiting") deps.notify(`Composer will restart for v${version} when ${reason} finishes.`, "info");
@@ -107,14 +106,14 @@ export function createUpdates(deps: UpdateDeps): Updates {
         if (state().status !== "waiting" || deps.busy()) return;
         unwatch?.();
         unwatch = null;
-        void finish(version);
+        void installWhenIdle(version);
       });
       return;
     }
     put({ status: "restarting", version });
     try {
       await deps.beforeRestart();
-      if (deps.busy()) return finish(version);
+      if (deps.busy()) return installWhenIdle(version);
       if (!installed) await found!.install();
       installed = true;
       await updater!.relaunch();
@@ -136,7 +135,7 @@ export function createUpdates(deps: UpdateDeps): Updates {
         return fail(version, e);
       }
     }
-    await finish(version);
+    await installWhenIdle(version);
   };
 
   const cancelRestart = () => {

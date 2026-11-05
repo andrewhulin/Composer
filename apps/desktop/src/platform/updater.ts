@@ -20,7 +20,10 @@ export interface Updater {
   relaunch: () => Promise<void>;
 }
 
-/** The updater for this build, or null where nothing can update (the browser preview). */
+/**
+ * The updater for this build, or null where nothing can update. In the browser preview,
+ * `?update=0.1.1` scripts a found update; `?update=latest`, `error` and `&install=error` the rest.
+ */
 export function platformUpdater(): Updater | null {
   if (inTauri()) return tauriUpdater;
   if (import.meta.env.DEV) {
@@ -52,10 +55,6 @@ const tauriUpdater: Updater = {
   relaunch,
 };
 
-/**
- * `?update=0.1.1` announces that version, `?update=latest` finds nothing, `?update=error` fails
- * the check, `?update=0.1.1&install=error` fails the install. Relaunching reloads without it.
- */
 function fakeUpdater(scripted: string): Updater {
   const params = new URLSearchParams(location.search);
   const wait = (ms: number) => new Promise<void>((done) => setTimeout(done, ms));

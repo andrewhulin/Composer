@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b1b1f"/>
+      <stop offset="1" stop-color="#0a0a0b"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#de8a45" stop-opacity="0.22"/>
+      <stop offset="0.55" stop-color="#9887e3" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#55c98e" stop-opacity="0.18"/>
+    </linearGradient>
+    <pattern id="grid" width="56" height="56" patternUnits="userSpaceOnUse" x="100" y="100">
+      <path d="M56 0H0V56" fill="none" stroke="#ffffff" stroke-opacity="0.055" stroke-width="2"/>
+    </pattern>
+    <clipPath id="sq"><rect x="100" y="100" width="824" height="824" rx="186"/></clipPath>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
+  <g clip-path="url(#sq)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#grid)"/>
+    <rect x="100" y="100" width="824" height="824" fill="url(#glow)"/>
+    <path d="M60 660 C 210 660, 190 512, 300 512" stroke="#de8a45" stroke-width="16" fill="none" stroke-linecap="round"/>
+    <path d="M724 512 C 834 512, 814 364, 964 364" stroke="#55c98e" stroke-width="16" fill="none" stroke-linecap="round"/>
+  </g>
+  <rect x="101.5" y="101.5" width="821" height="821" rx="184.5" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="3"/>
+  <rect x="300" y="368" width="424" height="288" rx="38" fill="#121214" stroke="#eeedea" stroke-width="12"/>
+  <rect x="344" y="418" width="60" height="22" rx="11" fill="#de8a45"/>
+  <rect x="416" y="418" width="60" height="22" rx="11" fill="#e05a4e"/>
+  <rect x="488" y="418" width="60" height="22" rx="11" fill="#9887e3"/>
+  <rect x="560" y="418" width="60" height="22" rx="11" fill="#52acd9"/>
+  <rect x="632" y="418" width="48" height="22" rx="11" fill="#55c98e"/>
+  <rect x="344" y="498" width="300" height="20" rx="10" fill="#34343a"/>
+  <rect x="344" y="546" width="220" height="20" rx="10" fill="#34343a"/>
+  <rect x="344" y="594" width="140" height="20" rx="10" fill="#26262b"/>
+  <circle cx="300" cy="512" r="26" fill="#0a0a0b" stroke="#de8a45" stroke-width="12"/>
+  <circle cx="724" cy="512" r="26" fill="#0a0a0b" stroke="#55c98e" stroke-width="12"/>
+</svg>

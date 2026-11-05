@@ -1,0 +1,10 @@
+.note { width: 220px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: var(--r-md); background: #1d1a10; border: 1px solid rgba(227, 194, 90, 0.35); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); }
+.note[data-selected] { border-color: var(--signal-hypothesis); }
+.meta { font-family: var(--font-mono); font-size: var(--fs-micro); letter-spacing: 0.04em; text-transform: uppercase; color: var(--signal-hypothesis); }
+.text { margin: 0; font-size: var(--fs-body); line-height: 17px; color: var(--text-primary); white-space: pre-wrap; word-break: break-word; user-select: text; }
+textarea.text { width: 100%; resize: none; padding: 0; border: 0; background: transparent; font: inherit; font-size: var(--fs-body); line-height: 17px; outline: none; }
+.head { display: flex; align-items: center; }
+.head .meta { flex: 1; }
+.remove { width: 16px; height: 16px; border-radius: 3px; font-size: 13px; line-height: 14px; color: var(--text-muted); opacity: 0; }
+.note:hover .remove { opacity: 1; }
+.remove:hover { color: var(--text-primary); background: rgba(238, 237, 234, 0.08); }

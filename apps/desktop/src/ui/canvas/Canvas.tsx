@@ -17,6 +17,7 @@ import styles from "./Canvas.module.css";
 const TOOLS: { id: CanvasTool; label: string; key: string }[] = [
   { id: "select", label: "Select", key: "V" },
   { id: "pan", label: "Pan", key: "H" },
+  { id: "comment", label: "Comment", key: "C" },
 ];
 
 const pad = (n: number) => String(Math.max(0, Math.round(n))).padStart(4, "0");

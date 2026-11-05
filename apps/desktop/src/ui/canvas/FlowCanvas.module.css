@@ -22,3 +22,10 @@
 /* Playback rebuild: things made in this frame fade in, node by node. */
 .pending { opacity: 0 !important; transform: scale(0.96); }
 .flow :global(.react-flow__node), .flow :global(.react-flow__edge) { transition: opacity 220ms var(--ease-out); }
+
+.empty { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); width: 380px; display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; border-radius: var(--r-lg); background: var(--bg-panel); border: 1px dashed var(--border-strong); pointer-events: auto; z-index: 5; }
+.emptyKicker { font-family: var(--font-mono); font-size: var(--fs-meta); letter-spacing: 0.04em; text-transform: uppercase; color: var(--phase); }
+.empty p { font-size: var(--fs-note); line-height: 18px; color: var(--text-secondary); }
+.emptyActions { display: flex; gap: 8px; }
+.emptyActions button { padding: 6px 11px; border-radius: var(--r-md); border: 1px solid var(--border-strong); font-size: var(--fs-chip); color: var(--text-primary); }
+.emptyActions button:first-child { background: var(--text-primary); color: var(--text-inverse); border-color: transparent; }

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 export type InspectorTab = "preview" | "prompt" | "node";
-export type CanvasTool = "select" | "pan";
+export type CanvasTool = "select" | "pan" | "comment";
 
 interface UiState {
   focus: boolean;
@@ -12,6 +12,8 @@ interface UiState {
   addMenuOpen: boolean;
   bookmarkOpen: boolean;
   compareOpen: boolean;
+  paletteOpen: boolean;
+  keysOpen: boolean;
   toggleFocus: () => void;
   setInspectorTab: (tab: InspectorTab) => void;
   setTool: (tool: CanvasTool) => void;
@@ -20,6 +22,8 @@ interface UiState {
   setAddMenuOpen: (open: boolean) => void;
   setBookmarkOpen: (open: boolean) => void;
   setCompareOpen: (open: boolean) => void;
+  setPaletteOpen: (open: boolean) => void;
+  setKeysOpen: (open: boolean) => void;
 }
 
 /** View state only. Project data lives in the project store. */
@@ -32,6 +36,8 @@ export const useUi = create<UiState>((set) => ({
   addMenuOpen: false,
   bookmarkOpen: false,
   compareOpen: false,
+  paletteOpen: false,
+  keysOpen: false,
   toggleFocus: () => set((s) => ({ focus: !s.focus })),
   setInspectorTab: (inspectorTab) => set({ inspectorTab }),
   setTool: (tool) => set({ tool }),
@@ -40,4 +46,6 @@ export const useUi = create<UiState>((set) => ({
   setAddMenuOpen: (addMenuOpen) => set({ addMenuOpen }),
   setBookmarkOpen: (bookmarkOpen) => set({ bookmarkOpen }),
   setCompareOpen: (compareOpen) => set({ compareOpen }),
+  setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
+  setKeysOpen: (keysOpen) => set({ keysOpen }),
 }));

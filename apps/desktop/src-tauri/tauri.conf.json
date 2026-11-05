@@ -44,8 +44,7 @@
   "bundle": {
     "active": true,
     "targets": [
-      "app",
-      "dmg"
+      "app"
     ],
     "category": "Productivity",
     "icon": [

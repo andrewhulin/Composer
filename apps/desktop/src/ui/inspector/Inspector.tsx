@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { PHASE_INFO, type Graph, type ClaudeNode, type GraphNode, type HypothesisNode, type Id, type OutputNode, type SourceContent, type SourceNode, type TextArtifact } from "@composer/core";
 import { hashOf } from "@composer/core";
 import { incoming, templateRefs, type AssembledPrompt, type Frame, type InsightsData, type PrototypeData, type StatementData, type StrategyData, type VerdictData, type StoryData, type PrData } from "@composer/engine";
@@ -17,7 +17,9 @@ import { StatementCard } from "./StatementCard";
 import { PrototypeView } from "./PrototypeView";
 import { StrategyView, VerdictView } from "./ValidateViews";
 import { openFoundations, score, useCraft } from "../../store/craft";
-import { PrView, StoryView } from "./ShareViews";
+// Share pulls in Remotion; load it only when a release story or PR is on screen.
+const StoryView = lazy(() => import("./ShareViews").then((m) => ({ default: m.StoryView })));
+const PrView = lazy(() => import("./ShareViews").then((m) => ({ default: m.PrView })));
 import { NodeTab } from "./NodeTab";
 import { PromptTab } from "./PromptTab";
 import { countKey, partialField } from "./partial";
@@ -178,9 +180,13 @@ function Preview({ node, graph }: { node: GraphNode | undefined; graph: Graph })
           {...(outputFor ? { outputId: outputFor } : {})}
         />
       ) : artifact.artifact === "release_story" && artifact.data ? (
-        <StoryView data={artifact.data as StoryData} hash={hashOf(artifact)} />
+        <Suspense fallback={<p className={styles.emptyText}>Loading the release story…</p>}>
+          <StoryView data={artifact.data as StoryData} hash={hashOf(artifact)} />
+        </Suspense>
       ) : artifact.artifact === "pr_description" && artifact.data ? (
-        <PrView data={artifact.data as PrData} hash={hashOf(artifact)} storyHash={storyHashFor(graph, null, node)} />
+        <Suspense fallback={null}>
+          <PrView data={artifact.data as PrData} hash={hashOf(artifact)} storyHash={storyHashFor(graph, null, node)} />
+        </Suspense>
       ) : artifact.artifact === "prototype" && artifact.data ? (
         <PrototypeView data={artifact.data as PrototypeData} hash={hashOf(artifact)} {...(recipeNode ? { claudeId: recipeNode.id } : {})} />
       ) : artifact.artifact === "weighted_context" && artifact.data ? (

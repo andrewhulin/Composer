@@ -44,11 +44,11 @@ export function Sidebar() {
 
   return (
     <aside className={styles.sidebar} data-phase={phase}>
-      <div className={styles.search}>
+      <button type="button" className={styles.search} onClick={() => useUi.getState().setPaletteOpen(true)}>
         <img src={searchIcon} alt="" width={12} height={12} />
         <span className={styles.searchText}>Search sources and memory</span>
         <span className={styles.kbd}>⌘K</span>
-      </div>
+      </button>
 
       <section className={styles.section}>
         <header className={styles.heading}>

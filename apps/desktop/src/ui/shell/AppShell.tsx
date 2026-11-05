@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { PHASES, type ClaudeNode, type OutputNode } from "@composer/core";
 import { actions, useProject } from "../../store/project";
 import { useUi } from "../../store/ui";
+import { useSession } from "../../store/session";
 import { getSecret, SECRET } from "../../platform/secrets";
 import { TitleBar } from "./TitleBar";
 import { PhaseRail } from "./PhaseRail";
@@ -11,6 +12,7 @@ import { Inspector } from "../inspector/Inspector";
 import { HistoryBar } from "../history/HistoryBar";
 import { SettingsDialog } from "../settings/SettingsDialog";
 import { FoundationsSheet } from "../foundations/FoundationsSheet";
+import { CommandPalette, KeyboardMap } from "../command/CommandPalette";
 import { KeyBanner, Toasts } from "../feedback/Toasts";
 import { CompareView } from "../history/CompareView";
 import { playback, usePlayback } from "../../store/playback";
@@ -66,6 +68,11 @@ function useShortcuts() {
         else actions.undo();
         return;
       }
+      if (e.metaKey && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        ui.setPaletteOpen(!ui.paletteOpen);
+        return;
+      }
       if (e.metaKey && e.key === ",") {
         e.preventDefault();
         ui.setSettingsOpen(true);
@@ -102,6 +109,8 @@ function useShortcuts() {
       else if (k === "p" && node) actions.togglePin(node.id);
       else if (k === "v") ui.setTool("select");
       else if (k === "h") ui.setTool("pan");
+      else if (k === "c") ui.setTool("comment");
+      else if (e.key === "?") ui.setKeysOpen(!ui.keysOpen);
       else if (k === "n") ui.setAddMenuOpen(!ui.addMenuOpen);
       else if (k === "escape") {
         ui.setAddMenuOpen(false);
@@ -117,6 +126,7 @@ function useShortcuts() {
 export function AppShell() {
   const phase = useProject((s) => s.activePhase);
   const ready = useProject((s) => s.ready);
+  const session = useSession();
   const settingsOpen = useUi((s) => s.settingsOpen);
   const setSettingsOpen = useUi((s) => s.setSettingsOpen);
   const [hasKey, setHasKey] = useState(true);
@@ -130,11 +140,13 @@ export function AppShell() {
       <TitleBar />
       <PhaseRail />
       <Sidebar />
-      {ready ? <Canvas /> : <main className={styles.loading} />}
+      {ready ? <Canvas /> : session.status === "error" ? <BootError message={session.message} /> : <main className={styles.loading} />}
       <Inspector />
       <HistoryBar />
       <SettingsDialog />
       <FoundationsSheet />
+      <CommandPalette />
+      <KeyboardMap />
       <CompareView />
       <Toasts />
       {ready && !hasKey && !settingsOpen && !(import.meta.env.DEV && location.search.includes("fake")) && <KeyBanner onAdd={() => setSettingsOpen(true)} />}
@@ -143,3 +155,19 @@ export function AppShell() {
 }
 
 export type { ClaudeNode, OutputNode };
+
+/** The database couldn't open. Nothing was changed; say so, and offer the one thing that helps. */
+function BootError({ message }: { message: string }) {
+  return (
+    <main className={styles.loading}>
+      <div className={styles.bootError}>
+        <span>Composer couldn't open its project database</span>
+        <p>{message}</p>
+        <p>Nothing was changed. Your projects live in ~/Library/Application Support/com.andrewhulin.composer/composer.db.</p>
+        <button type="button" onClick={() => location.reload()}>
+          Try again
+        </button>
+      </div>
+    </main>
+  );
+}

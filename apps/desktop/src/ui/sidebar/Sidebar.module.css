@@ -94,3 +94,4 @@
 button.slot, button.health, .clickable { width: 100%; text-align: left; }
 button.slot:hover, .clickable:hover { background: var(--bg-hover); }
 button.health:hover { border-color: var(--border-strong); }
+button.search { width: 100%; text-align: left; }

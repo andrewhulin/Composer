@@ -11,7 +11,7 @@ import {
   type OnSelectionChangeParams,
 } from "@xyflow/react";
 import "@xyflow/react/dist/base.css";
-import { PHASES, type GraphNode, type Id } from "@composer/core";
+import { PHASES, PHASE_INFO, previousPhase, type GraphNode, type Id } from "@composer/core";
 import { canConnect } from "@composer/engine";
 import { actions, toast, useProject } from "../../store/project";
 import { useUi } from "../../store/ui";
@@ -24,6 +24,8 @@ import { HypothesisNodeView } from "../nodes/HypothesisNodeView";
 import { OutputNodeView } from "../nodes/OutputNodeView";
 import { WireEdge } from "./WireEdge";
 import { DropHint, RegionNode } from "./RegionNode";
+import { CommentNode } from "./CommentNode";
+import { comments, useComments } from "../../store/comments";
 import styles from "./FlowCanvas.module.css";
 
 const nodeTypes = {
@@ -33,6 +35,7 @@ const nodeTypes = {
   output: OutputNodeView,
   region: RegionNode,
   drop: DropHint,
+  comment: CommentNode,
 };
 const edgeTypes = { wire: WireEdge };
 
@@ -50,6 +53,7 @@ export function FlowCanvas() {
   const graph = useDisplayGraph();
   const playing = usePlayback((s) => s.active);
   const pending = usePlayback((s) => s.pending);
+  const notes = useComments((s) => s.list);
   const selection = useProject((s) => s.selection);
   const activePhase = useProject((s) => s.activePhase);
   const loop = useProject((s) => s.loop);
@@ -86,8 +90,13 @@ export function FlowCanvas() {
         draggable: !playing,
       });
     }
+    for (const c of notes) {
+      if (c.loop !== loop || (focus && c.phase !== activePhase)) continue;
+      const dx = focus ? 0 : PHASES.indexOf(c.phase) * REGION_W;
+      out.push({ id: `comment:${c.id}`, type: "comment", position: { x: c.x + dx, y: c.y }, data: {}, zIndex: 20, draggable: !playing, selectable: false });
+    }
     return out;
-  }, [graph.nodes, selection, focus, activePhase, loop, offset, visible, pending, playing]);
+  }, [graph.nodes, selection, focus, activePhase, loop, offset, visible, pending, playing, notes]);
 
   const edges = useMemo<FlowEdge[]>(
     () =>
@@ -109,6 +118,13 @@ export function FlowCanvas() {
     (changes: NodeChange[]) => {
       for (const c of changes) {
         if (usePlayback.getState().active && c.type !== "select") continue;
+        if ("id" in c && c.id.startsWith("comment:")) {
+          if (c.type === "position" && c.position) {
+            const note = useComments.getState().list.find((x) => `comment:${x.id}` === c.id);
+            if (note) comments.update(note.id, { x: Math.round(c.position.x - (focus ? 0 : PHASES.indexOf(note.phase) * REGION_W)), y: Math.round(c.position.y) });
+          }
+          continue;
+        }
         if (c.type === "position" && c.position) {
           const n = useProject.getState().graph.nodes[c.id];
           if (n) actions.move(c.id, { x: Math.round(c.position.x - offset(n)), y: Math.round(c.position.y) });
@@ -118,7 +134,7 @@ export function FlowCanvas() {
         } else if (c.type === "remove") actions.remove([c.id]);
       }
     },
-    [offset],
+    [offset, focus],
   );
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
@@ -220,7 +236,15 @@ export function FlowCanvas() {
         onConnectEnd={onConnectEnd as never}
         isValidConnection={isValidConnection}
         onSelectionChange={onSelectionChange}
-        onPaneClick={() => actions.select(null)}
+        onPaneClick={(e) => {
+          comments.edit(null);
+          if (useUi.getState().tool === "comment" && !usePlayback.getState().active) {
+            comments.add(dropPoint(e));
+            useUi.getState().setTool("select");
+            return;
+          }
+          actions.select(null);
+        }}
         onMove={(_, vp) => setZoom(vp.zoom)}
         nodesConnectable={!playing}
         connectionRadius={24}
@@ -248,6 +272,7 @@ export function FlowCanvas() {
           style={{ width: 150, height: 96 }}
         />
       </ReactFlow>
+      {!playing && <PhaseEmpty />}
     </div>
   );
 }
@@ -267,3 +292,31 @@ async function addFromText(text: string, at?: { x: number; y: number }) {
 }
 
 export type { Id };
+
+/** An empty phase says what unlocks it, instead of showing a blank grid. */
+function PhaseEmpty() {
+  const phase = useProject((s) => s.activePhase);
+  const loop = useProject((s) => s.loop);
+  const empty = useProject((s) => !Object.values(s.graph.nodes).some((n) => n.phase === s.activePhase && n.loop === s.loop));
+  const focus = useUi((s) => s.focus);
+  const prev = previousPhase(phase);
+  if (!empty || !prev || !focus) return null;
+  return (
+    <div className={styles.empty}>
+      <span className={styles.emptyKicker}>
+        {PHASE_INFO[phase].name} · loop {loop}
+      </span>
+      <p>
+        {PHASE_INFO[phase].name} starts from a locked {PHASE_INFO[prev].output.toLowerCase()}. Lock it in {PHASE_INFO[prev].name} and this phase lays itself out, or add a node to start by hand.
+      </p>
+      <div className={styles.emptyActions}>
+        <button type="button" onClick={() => void actions.setActivePhase(prev)}>
+          Go to {PHASE_INFO[prev].name}
+        </button>
+        <button type="button" onClick={() => useUi.getState().setAddMenuOpen(true)}>
+          Add node
+        </button>
+      </div>
+    </div>
+  );
+}

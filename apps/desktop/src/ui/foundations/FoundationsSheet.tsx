@@ -4,7 +4,7 @@ import type { DesignSystem, DriftProposal, Philosophy, Principle } from "@compos
 import type { FoundationRow, ProposalRow } from "@composer/data";
 import { inTauri } from "../../platform/env";
 import { readTextFile } from "../../platform/share";
-import { accept, evidence, importDesignSystem, importPhilosophy, lockPrinciple, notYet, openFoundations, reflect, reject, retire, useCraft, type PrincipleDiff, type RuleDiff } from "../../store/craft";
+import { accept, evidence, importDesignSystem, loadCraft, importPhilosophy, lockPrinciple, notYet, openFoundations, reflect, reject, retire, useCraft, type PrincipleDiff, type RuleDiff } from "../../store/craft";
 import { toast, useProject } from "../../store/project";
 import { cx } from "../primitives/cx";
 import { ago, useNow } from "../../hooks/useNow";
@@ -134,7 +134,6 @@ function EditPrinciples({ ph, onDone }: { ph: Philosophy; onDone: () => void }) 
     const rev = ph.rev + 1;
     const title = changed.length === 1 ? `Reworded ${String(changed[0]!.n).padStart(2, "0")}` : `Reworded ${changed.length} principles`;
     await repo.saveFoundation("philosophy", `rev ${rev}`, { ...ph, rev, principles: draft.map((d) => ({ ...d, text: d.text.trim() })) }, { kind: "reworded", title, text: "Edited by you." }, current.row.id);
-    const { loadCraft } = await import("../../store/craft");
     await loadCraft();
     onDone();
   });

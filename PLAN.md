@@ -1,5 +1,7 @@
 # Design Composer: milestone plan
 
+**Status:** M0–M10 shipped on 2026-11-04. What each milestone delivered, and every default picked along the way, is in [CHANGELOG.md](CHANGELOG.md).
+
 This is the plan of attack. The design behind it is in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 **Decisions made with Andrew (Nov 4, 2026):**

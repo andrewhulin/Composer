@@ -8,12 +8,14 @@ import { actions, loadProject, useProject } from "./store/project";
 import { storyProps } from "./share/story";
 import * as craft from "./store/craft";
 import { loadCraft } from "./store/craft";
+import { loadComments } from "./store/comments";
 
 boot()
   .then(async (booted) => {
     useSession.setState({ status: "ready", booted });
     await loadProject(booted);
     await loadCraft();
+    await loadComments();
   })
   .catch((e: unknown) => useSession.setState({ status: "error", message: e instanceof Error ? e.message : String(e) }));
 

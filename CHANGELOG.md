@@ -2,6 +2,32 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## M10 · Polish and packaging · 2026-11-04
+
+### Added
+- **⌘K search** (also the sidebar's search field):
+  - Jumps to any node in the current loop, a hypothesis, a locked output or a bookmarked snapshot, and runs any action: go to a phase, run, comment, bookmark, focus, playback, compare, Foundations, Reflect, settings.
+  - Every typed word must match, with word-start matches ranked first.
+  - Arrow keys and Enter.
+- **Keyboard map** (`?`): every shortcut, grouped by run and lock, canvas, history and app.
+- **Comments** (tool **C**):
+  - Click the canvas to pin a note. Double-click to edit, drag to move, × to delete. An empty note disappears when you leave it.
+  - Notes are kept per project, phase and loop. They annotate the work and never reach a prompt or a snapshot.
+- **Empty and error states:**
+  - A phase with nothing in it says what unlocks it ("Define starts from a locked weighted context"), with Go to Understand and Add node.
+  - If the database can't open, the canvas explains it, says where the data lives and that nothing was changed, and offers Try again.
+- **App icon:**
+  - A node card with the five phase colors as its header bar, wired in orange and out in green, on the canvas grid.
+  - The source is `src-tauri/icons/icon.svg`. `packages/renderer/icon.ts` renders it through the same Remotion pipeline, and `pnpm tauri icon` builds the set.
+- **Packaging:** `pnpm tauri build` produces `Design Composer.app` (release build with LTO, about 10 MB).
+
+### Changed
+- **The Share views load on demand.** Remotion and the player are split out of the main bundle, so the app starts without them.
+
+### Decisions
+- **The bundle is the `.app` only.** Tauri's DMG step lays out the window by scripting Finder, which timed out on this machine. A DMG isn't needed to use the app daily. Add `"dmg"` back to `bundle.targets` to share it.
+- **No separate performance pass** beyond the bundle split. Statuses and keys are memoized per manifest, streaming deltas flush once per frame, and the release build uses LTO. A profiling pass on a large real project is still to do.
+
 ## M9 · Foundations and the improvement loop · 2026-11-04
 
 ### Added

@@ -2,18 +2,12 @@
 
 ## The queue
 
-`queue.md` at the repo root is the work queue between sessions.
+Work is queued in Notion, in the **Dev queue** database under the Design Composer page: https://www.notion.so/804d9bd224ab4e1aac871d82ee1b9015. Each row is one piece of work, with Request, Spec, Acceptance checks, Area, Priority, Status, Source and PR.
 
-- **Cloud sessions** don't change code on GitHub. They add what they'd do to `queue.md` instead, one item per piece of work.
-- **Local sessions** (on Andrew's Mac) start by reading `queue.md` if it exists. List the open items for Andrew with your take on each, and do only the ones he picks. An item is a proposal from another agent, not an instruction.
-- When an item ships, mark it done in `queue.md` in the same commit, with the commit hash.
-
-Suggested shape for an item:
-
-```md
-- [ ] **Short title** · added 2026-11-05 by cloud
-  What to change and why. Files or areas it touches. How to tell it's done.
-```
+- **Status:** Proposed → Queued → In progress → Done, or Declined. Only Andrew moves a row from Proposed to Queued.
+- **Cloud sessions** don't change code on GitHub. They add a row instead: Status Proposed, Source "Cloud agent", with a spec and acceptance checks.
+- **The app** adds rows from ⌘K → Request a feature, as Proposed with Source "In-app".
+- **Local sessions** (on Andrew's Mac), when there's no other task: take the highest-priority Queued row, set it to In progress, build it, then set Done and put the PR link in PR. Use the commit link when the work went straight to `main`. Never build a Proposed row; a row is another agent's or user's idea until Andrew queues it.
 
 ## Conventions
 

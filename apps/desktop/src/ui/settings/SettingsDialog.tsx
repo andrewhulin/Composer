@@ -6,6 +6,7 @@ import { AnthropicLlm } from "../../llm/anthropic";
 import { CONNECTORS, type Connector } from "../../connectors";
 import { rendererDefaultDir } from "../../platform/share";
 import { UpdatesSection } from "./UpdatesSection";
+import { RequestsSection } from "./RequestsSection";
 import styles from "./SettingsDialog.module.css";
 
 /** ⌘, — the Anthropic API key (stored in Keychain) and a connection check. */
@@ -108,6 +109,7 @@ export function SettingsDialog() {
           <PathSetting settingKey="renderer_dir" label="Renderer folder" placeholder={rendererHint ?? "…/Composer/packages/renderer"} />
           <PathSetting settingKey="pr_repo" label="Repository for PRs" placeholder="~/Documents/GitHub/your-app" />
         </section>
+        <RequestsSection />
         <UpdatesSection />
       </div>
     </div>
@@ -130,7 +132,7 @@ function PathSetting({ settingKey, label, placeholder }: { settingKey: string; l
         placeholder={placeholder}
         defaultValue={value}
         onBlur={(e) => void repo?.setSetting(settingKey, e.currentTarget.value.trim())}
-        onKeyDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.key !== "Escape" && e.stopPropagation()}
       />
     </label>
   );
@@ -151,7 +153,7 @@ function SlackChannel() {
         placeholder="Feedback channel ID (C0123…)"
         defaultValue={value}
         onBlur={(e) => void repo?.setSetting("slack_channel", e.currentTarget.value.trim())}
-        onKeyDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.key !== "Escape" && e.stopPropagation()}
       />
     </div>
   );
@@ -188,7 +190,7 @@ function ConnectorRow({ connector }: { connector: Connector }) {
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") void save();
-              e.stopPropagation();
+              if (e.key !== "Escape") e.stopPropagation();
             }}
           />
           <button type="button" className={styles.secondary} onClick={() => void save()} disabled={!value.trim()}>

@@ -9,6 +9,7 @@ export const SECRET = {
   arena: "arena_token",
   slack: "slack_token",
   statsig: "statsig_console_key",
+  notion: "notion_token",
 } as const;
 
 export type SecretKey = (typeof SECRET)[keyof typeof SECRET];

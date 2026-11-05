@@ -11,6 +11,7 @@ import { Canvas } from "../canvas/Canvas";
 import { Inspector } from "../inspector/Inspector";
 import { HistoryBar } from "../history/HistoryBar";
 import { SettingsDialog } from "../settings/SettingsDialog";
+import { RequestSheet } from "../requests/RequestSheet";
 import { FoundationsSheet } from "../foundations/FoundationsSheet";
 import { CommandPalette, KeyboardMap } from "../command/CommandPalette";
 import { Coach } from "../tutorial/Coach";
@@ -34,6 +35,10 @@ function useShortcuts() {
       const ui = useUi.getState();
       if (e.key === "Escape" && ui.settingsOpen) {
         ui.setSettingsOpen(false);
+        return;
+      }
+      if (e.key === "Escape" && ui.requestOpen) {
+        ui.setRequestOpen(false);
         return;
       }
       if (e.key === "Escape" && ui.compareOpen) {
@@ -169,6 +174,7 @@ export function AppShell() {
       {panels.right && <Inspector />}
       {panels.bottom && <HistoryBar />}
       <SettingsDialog />
+      <RequestSheet />
       <FoundationsSheet />
       <CommandPalette />
       <Coach />

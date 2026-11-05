@@ -25,6 +25,8 @@ interface UiState {
   compareOpen: boolean;
   paletteOpen: boolean;
   keysOpen: boolean;
+  /** The Request a feature sheet. */
+  requestOpen: boolean;
   /** In Define and Validate, show the node graph under the workspace instead of the workspace. */
   showGraph: boolean;
   /** Build's variants board, over the canvas. */
@@ -52,6 +54,7 @@ interface UiState {
   setCompareOpen: (open: boolean) => void;
   setPaletteOpen: (open: boolean) => void;
   setKeysOpen: (open: boolean) => void;
+  setRequestOpen: (open: boolean) => void;
 }
 
 /** View state only. Project data lives in the project store. */
@@ -66,6 +69,7 @@ export const useUi = create<UiState>((set) => ({
   compareOpen: false,
   paletteOpen: false,
   keysOpen: false,
+  requestOpen: false,
   showGraph: false,
   variantsOpen: false,
   studio: null,
@@ -92,6 +96,7 @@ export const useUi = create<UiState>((set) => ({
   setCompareOpen: (compareOpen) => set({ compareOpen }),
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   setKeysOpen: (keysOpen) => set({ keysOpen }),
+  setRequestOpen: (requestOpen) => set({ requestOpen }),
 }));
 
 function persistPanels(panels: Panels): { panels: Panels } {

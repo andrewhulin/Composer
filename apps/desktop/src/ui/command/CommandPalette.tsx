@@ -54,6 +54,7 @@ function useItems(open: boolean): Item[] {
       { id: "foundations", group: "Actions", label: "Open Foundations", hint: "design system, philosophy, learned rules", run: () => openFoundations() },
       { id: "reflect", group: "Actions", label: "Reflect now", hint: "draft rules from scored runs", run: () => void reflect() },
       { id: "settings", group: "Actions", label: "Settings", keys: "⌘,", run: () => ui.setSettingsOpen(true) },
+      { id: "request", group: "Actions", label: "Request a feature", hint: "adds it to the Dev queue in Notion", run: () => ui.setRequestOpen(true) },
       { id: "update", group: "Actions", ...updateCommand() },
       { id: "keys", group: "Actions", label: "Keyboard shortcuts", keys: "?", run: () => ui.setKeysOpen(true) },
       ...(useTutorial.getState().state?.status === "paused" ? [{ id: "guide-resume", group: "Actions" as const, label: "Tutorial: resume the guide", hint: "pick up where you left off", run: () => tutorial.resume() }] : []),

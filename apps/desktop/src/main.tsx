@@ -10,6 +10,7 @@ import * as craft from "./store/craft";
 import { loadCraft } from "./store/craft";
 import { loadComments } from "./store/comments";
 import { initTutorial, tutorial as tutorialApi, useTutorial } from "./tutorial/store";
+import { flushRequests } from "./requests/store";
 import { startUpdateChecks, updates } from "./store/updates";
 
 boot()
@@ -19,6 +20,8 @@ boot()
     await loadCraft();
     await loadComments();
     await initTutorial();
+    // Requests saved offline or before Notion was connected go out at launch.
+    void flushRequests().catch(() => undefined);
   })
   .catch((e: unknown) => useSession.setState({ status: "error", message: e instanceof Error ? e.message : String(e) }));
 

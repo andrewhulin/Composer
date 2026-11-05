@@ -2,6 +2,30 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## Feature requests to the Dev queue · 2026-11-05
+
+### Added
+- **⌘K → Request a feature:** a short form that adds a row to the Dev queue database in Notion.
+  - **Fields:** what Composer should do, why and how you'd use it, and the area. The area is pre-filled from the phase you're in.
+  - **"Include where I am"** adds the phase, the loop, the kind of step selected and the app version. It never includes the project's content, and the form shows exactly what goes.
+  - **Every row lands as Proposed, with Source "In-app",** so nothing builds it until it's moved to Queued by hand.
+  - **Nothing is lost offline:** a request is saved first, then sent. One sent before Notion is connected, or when Notion can't be reached, waits and goes at the next launch, when Settings change, or with the next request.
+- **Settings → Feature requests:** the Notion integration token (in Keychain), the database link, and what's waiting, with Send now.
+- **The browser preview** scripts Notion with `?notion=ok` or `?notion=error`, since Notion blocks requests from a browser.
+- **Tests:** link parsing, the row's properties, the data source lookup and Notion's errors, and the outbox (order, retries, overlapping sends, the cached lookup). 211 in total.
+
+### Changed
+- **The work queue moved from `queue.md` to Notion.** CLAUDE.md now points every session at the Dev queue: cloud sessions add Proposed rows, and local sessions build only Queued ones.
+- **The Dev queue database** gained a Proposed status before Queued, a Declined status, and a Source field (Andrew, Cloud agent or In-app).
+
+### Fixed
+- **Esc closes Settings from any field.** The token, channel and folder fields swallowed every key, so Esc did nothing while one was focused.
+
+### Decisions
+- **Notion API 2025-09-03:** rows are created under the database's data source. It's looked up from the database link once, then cached.
+- **The database link isn't built in.** The repo is public and other people may run Composer, so each copy is pointed at its own queue in Settings.
+- **Rows typed straight into Notion still default to Queued,** because adding one yourself is the approval.
+
 ## In-app updates · 2026-11-05
 
 ### Added

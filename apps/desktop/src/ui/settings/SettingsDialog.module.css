@@ -20,3 +20,7 @@
 .help { font-size: var(--fs-chip); color: var(--text-muted); }
 
 .pathRow { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-chip); color: var(--text-secondary); }
+
+.updateStatus { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--fs-chip); }
+.version { flex: none; font-family: var(--font-mono); color: var(--text-primary); }
+.updateText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); }

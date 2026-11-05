@@ -2,6 +2,43 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## In-app updates · 2026-11-05
+
+### Added
+- **Composer updates itself from GitHub Releases:**
+  - **Checks quietly** 5 seconds after launch, then every four hours. A check that fails stays silent; Settings says why.
+  - **Title-bar pill:** "Update ready · v0.1.1 · Restart". Clicking it downloads the signed update, installs it and relaunches, with progress in the pill.
+  - **Never cuts off work:** if a Claude run, Reflect, a replay or a video render is in flight, the pill shows "Waiting" and Composer restarts when it finishes. Click the pill to cancel; the download is kept.
+  - **⌘K → Check for updates.** Once an update is found it becomes "Restart to update to v0.1.1".
+  - **Settings → Updates:** the running version, when it last checked, and any error, with Check for updates, Restart to update, or Don't restart yet.
+  - Pending edits are saved before the relaunch.
+- **Release workflow** (`.github/workflows/release.yml`): pushing a `v*` tag checks that the tag matches the app version, runs `pnpm check`, builds one universal app (Apple Silicon and Intel), signs the update and publishes a GitHub Release with the `.app.tar.gz`, its `.sig` and `latest.json`.
+- **README:** how to cut a release, the one-time signing secrets, and how to install from a release.
+- **Browser preview:** updating is a no-op without Tauri. `?update=0.1.1` scripts a found update; `?update=latest`, `?update=error` and `&install=error` script the other outcomes.
+- **Tests:**
+  - **The update lifecycle:** quiet and manual checks, the launch delay and interval, waiting for a run, a run starting during the save, cancel, a double-clicked Restart, and retrying a failed download, install or relaunch.
+  - **Against the real stores:** a restart waits for a Claude run, Reflect, a replay or a video render, and saves the working graph first. Also the ⌘K entry, and that a development copy never checks on its own.
+  - **The updater:** download progress from the Tauri plugin, and each scripted outcome in the browser preview.
+  - 192 in total.
+
+### Changed
+- **The title bar's two sides share the spare width** instead of 420px each, so the update pill, the Guide pill, the panel toggles and the save status fit at the default window size. The project name stays centered.
+- **The app bundle is ad-hoc signed** (`signingIdentity: "-"`), so a copy downloaded from a release opens after the one-time Gatekeeper approval instead of being reported as damaged.
+
+### Decisions
+- **Updates are signed with a minisign key.** The public key is in `tauri.conf.json`. The private key lives at `~/.tauri/composer-updater.key`, its password in Keychain, and both go in as GitHub secrets. Neither is in the repo.
+- **Updater bundles are switched on by `tauri.release.conf.json`**, which only the workflow passes, so `pnpm tauri build` still works locally without the key.
+- **The tag must match `version` in `tauri.conf.json`**, or the workflow stops before building.
+- **Releases are published, not drafted.** Pushing the tag is the go-ahead, and `releases/latest` doesn't see drafts.
+- **One universal build in one job.** It compiles Rust twice, but Actions minutes are free on a public repo and one download works on either Mac.
+- **Download first, then wait:** clicking Restart downloads straight away. Only the install and relaunch wait for running work.
+- **Dev builds (`pnpm dev`) don't check on their own**, so a development copy never offers to replace itself. ⌘K still checks.
+- **No release notes in the app yet.** The release body links to this changelog.
+- **Verification:**
+  - In the browser preview, against the scripted updater: the pill appeared from the quiet launch check; Restart during a scripted Claude run waited, then restarted when the run ended; cancel kept the download; plus up to date, a failed check, and a failed install with Retry. No console errors.
+  - A local build with the release config produced the `.app.tar.gz` and `.sig`. The signature verifies against the public key in `tauri.conf.json`, and the app's ad-hoc code signature is valid.
+  - Not yet verified: a real install and relaunch through Tauri. That first happens when a copy with this change sees the next release.
+
 ## Work queue · 2026-11-05
 
 ### Added

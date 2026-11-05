@@ -4,6 +4,7 @@ import { actions, useProject } from "../../store/project";
 import { useSession } from "../../store/session";
 import { GuidePill } from "../tutorial/Coach";
 import { PanelToggles } from "./PanelToggles";
+import { UpdatePill } from "./UpdatePill";
 import { Dot } from "../primitives/Dot";
 import styles from "./TitleBar.module.css";
 
@@ -58,6 +59,7 @@ export function TitleBar() {
         <span className={styles.phase}>{PHASE_INFO[phase].name}</span>
       </div>
       <div className={styles.right} data-tauri-drag-region>
+        <UpdatePill />
         <GuidePill />
         <PanelToggles />
         <Dot color={status.color} />

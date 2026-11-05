@@ -53,6 +53,17 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "signingIdentity": "-"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM5OTU5RTYxNEQ0Q0FGNTUKUldSVnIweE5ZWjZWeWNCcGJlQlpHb0NOdzA2QnY3L0ZhbkI3ZVlPNlRYclVONGNXYWxoNzdaWjUK",
+      "endpoints": [
+        "https://github.com/andrewhulin/Composer/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

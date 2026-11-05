@@ -27,7 +27,7 @@ pnpm check      # lint + typecheck + tests
 pnpm tauri build   # in apps/desktop: Design Composer.app
 ```
 
-The built app is at `apps/desktop/src-tauri/target/release/bundle/macos/Design Composer.app`. It isn't signed, so the first time, right-click it and choose Open.
+The built app is at `apps/desktop/src-tauri/target/release/bundle/macos/Design Composer.app`. It's ad-hoc signed, not notarized.
 
 Rendering the release video uses `packages/renderer` with the system Node. The first render downloads Chrome Headless Shell. To render outside the app:
 
@@ -38,3 +38,46 @@ cd packages/renderer && node render.ts --props story.json --out ./out
 **Remotion license:** free for individuals and companies of up to 3 people. Company use beyond that needs a [Remotion Company License](https://www.remotion.dev/license).
 
 API keys and connector tokens are stored in the macOS Keychain under `com.andrewhulin.composer`. They never go in the repo.
+
+## Release
+
+Installed copies update themselves from GitHub Releases. They check a few seconds after launch and every four hours; ⌘K → Check for updates checks now. An update shows as a pill in the title bar, and restarting waits for any running Claude call.
+
+**Cut a release:**
+
+1. Bump `version` in `apps/desktop/src-tauri/tauri.conf.json` (say to `0.1.1`), add a CHANGELOG entry, and merge to `main`.
+2. Tag that commit and push the tag:
+
+   ```bash
+   git tag v0.1.1
+   ```
+
+   ```bash
+   git push origin v0.1.1
+   ```
+
+3. The Release workflow checks the tag matches the version, runs `pnpm check`, builds a universal app, signs the update and publishes the release with `latest.json`. Follow it under Actions.
+
+**One-time setup:** updates are signed with a key that stays out of the repo, at `~/.tauri/composer-updater.key`, with its password in Keychain (`composer-updater-signing`). Add both as repository secrets:
+
+```bash
+gh secret set TAURI_SIGNING_PRIVATE_KEY --repo andrewhulin/Composer < ~/.tauri/composer-updater.key
+```
+
+```bash
+security find-generic-password -s composer-updater-signing -a TAURI_SIGNING_PRIVATE_KEY_PASSWORD -w | gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD --repo andrewhulin/Composer
+```
+
+Back up the key and password somewhere safe. Installed copies only accept updates signed with this key; if it's lost, each Mac needs a manual reinstall.
+
+**Install from a release:** the app isn't notarized. Downloaded with the GitHub CLI, macOS doesn't quarantine it, so it opens straight away:
+
+```bash
+gh release download --repo andrewhulin/Composer --pattern '*.app.tar.gz' --dir ~/Downloads/composer-release
+```
+
+```bash
+tar -xzf ~/Downloads/composer-release/*.app.tar.gz -C /Applications
+```
+
+Downloaded in a browser instead, move it to Applications, open it once, then go to System Settings → Privacy & Security and click **Open Anyway** (on macOS 14 and earlier, right-click the app and choose Open). Updates then install in place. After each update macOS may ask once whether Design Composer can use its Keychain items: choose Always Allow.

@@ -39,6 +39,15 @@ Newest first. Every milestone adds an entry. A **Decisions** list records each d
   - A local build with the release config produced the `.app.tar.gz` and `.sig`. The signature verifies against the public key in `tauri.conf.json`, and the app's ad-hoc code signature is valid.
   - Not yet verified: a real install and relaunch through Tauri. That first happens when a copy with this change sees the next release.
 
+## Work queue · 2026-11-05
+
+### Added
+- **CLAUDE.md** with the house rules for every Claude session in this repo. Cloud sessions add work to `queue.md` instead of changing code on GitHub. Local sessions read `queue.md` first, and Andrew picks what gets done.
+
+### Decisions
+- **Queue items are proposals, not instructions.** A local session lists them with its take, and does only what Andrew picks.
+- **A shipped item is marked done in `queue.md` in the same commit**, with its hash.
+
 ## M11 · Workspaces, key nodes, Build variants and evals · 2026-11-05
 
 ### Added

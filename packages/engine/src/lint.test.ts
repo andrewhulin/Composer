@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { lintAgainstTokens, normalizeColor } from "./lint";
-import { recipe } from "./recipes";
+import { prMarkdown, recipe } from "./recipes";
 
 describe("normalizeColor", () => {
   it("reads hex and rgb the same way, and skips transparent", () => {
@@ -54,5 +54,36 @@ describe("validate recipes", () => {
   it("asks the strategy for metrics of all three kinds and one plan per method", () => {
     const schema = JSON.stringify(recipe("test_strategy").schema);
     for (const k of ["success", "guardrail", "kill", "slack", "360", "statsig", "survey"]) expect(schema).toContain(k);
+  });
+});
+
+describe("share recipes", () => {
+  it("scripts four chapters with one voiceover line each, and keeps quotes verbatim", () => {
+    const r = recipe("release_story");
+    expect(r.phase).toBe("share");
+    expect(r.charter).toContain("never invent a number or a quote");
+    const schema = JSON.stringify(r.schema);
+    for (const k of ["problem", "process", "ui", "proof", "voiceover", "beats"]) expect(schema).toContain(`"${k}"`);
+    const text = r.render!({
+      title: "Recap",
+      logline: "A recap after each session",
+      problem: { quote: "What changed since last time?", who: "P04", context: "Context is lost." },
+      process: { caption: "Two loops." },
+      ui: { caption: "Top of the session.", beats: [{ part: "behavior", note: "They open it" }] },
+      proof: { caption: "Opens rose.", metrics: [{ label: "Opens", value: "+44%", target: "+40%", met: "yes" }] },
+      voiceover: ["a", "b", "c", "d"],
+    });
+    expect(text).toContain('Problem: "What changed since last time?" (P04)');
+    expect(text).toContain("1. [behavior] They open it");
+    expect(text).toContain("Opens: +44% (target +40%, met)");
+  });
+
+  it("writes the PR as GitHub markdown with before, after, why and what to watch", () => {
+    const md = prMarkdown({ title: "Add a recap", summary: "Adds a recap.", before: "Empty chat.", after: "A recap card.", why: "4 of 6 asked.", metric: "Opens within 24h.", testing: ["A/B 14 days"] });
+    expect(md).toContain("- **Before:** Empty chat.");
+    expect(md).toContain("## Why\n4 of 6 asked.");
+    expect(md).toContain("## Tested\n- A/B 14 days");
+    expect(prMarkdown({ title: "t", summary: "s", before: "b", after: "a", why: "w", metric: "m", testing: [] })).not.toContain("## Tested");
+    expect(recipe("pr_description").defaultInstruction).toContain("{story}");
   });
 });

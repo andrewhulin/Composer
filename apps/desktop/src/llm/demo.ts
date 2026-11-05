@@ -56,7 +56,32 @@ button{margin-top:auto;padding:14px;border:0;border-radius:10px;background:#1919
       findings: [{ text: "People skim past a card that looks like content", source: "Slack · 4 replies" }],
       next: "Back to Understand: why is the card skimmed instead of opened?",
     };
-    const answer = schemaText.includes('"decision_rule"') ? strategy : schemaText.includes('"findings"') ? verdict : schemaText.includes('"html"') ? proto : schemaText.includes("insights")
+    const story = {
+      title: "Recap after a session",
+      logline: "A short recap waits at the top of the next session, so returning users pick up where they left off.",
+      problem: { quote: "What changed since last time? I never know where we left off.", who: "P04 · returning user", context: "Returning users spend their first minutes rebuilding context." },
+      process: { caption: "Two loops: the first recap was skimmed, the second was opened." },
+      ui: {
+        caption: "The recap is the first thing a returning user sees.",
+        beats: [
+          { part: "who", note: "Returning users see it on their second session" },
+          { part: "behavior", note: "They open the recap before chatting" },
+          { part: "metric", note: "Opens are tracked within 24 hours" },
+        ],
+      },
+      proof: { caption: "Opens rose without shortening sessions.", metrics: [{ label: "Recap opened within 24h", value: "+44%", target: "+40%", met: "yes" }, { label: "Session length", value: "+1.2%", target: "no drop", met: "yes" }] },
+      voiceover: ["Returning users kept asking what changed since last time.", "We ran it twice: the first recap got skimmed, the second got opened.", "Now a short recap waits at the top of the next session.", "Opens rose forty-four percent, and sessions didn't get shorter."],
+    };
+    const pr = {
+      title: "Add a session recap for returning users",
+      summary: "Returning users now see a short recap of their last session before they start chatting.",
+      before: "Returning users land on an empty chat and rebuild context themselves.",
+      after: "A recap card sits at the top of the next session with what changed and what was planned.",
+      why: "\"What changed since last time?\" came up in 4 of 6 interviews. In the A/B test, opens within 24h rose 44% with no drop in session length.",
+      metric: "Recap opens within 24h, and session length as a guardrail.",
+      testing: ["Statsig recap_v2 vs control, 50/50, 14 days", "5 moderated sessions with returning users"],
+    };
+    const answer = schemaText.includes('"voiceover"') ? story : schemaText.includes('"before"') ? pr : schemaText.includes('"decision_rule"') ? strategy : schemaText.includes('"findings"') ? verdict : schemaText.includes('"html"') ? proto : schemaText.includes("insights")
       ? {
           summary: `Returning people lose the thread between sessions and want proof of progress, not a transcript. (${heavy} heavy sources)`,
           insights: [

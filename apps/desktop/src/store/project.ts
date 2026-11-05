@@ -490,7 +490,7 @@ export const actions = {
   /** A Claude step for the phase in focus, using the phase's recipe. */
   addClaude() {
     const { graph, activePhase, loop } = get();
-    const recipeId = activePhase === "define" ? "draft_statement" : activePhase === "build" ? "prototype" : activePhase === "validate" ? "verdict" : "synthesize_insights";
+    const recipeId = activePhase === "define" ? "draft_statement" : activePhase === "build" ? "prototype" : activePhase === "validate" ? "verdict" : activePhase === "share" ? "pr_description" : "synthesize_insights";
     const count = Object.values(graph.nodes).filter((n) => n.kind === "claude" && n.phase === activePhase && n.loop === loop).length;
     const node = newClaude(graph, activePhase, loop, recipeId, { x: 600, y: 248 + count * 220 });
     setGraph(addNode<ClaudeNode>(graph, node));
@@ -700,6 +700,11 @@ export const actions = {
     const snap = await takeSnapshot("lock", version.id, `${PHASE_INFO[node.phase].output} v${version.version} locked`);
     if (snap) await repo.setVersionSnapshot(version.id, snap.id);
     const advance = next && phaseHasNodes(get().graph, next, loop);
+    if (node.phase === "share") {
+      await repo.decide(project.id, "shipped", `Shipped release story v${version.version} in loop ${loop}`, { versionId: version.id });
+      toast(`Shipped · release story v${version.version}. Render the video or open the PR from the inspector.`, "success");
+      return;
+    }
     toast(`${PHASE_INFO[node.phase].output} v${version.version} locked${advance ? ` · now in ${PHASE_INFO[next].name}` : ""}`, "success");
     if (advance) await actions.setActivePhase(next);
   },

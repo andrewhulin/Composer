@@ -5,6 +5,7 @@ import { AppShell } from "./ui/shell/AppShell";
 import { boot } from "./app/boot";
 import { useSession } from "./store/session";
 import { actions, loadProject, useProject } from "./store/project";
+import { storyProps } from "./share/story";
 
 boot()
   .then(async (booted) => {
@@ -20,4 +21,4 @@ createRoot(document.getElementById("root")!).render(
 );
 
 // Dev builds expose the store for scripted UI checks from the console.
-if (import.meta.env.DEV) Object.assign(window, { __composer: { actions, useProject } });
+if (import.meta.env.DEV) Object.assign(window, { __composer: { actions, useProject, storyProps } });

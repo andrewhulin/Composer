@@ -4,6 +4,7 @@ import { useUi } from "../../store/ui";
 import { toast, useProject } from "../../store/project";
 import { AnthropicLlm } from "../../llm/anthropic";
 import { CONNECTORS, type Connector } from "../../connectors";
+import { rendererDefaultDir } from "../../platform/share";
 import styles from "./SettingsDialog.module.css";
 
 /** ⌘, — the Anthropic API key (stored in Keychain) and a connection check. */
@@ -13,9 +14,11 @@ export function SettingsDialog() {
   const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [value, setValue] = useState("");
   const [checking, setChecking] = useState(false);
+  const [rendererHint, setRendererHint] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) void getSecret(SECRET.anthropic).then((k) => setHasKey(!!k));
+    if (open) void rendererDefaultDir().then(setRendererHint);
   }, [open]);
 
   if (!open) return null;
@@ -98,8 +101,36 @@ export function SettingsDialog() {
             <ConnectorRow key={c.platform} connector={c} />
           ))}
         </section>
+        <section className={styles.section}>
+          <span className="caps">Share</span>
+          <p className={styles.note}>The release video renders with Remotion and the system Node. PRs open from a temporary worktree, so your checkout is never touched.</p>
+          <PathSetting settingKey="renderer_dir" label="Renderer folder" placeholder={rendererHint ?? "…/Composer/packages/renderer"} />
+          <PathSetting settingKey="pr_repo" label="Repository for PRs" placeholder="~/Documents/GitHub/your-app" />
+        </section>
       </div>
     </div>
+  );
+}
+
+/** A folder path kept as a project setting; `~` expands to the home folder when used. */
+function PathSetting({ settingKey, label, placeholder }: { settingKey: string; label: string; placeholder: string }) {
+  const repo = useProject((s) => s.repo);
+  const [value, setValue] = useState<string | null>(null);
+  useEffect(() => {
+    void repo?.getSetting<string>(settingKey).then((v) => setValue(v ?? ""));
+  }, [repo, settingKey]);
+  if (value === null) return null;
+  return (
+    <label className={styles.pathRow}>
+      <span>{label}</span>
+      <input
+        className={styles.input}
+        placeholder={placeholder}
+        defaultValue={value}
+        onBlur={(e) => void repo?.setSetting(settingKey, e.currentTarget.value.trim())}
+        onKeyDown={(e) => e.stopPropagation()}
+      />
+    </label>
   );
 }
 

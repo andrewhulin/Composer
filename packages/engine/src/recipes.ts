@@ -235,6 +235,94 @@ RECIPES.verdict = {
   },
 };
 
+export type Part = "who" | "behavior" | "because" | "metric";
+
+export interface StoryData {
+  title: string;
+  logline: string;
+  problem: { quote: string; who: string; context: string };
+  process: { caption: string };
+  ui: { caption: string; beats: { part: Part; note: string }[] };
+  proof: { caption: string; metrics: { label: string; value: string; target: string; met: "yes" | "no" | "unknown" }[] };
+  /** One spoken line per chapter: problem, process, UI, proof. */
+  voiceover: string[];
+}
+
+export interface PrData {
+  title: string;
+  summary: string;
+  before: string;
+  after: string;
+  why: string;
+  metric: string;
+  testing: string[];
+}
+
+export const CHAPTERS = ["The problem", "The process", "The UI", "The proof"] as const;
+
+RECIPES.release_story = {
+  id: "release_story",
+  phase: "share",
+  title: "Release story",
+  artifact: "release_story",
+  effort: "high",
+  charter:
+    "This phase shares what shipped. It is the only way out of Composer. This step scripts a short release video in four chapters: the problem (the single most telling quote, verbatim, with who said it), the process (one line over the real graph rebuilding itself), the UI (the moments of the prototype that carry the hypothesis, in order), and the proof (the metrics against their targets, exactly as validated). Write for people who weren't in the room. Every claim must trace to a locked output; never invent a number or a quote.",
+  defaultInstruction: "Script the release story from {verdict} and the locked outputs in memory. Pick the quote that makes the problem obvious. Walk the prototype beat by beat. Show the proof with real numbers. Write one voiceover line per chapter, under 22 words each.",
+  schema: obj({
+    title: str,
+    logline: str,
+    problem: obj({ quote: str, who: str, context: str }),
+    process: obj({ caption: str }),
+    ui: obj({ caption: str, beats: arr(obj({ part: { type: "string", enum: ["who", "behavior", "because", "metric"] }, note: str })) }),
+    proof: obj({ caption: str, metrics: arr(obj({ label: str, value: str, target: str, met: { type: "string", enum: ["yes", "no", "unknown"] } })) }),
+    voiceover: arr(str),
+  }),
+  render: (data) => {
+    const d = data as StoryData;
+    return [
+      `${d.title}: ${d.logline}`,
+      `Problem: "${d.problem.quote}" (${d.problem.who}). ${d.problem.context}`,
+      `Process: ${d.process.caption}`,
+      `UI: ${d.ui.caption}`,
+      ...d.ui.beats.map((b, i) => `  ${i + 1}. [${b.part}] ${b.note}`),
+      `Proof: ${d.proof.caption}`,
+      ...d.proof.metrics.map((m) => `  ${m.label}: ${m.value} (target ${m.target}, ${m.met === "yes" ? "met" : m.met === "no" ? "not met" : "unknown"})`),
+    ].join("\n");
+  },
+};
+
+RECIPES.pr_description = {
+  id: "pr_description",
+  phase: "share",
+  title: "PR description",
+  artifact: "pr_description",
+  effort: "medium",
+  charter:
+    "This step writes the pull request that ships the change. Reviewers need the before and after, why it's worth doing (the hypothesis and the evidence), the metric to watch after merge, and how it was tested. Plain, specific, no marketing. Every claim must trace to a locked output.",
+  defaultInstruction: "Write the PR description for the work in {story}. Title under 70 characters. Say what changes for the user, why (with the quote and the number that convinced us), and what to watch after merge.",
+  schema: obj({ title: str, summary: str, before: str, after: str, why: str, metric: str, testing: arr(str) }),
+  render: (data) => prMarkdown(data as PrData),
+};
+
+/** The PR body as GitHub markdown. */
+export function prMarkdown(d: PrData): string {
+  return [
+    d.summary,
+    "",
+    "## Before → after",
+    `- **Before:** ${d.before}`,
+    `- **After:** ${d.after}`,
+    "",
+    "## Why",
+    d.why,
+    "",
+    "## Watch after merge",
+    d.metric,
+    ...(d.testing.length ? ["", "## Tested", ...d.testing.map((t) => `- ${t}`)] : []),
+  ].join("\n");
+}
+
 export function recipe(id: RecipeId): Recipe {
   const r = RECIPES[id];
   if (!r) throw new Error(`Recipe ${id} is not available yet`);

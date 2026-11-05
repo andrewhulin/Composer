@@ -41,7 +41,7 @@ export function aliasFor(title: string, graph: Graph, scope: { phase: Phase; loo
 }
 
 /** Names other recipes' instructions use to refer to this one, e.g. the verdict's {strategy}. */
-const RECIPE_ALIAS: Partial<Record<RecipeId, string>> = { test_strategy: "strategy" };
+const RECIPE_ALIAS: Partial<Record<RecipeId, string>> = { test_strategy: "strategy", release_story: "story", pr_description: "pr" };
 
 export function newClaude(graph: Graph, phase: Phase, loop: number, recipeId: RecipeId, position: { x: number; y: number }, title?: string): NewNode<ClaudeNode> {
   const r = recipe(recipeId);
@@ -129,7 +129,7 @@ export function nextSourcePosition(graph: Graph, phase: Phase, loop: number): { 
   return { x: 72 + col * 248, y: 96 + row * 112 };
 }
 
-const RECIPE_FOR: Partial<Record<Phase, RecipeId>> = { understand: "synthesize_insights", define: "draft_statement", build: "prototype", validate: "test_strategy" };
+const RECIPE_FOR: Partial<Record<Phase, RecipeId>> = { understand: "synthesize_insights", define: "draft_statement", build: "prototype", validate: "test_strategy", share: "release_story" };
 
 /** Where evidence dropped into a phase is wired: Validate's verdict step, else the phase's first step. */
 export function evidenceTarget(graph: Graph, phase: Phase, loop: number): ClaudeNode | undefined {
@@ -158,6 +158,13 @@ export function scaffoldPhase(graph: Graph, phase: Phase, loop: number, inlet?: 
     const r = connect(g, claude.id, verdict.id, ulid);
     if (r.ok) g = r.graph;
     last = verdict;
+  }
+  if (phase === "share") {
+    // The PR is a sibling of the story: same facts, different reader, rerun on its own.
+    const pr = newClaude(g, phase, loop, "pr_description", { x: 920, y: 520 });
+    g = addNode(g, pr);
+    const r = connect(g, claude.id, pr.id, ulid);
+    if (r.ok) g = r.graph;
   }
   const out = newOutput(g, phase, loop, { x: phase === "validate" ? 1240 : 920, y: 264 });
   g = addNode(g, out);

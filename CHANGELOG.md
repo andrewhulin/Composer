@@ -2,6 +2,58 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## M8 · Share: the release video and the PR · 2026-11-04
+
+### Added
+- **Two Share recipes:**
+  - `release_story` scripts a short video in four chapters, plus one voiceover line per chapter:
+    - **The problem:** the most telling quote, verbatim, with who said it.
+    - **The process:** one line over the real graph.
+    - **The UI:** the prototype's beats, each tied to a hypothesis part.
+    - **The proof:** each metric against its target.
+  - `pr_description` writes the PR: summary, before → after, why (with the quote and the number), what to watch after merge, and how it was tested. It sits next to the story, so the PR can be rerun without re-scripting the video.
+  - Both read every earlier locked output through project memory, and the charter forbids inventing numbers or quotes.
+- **Share is scaffolded:** inlet `{verdict}` → Release story → Release story output, plus PR description. Locking the release story records "shipped".
+- **`packages/renderer`**, a Remotion 4 project (1920×1080, 30 fps):
+  - **Title card**, then the four chapters, then **"Shipped."**
+  - **Problem:** the quote animates in word by word.
+  - **Process:** the project's actual graph, every phase and loop, rebuilding in creation order. A camera follows each new node at a zoom where titles read, then pulls back to the whole graph. Phases become columns, and empty canvas is squeezed out.
+  - **UI:** the locked prototype runs inside a device frame. A cursor taps the real `data-part` elements in order while each beat lights up beside it.
+  - **Proof:** metrics count up to their values, with met or missed.
+  - Burned-in captions, the canvas grid, corner brackets and a frame counter.
+  - Each chapter stretches to fit its voiceover.
+- **Rendering:**
+  - `node render.ts` (Node's built-in type stripping) records the voiceover with macOS `say`, then bundles and renders **MP4** (H.264 + AAC), a **GIF** cut (half size, 10 fps) and a **poster** still from the proof chapter.
+  - It prints JSON progress lines, which the app streams into a progress bar.
+- **Inspector · Release story** (Figma 07 · Share):
+  - The video plays in place through `@remotion/player`, with Open large.
+  - The four chapters with their voiceover lines.
+  - **Render MP4 + GIF**, then the poster, with Reveal in Finder for each file.
+- **Inspector · PR description:**
+  - The PR as reviewers will see it.
+  - **Open pull request…** first says exactly what will happen (repo, branch, files), then pushes.
+  - The PR is built in a temporary `git worktree` off the default branch: the prototype HTML, the GIF and the poster go under `design/composer/<slug>/`, in one commit. Then it's pushed and opened with `gh pr create`, with the GIF embedded in the body.
+  - The designer's own checkout is never touched.
+- **Rust commands:**
+  - `story_render`, which runs the system Node and streams `story-progress` events.
+  - `pr_open`, `reveal_path`, `open_url`, and `renderer_default_dir`.
+  - Child processes get the login shell's `PATH`, so Node, git and gh are found even when the app is launched from the Finder.
+- **Settings · Share:** the renderer folder (defaults to `packages/renderer` in this repo) and the repository for PRs.
+- **Tests:** timeline lengths and voiceover stretching, process layout (fits the box, keeps creation order, skips empty phases), metric count-up, the story and PR contracts, and Share scaffolding. 103 in total.
+
+### Decisions
+- **The process chapter draws its own small nodes** rather than reusing the canvas components. Those depend on React Flow and the app's stores. These read the same data and use the same tokens.
+- **The in-app player loads the prototype from its asset URL**, because Composer's CSP blocks inline scripts. Renders embed the HTML directly, so the cursor can find the real elements. In the player, the cursor falls back to scripted positions.
+- **Voiceover uses macOS `say`.** No account, works offline. ElevenLabs can slot into `render.ts` later.
+- **PRs go to a repository you choose in Settings.** Nothing is pushed until you confirm the plan.
+- **Flag: Remotion's license.** It's free for individuals and companies of up to 3 people. Using it for Slingshot work needs a Remotion Company License. The renderer is one package behind a JSON-in, files-out interface, so it can be swapped.
+- **Verification:**
+  - The full Understand → Share flow ran in the browser preview with the scripted model, and the player plays the real project.
+  - The app's actual story props were rendered end to end with `render.ts`: a 32 s MP4 with voiceover, a GIF and a poster. The frames were checked.
+  - Not checked:
+    - The Rust spawn and event stream inside the native window.
+    - Opening a real PR. Nothing was pushed.
+
 ## M7 · Validate: test strategy, verdict, and the loop · 2026-11-04
 
 ### Added

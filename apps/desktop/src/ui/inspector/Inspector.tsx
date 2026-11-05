@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { PHASE_INFO, type Graph, type ClaudeNode, type GraphNode, type HypothesisNode, type Id, type OutputNode, type SourceContent, type SourceNode, type TextArtifact } from "@composer/core";
 import { hashOf } from "@composer/core";
-import { incoming, templateRefs, type AssembledPrompt, type Frame, type InsightsData, type PrototypeData, type StatementData, type StrategyData, type VerdictData } from "@composer/engine";
+import { incoming, templateRefs, type AssembledPrompt, type Frame, type InsightsData, type PrototypeData, type StatementData, type StrategyData, type VerdictData, type StoryData, type PrData } from "@composer/engine";
 import { actions, latestVersionOf, previewPrompt, useProject } from "../../store/project";
 import { useUi, type InspectorTab } from "../../store/ui";
 import { useDisplayGraph, usePlaybackActive } from "../../store/display";
@@ -16,6 +16,7 @@ import { InsightsCard } from "./InsightsCard";
 import { StatementCard } from "./StatementCard";
 import { PrototypeView } from "./PrototypeView";
 import { StrategyView, VerdictView } from "./ValidateViews";
+import { PrView, StoryView } from "./ShareViews";
 import { NodeTab } from "./NodeTab";
 import { PromptTab } from "./PromptTab";
 import { countKey, partialField } from "./partial";
@@ -89,6 +90,13 @@ export function Inspector() {
   );
 }
 
+/** The release story a PR node was written from, so its PR can carry that story's rendered GIF. */
+function storyHashFor(graph: Graph, _s: unknown, node: GraphNode): string | null {
+  const from = graph.edges.filter((e) => e.to === node.id).map((e) => graph.nodes[e.from]);
+  const story = from.find((n): n is ClaudeNode => n?.kind === "claude" && n.recipe === "release_story");
+  return story ? (graph.outputs[story.id]?.hash ?? null) : null;
+}
+
 function Empty({ text }: { text: string }) {
   return <p className={styles.emptyText}>{text}</p>;
 }
@@ -152,6 +160,10 @@ function Preview({ node, graph }: { node: GraphNode | undefined; graph: Graph })
           data={artifact.data as VerdictData}
           {...(outputFor ? { outputId: outputFor } : {})}
         />
+      ) : artifact.artifact === "release_story" && artifact.data ? (
+        <StoryView data={artifact.data as StoryData} hash={hashOf(artifact)} />
+      ) : artifact.artifact === "pr_description" && artifact.data ? (
+        <PrView data={artifact.data as PrData} hash={hashOf(artifact)} storyHash={storyHashFor(graph, null, node)} />
       ) : artifact.artifact === "prototype" && artifact.data ? (
         <PrototypeView data={artifact.data as PrototypeData} hash={hashOf(artifact)} {...(recipeNode ? { claudeId: recipeNode.id } : {})} />
       ) : artifact.artifact === "weighted_context" && artifact.data ? (

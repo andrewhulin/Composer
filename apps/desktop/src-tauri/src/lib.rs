@@ -1,6 +1,7 @@
 mod db;
 mod prototypes;
 mod secrets;
+mod share;
 
 use tauri::Manager;
 
@@ -23,6 +24,11 @@ pub fn run() {
             secrets::secret_get,
             secrets::secret_set,
             secrets::secret_delete,
+            share::renderer_default_dir,
+            share::story_render,
+            share::pr_open,
+            share::reveal_path,
+            share::open_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Design Composer");

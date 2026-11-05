@@ -4,7 +4,7 @@ import { incoming, templateRefs } from "@composer/engine";
 import { scaffoldPhase } from "./scaffold";
 
 describe("scaffoldPhase", () => {
-  it.each(PHASES.filter((p) => p !== "understand" && p !== "share"))("wires every name the %s instructions mention", (phase) => {
+  it.each(PHASES.filter((p) => p !== "understand"))("wires every name the %s instructions mention", (phase) => {
     const from = previousPhase(phase)!;
     const g = scaffoldPhase(emptyGraph(), phase, 1, { familyId: "fam", versionId: "ver", phase: from });
     for (const node of Object.values(g.nodes).filter((n): n is ClaudeNode => n.kind === "claude")) {

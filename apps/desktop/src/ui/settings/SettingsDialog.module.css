@@ -18,3 +18,5 @@
 .connectorName { font-size: var(--fs-body); font-weight: 500; }
 .connectorState { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
 .help { font-size: var(--fs-chip); color: var(--text-muted); }
+
+.pathRow { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-chip); color: var(--text-secondary); }

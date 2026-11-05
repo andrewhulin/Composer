@@ -25,6 +25,18 @@ interface UiState {
   compareOpen: boolean;
   paletteOpen: boolean;
   keysOpen: boolean;
+  /** In Define and Validate, show the node graph under the workspace instead of the workspace. */
+  showGraph: boolean;
+  /** Build's variants board, over the canvas. */
+  variantsOpen: boolean;
+  /** The prototype studio (interact, tweak, note) for one variant. */
+  studio: { nodeId: string } | null;
+  /** The key node dock: expanded or folded to its header. */
+  keyOpen: boolean;
+  setShowGraph: (show: boolean) => void;
+  setVariantsOpen: (open: boolean) => void;
+  setStudio: (studio: { nodeId: string } | null) => void;
+  setKeyOpen: (open: boolean) => void;
   /** Which of the sidebar, inspector and history bar are showing. Remembered between launches. */
   panels: Panels;
   togglePanel: (panel: Panel) => void;
@@ -54,6 +66,14 @@ export const useUi = create<UiState>((set) => ({
   compareOpen: false,
   paletteOpen: false,
   keysOpen: false,
+  showGraph: false,
+  variantsOpen: false,
+  studio: null,
+  keyOpen: true,
+  setShowGraph: (showGraph) => set({ showGraph }),
+  setVariantsOpen: (variantsOpen) => set({ variantsOpen }),
+  setStudio: (studio) => set({ studio }),
+  setKeyOpen: (keyOpen) => set({ keyOpen }),
   panels: savedPanels(),
   togglePanel: (panel) => set((s) => persistPanels({ ...s.panels, [panel]: !s.panels[panel] })),
   setPanels: (panels) => set((s) => persistPanels({ ...s.panels, ...panels })),

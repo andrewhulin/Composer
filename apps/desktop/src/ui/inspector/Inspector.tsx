@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo } from "react";
-import { PHASE_INFO, type Graph, type ClaudeNode, type GraphNode, type HypothesisNode, type Id, type OutputNode, type SourceContent, type SourceNode, type TextArtifact } from "@composer/core";
+import { PHASE_INFO, PHASE_SURFACE, type Phase, type Graph, type ClaudeNode, type GraphNode, type HypothesisNode, type Id, type OutputNode, type SourceContent, type SourceNode, type TextArtifact } from "@composer/core";
 import { hashOf } from "@composer/core";
 import { incoming, templateRefs, type AssembledPrompt, type Frame, type InsightsData, type PrototypeData, type StatementData, type StrategyData, type VerdictData, type StoryData, type PrData } from "@composer/engine";
 import { actions, latestVersionOf, previewPrompt, useProject } from "../../store/project";
@@ -21,6 +21,7 @@ import { openFoundations, score, useCraft } from "../../store/craft";
 const StoryView = lazy(() => import("./ShareViews").then((m) => ({ default: m.StoryView })));
 const PrView = lazy(() => import("./ShareViews").then((m) => ({ default: m.PrView })));
 import { NodeTab } from "./NodeTab";
+import { RunEvals } from "./RunEvals";
 import { PromptTab } from "./PromptTab";
 import { countKey, partialField } from "./partial";
 import styles from "./Inspector.module.css";
@@ -64,7 +65,9 @@ export function Inspector() {
   const live = useProject((s) => (selection ? s.live[selection] : undefined));
 
   // The Claude node whose context and instruction the panel shows: the selection, or what feeds an Output.
-  const claudeId = node?.kind === "claude" ? node.id : node?.kind === "output" && node.mode === "output" ? incoming(graph, node.id)[0]?.from : undefined;
+  const workspace = useWorkspaceShown(phase);
+  const keyFeed = useProject((s) => (workspace && !node ? keyFeedId(s.graph, phase, s.loop) : undefined));
+  const claudeId = node?.kind === "claude" ? node.id : node?.kind === "output" && node.mode === "output" ? incoming(graph, node.id)[0]?.from : keyFeed;
   const claude = claudeId ? (graph.nodes[claudeId] as ClaudeNode | undefined) : undefined;
   const settled = useDebounced(graph, 200);
   const prompt = useMemo(() => (claudeId ? previewPrompt(settled, claudeId) : undefined), [settled, claudeId]);
@@ -91,6 +94,19 @@ export function Inspector() {
       {!playing && <Actions node={node} running={live?.status === "running"} claudeId={claudeId} />}
     </aside>
   );
+}
+
+/** True while Define or Validate shows its workspace rather than the graph. */
+function useWorkspaceShown(phase: Phase): boolean {
+  const showGraph = useUi((s) => s.showGraph);
+  const focus = useUi((s) => s.focus);
+  return focus && !showGraph && PHASE_SURFACE[phase] !== "canvas";
+}
+
+/** In a workspace with nothing selected, the inspector follows the Claude node feeding the key node. */
+function keyFeedId(graph: Graph, phase: Phase, loop: number): Id | undefined {
+  const out = Object.values(graph.nodes).find((n) => n.kind === "output" && n.mode === "output" && n.phase === phase && n.loop === loop);
+  return out ? incoming(graph, out.id)[0]?.from : undefined;
 }
 
 /** The release story a PR node was written from, so its PR can carry that story's rendered GIF. */
@@ -135,7 +151,13 @@ function Preview({ node, graph }: { node: GraphNode | undefined; graph: Graph })
           <span className={styles.fill} />
           <span className={styles.meta}>One output → {info.output}</span>
         </div>
-        <p className={styles.emptyText}>{info.purpose} Select a node to preview it. Its output renders here as it streams.</p>
+        {PHASE_SURFACE[s.activePhase] !== "canvas" ? (
+          <p className={styles.workspaceNote}>
+            {PHASE_SURFACE[s.activePhase] === "writing" ? "Writing workspace." : "Scorecard."} The key node, top right, shows exactly what the next phase will read. Below and in the Prompt tab is what Claude reads for the draft. Press G for the graph underneath.
+          </p>
+        ) : (
+          <p className={styles.emptyText}>{info.purpose} Select a node to preview it. Its output renders here as it streams.</p>
+        )}
       </section>
     );
   }
@@ -197,7 +219,12 @@ function Preview({ node, graph }: { node: GraphNode | undefined; graph: Graph })
         </article>
       )}
       {artifact && at && live?.status !== "running" && <span className={styles.meta}>Rendered {ago(at, now)}</span>}
-      {claude && !playing && s.lastRuns[claude.id]?.status === "succeeded" && live?.status !== "running" && <ScoreRun runId={s.lastRuns[claude.id]!.id} />}
+      {claude && !playing && s.lastRuns[claude.id]?.status === "succeeded" && live?.status !== "running" && (
+        <>
+          <ScoreRun runId={s.lastRuns[claude.id]!.id} />
+          <RunEvals key={s.lastRuns[claude.id]!.id} claude={claude} runId={s.lastRuns[claude.id]!.id} />
+        </>
+      )}
     </section>
   );
 }

@@ -8,35 +8,52 @@ export function demoLlm(): FakeLlm {
   return new FakeLlm((req: LlmRequest) => {
     const schemaText = JSON.stringify(req.schema ?? {});
     const heavy = (JSON.stringify(req.messages).match(/weight=\\"heavy\\"/g) ?? []).length;
+    const all = JSON.stringify(req.messages);
+    const direction = /Direction: (\w+)/.exec(all)?.[1]?.toLowerCase() ?? "direct";
+    const accent = { direct: "#19191c", structural: "#3b5bdb", expressive: "#d9480f", minimal: "#19191c", refine: "#2b8a3e", layout: "#5f3dc4", tone: "#c2255c" }[direction] ?? "#19191c";
+    const card = direction === "structural"
+      ? `<nav class="tabs"><button data-tab="recap" class="kit-current">Recap</button><button data-tab="plan">Plan</button></nav>
+<section data-panel="recap" class="card"><span class="label">What changed</span><template data-repeat="tasks" data-limit="3"><div class="item"><span class="dot"></span><span data-sample="title"></span></div></template></section>
+<section data-panel="plan" class="card"><span class="label">This week</span><div class="item"><span class="dot"></span>Two new ideas to try</div></section>`
+      : `<div class="card"><span class="label">What changed</span>
+<div class="item"><span class="dot"></span>You named the feeling: “too much to read”</div>
+${direction === "minimal" ? "" : '<div class="item"><span class="dot"></span>Two new ideas to try this week</div>'}</div>`;
     const proto = {
-      title: "Recap: what changed since last time",
-      fidelity: /fidelity[^.]*low-fi|a low-fi/i.test(JSON.stringify(req.messages)) ? "lofi" : /high-fi/i.test(JSON.stringify(req.messages)) ? "hifi" : "wireframe",
+      title: `Recap: ${direction === "expressive" ? "a moment to come back to" : direction === "minimal" ? "one line, then chat" : "what changed since last time"}`,
+      fidelity: /fidelity[^.]*low-fi|a low-fi/i.test(all) ? "lofi" : /high-fi/i.test(all) ? "hifi" : "wireframe",
       html: `<!doctype html><html><head><meta charset="utf-8"><title>Recap</title><style>
 body{margin:0;font-family:-apple-system,system-ui,sans-serif;background:#f6f5f2;color:#19191c}
-main{display:flex;flex-direction:column;gap:16px;padding:56px 20px 24px;min-height:844px;box-sizing:border-box}
-h1{font-size:24px;margin:0;line-height:1.2}
+[data-screen]{display:flex;flex-direction:column;gap:16px;padding:56px 20px 24px;min-height:844px;box-sizing:border-box}
+h1{font-size:${direction === "expressive" ? 34 : 24}px;margin:0;line-height:1.15;color:${accent}}
 .card{display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:12px;background:#fff;border:1px solid #e4e1da}
 .label{font-size:12px;color:#8a857a;text-transform:uppercase;letter-spacing:.06em}
 .item{display:flex;gap:10px;align-items:center;font-size:15px}
-.dot{width:8px;height:8px;border-radius:4px;background:#de8a45}
-button{margin-top:auto;padding:14px;border:0;border-radius:10px;background:#19191c;color:#fff;font-size:16px}
-</style></head><body><main data-screen="Recap">
-<span class="label" data-part="who">Welcome back, third session</span>
-<h1 data-part="because">Since last time</h1>
-<div class="card"><span class="label">What changed</span>
-<div class="item"><span class="dot"></span>You named the feeling: “too much to read”</div>
-<div class="item"><span class="dot"></span>Two new ideas to try this week</div></div>
-<button data-part="behavior">Pick up where we left off</button>
+.dot{width:8px;height:8px;border-radius:4px;background:${accent}}
+.tabs{display:flex;gap:6px}.tabs button{flex:1;padding:8px;border:1px solid #e4e1da;border-radius:8px;background:#fff;font-size:14px}
+.tabs .kit-current{background:${accent};color:#fff}
+.cta{margin-top:auto;padding:14px;border:0;border-radius:10px;background:${accent};color:#fff;font-size:16px}
+</style></head><body>
+<main data-screen="Recap">
+<span class="label">Welcome back, third session</span>
+<h1>${direction === "expressive" ? "Here's where you left off" : "Since last time"}</h1>
+${card}
+<button class="cta" data-go="Chat" data-transition="push">Pick up where we left off</button>
+</main>
+<main data-screen="Chat">
+<button class="label" data-back>‹ Recap</button>
+<h1>Chat</h1>
+<div class="card"><span class="label">Picked up</span><div class="item"><span class="dot"></span>Last time you planned two ideas. Which first?</div></div>
+<button class="cta" data-toast="Saved for next time">Save for next time</button>
 </main></body></html>`,
-      screens: [{ name: "Recap", purpose: "Show what changed before chat" }],
-      rationale: "One card, three lines: proof of progress without a transcript to read.",
+      screens: [{ name: "Recap", purpose: "Show what changed before chat" }, { name: "Chat", purpose: "Pick up the thread" }],
+      rationale: `${direction[0]!.toUpperCase()}${direction.slice(1)} direction: one card, a few lines, proof of progress without a transcript to read.`,
       tests: "Recap opens within 24h rise 40% or more",
     };
     const strategy = {
       metrics: [
-        { kind: "success", text: "Recap opened within 24h · +40% vs control" },
-        { kind: "guardrail", text: "Session length does not drop" },
-        { kind: "kill", text: "No lift after 2 weeks → back to Understand" },
+        { kind: "success", text: "Recap opened within 24h vs control", target: "+40% or more" },
+        { kind: "guardrail", text: "Session length", target: "no drop" },
+        { kind: "kill", text: "Lift after 2 weeks", target: "under +10% → back to Understand" },
       ],
       methods: [
         { method: "slack", use: true, plan: "Post the prototype and 3 questions to the design channel", questions: ["Would you open this before chatting?", "What's missing from the recap?", "Too much or too little?"] },
@@ -50,8 +67,8 @@ button{margin-top:auto;padding:14px;border:0;border-radius:10px;background:#1919
       verdict: "misses",
       summary: "Opens rose 12%, well short of 40%; people skim past the card.",
       metrics: [
-        { kind: "success", text: "Recap opened within 24h · +40%", observed: "+12%", met: "no" },
-        { kind: "guardrail", text: "Session length does not drop", observed: "-0.9%", met: "yes" },
+        { kind: "success", text: "Recap opened within 24h vs control", observed: "+12%", met: "no" },
+        { kind: "guardrail", text: "Session length", observed: "-0.9%", met: "yes" },
       ],
       findings: [{ text: "People skim past a card that looks like content", source: "Slack · 4 replies" }],
       next: "Back to Understand: why is the card skimmed instead of opened?",
@@ -97,6 +114,15 @@ button{margin-top:auto;padding:14px;border:0;border-radius:10px;background:#1919
         }
       : {
           frame: "hypothesis",
+          form: {
+            believe: "showing what changed since the last session will get returning users to open the recap before they chat",
+            whom: "returning users on their third session or later",
+            know_when: "recap opens within 24h rise 40% or more, with no drop in session length",
+          },
+          variants: [
+            { angle: "Narrower user", believe: "a one-line recap at the top of chat will get people back into the thread faster", whom: "returning users who paused for more than a week", know_when: "time to first message drops by 30% or more" },
+            { angle: "Different signal", believe: "a recap that names the plan from last time makes the next session feel like a continuation", whom: "returning users on their third session or later", know_when: "4 of 5 moderated sessions describe it as picking up, not starting over" },
+          ],
           statement: "We believe returning users will open the recap if it shows what changed since their last session. We will know when recap opens within 24h rise 40% or more.",
           parts: { who: "returning users", behavior: "open the recap", because: "shows what changed since their last session", metric: "recap opens within 24h rise 40% or more" },
           support: [

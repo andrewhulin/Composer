@@ -1,0 +1,15 @@
+.logo { flex: none; display: inline-block; vertical-align: middle; }
+.sm { width: var(--icon-sm); height: var(--icon-sm); }
+.md { width: var(--icon-md); height: var(--icon-md); }
+.lg { width: var(--icon-lg); height: var(--icon-lg); }
+.tile {
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--r-xs);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1;
+}

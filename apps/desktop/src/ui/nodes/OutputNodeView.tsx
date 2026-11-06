@@ -4,7 +4,9 @@ import { PHASE_INFO, nextPhase, type OutputNode, type TextArtifact } from "@comp
 import { incoming, outputLockState } from "@composer/engine";
 import { latestVersionOf, useProject } from "../../store/project";
 import { useDisplayGraph, usePlaybackActive } from "../../store/display";
+import { ArrowLeft, ArrowRight, Diamond } from "lucide-react";
 import { cx } from "../primitives/cx";
+import { Icon } from "../primitives/Icon";
 import { Port } from "./Port";
 import styles from "./Node.module.css";
 import own from "./OutputNodeView.module.css";
@@ -67,7 +69,9 @@ export const OutputNodeView = memo(function OutputNodeView({ id, selected }: Nod
   return (
     <div className={cx(styles.node, own.output, selected && styles.selected, shake && styles.shake)} data-phase={accent} key={shake}>
       <div className={styles.header}>
-        <span className={cx(styles.glyph, own.glyph)}>◆</span>
+        <span className={cx(styles.glyph, own.glyph)}>
+          <Icon icon={Diamond} size="sm" fill="currentColor" />
+        </span>
         <span className={styles.title}>{node.title}</span>
         <span className={styles.tag}>{inlet ? "Inlet" : "Output"}</span>
       </div>
@@ -75,11 +79,14 @@ export const OutputNodeView = memo(function OutputNodeView({ id, selected }: Nod
         <p className={cx(own.preview, !text && own.empty)}>{text ? `“${firstLine(text)}”` : inlet ? "Nothing locked yet." : "Lock the result here to hand it to the next phase."}</p>
         <div className={own.footer}>
           <span className={cx(own.status, own[tone])}>{status}</span>
-          <span>{inlet && fromPhase ? `← ${PHASE_INFO[fromPhase].name}` : next ? `→ ${PHASE_INFO[next].name}` : "→ out"}</span>
+          <span className={own.next}>
+            <Icon icon={inlet && fromPhase ? ArrowLeft : ArrowRight} size="sm" />
+            {inlet && fromPhase ? PHASE_INFO[fromPhase].name : next ? PHASE_INFO[next].name : "out"}
+          </span>
         </div>
       </div>
-      {!inlet && <Port nodeId={id} port="text" type="text" side="in" top={14} color="var(--phase)" />}
-      <Port nodeId={id} port="out" type="phase_output" side="out" top={14} />
+      {!inlet && <Port nodeId={id} port="text" type="text" side="in" top={18} color="var(--phase)" />}
+      <Port nodeId={id} port="out" type="phase_output" side="out" top={18} />
     </div>
   );
 });

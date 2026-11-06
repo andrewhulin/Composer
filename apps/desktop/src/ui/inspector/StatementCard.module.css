@@ -1,40 +1,30 @@
-.card { display: flex; flex-direction: column; gap: 10px; }
-.frames { display: flex; gap: 2px; padding: 2px; border-radius: var(--r-md); background: var(--bg-canvas); }
-.frame { flex: 1; padding: 6px 4px; border-radius: var(--r-xs); font-size: var(--fs-chip); font-weight: 500; color: var(--text-secondary); white-space: nowrap; }
-.frame:hover { color: var(--text-primary); }
-.frameOn, .frameOn:hover { background: rgba(224, 90, 78, 0.18); color: var(--phase-define); }
-.paper { padding: 16px 18px; border-radius: var(--r-md); background: #f5f3ee; user-select: text; }
-.sentence { font-size: 17px; font-weight: 600; line-height: 24px; color: #1c1b19; }
+.card { display: flex; flex-direction: column; gap: var(--sp-12); }
+.paper { padding: var(--sp-20) var(--sp-24); border-radius: var(--r-md); background: var(--paper-bg-2); user-select: text; }
+.sentence { font-size: var(--fs-title); font-weight: 600; line-height: 30px; color: var(--paper-ink-deep); }
 .sentence span { text-decoration: underline; text-decoration-skip-ink: none; text-underline-offset: 3px; }
 .define { color: var(--phase-define); }
 .build { color: var(--phase-build); }
 .understand { color: var(--phase-understand); }
 .validate { color: var(--phase-validate); }
-.chips { display: flex; gap: 6px; }
-.chip { padding: 3px 8px; border-radius: var(--r-xs); font-family: var(--font-mono); font-size: var(--fs-small); font-weight: 500; }
-.chip_define { background: rgba(224, 90, 78, 0.14); color: var(--phase-define); }
-.chip_build { background: rgba(152, 135, 227, 0.14); color: var(--phase-build); }
-.chip_understand { background: rgba(222, 138, 69, 0.14); color: var(--phase-understand); }
-.chip_validate { background: rgba(82, 172, 217, 0.14); color: var(--phase-validate); }
+.chips { display: flex; gap: var(--sp-8); }
+.part { display: inline-flex; }
 .checks {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
-  padding: 10px 12px;
+  gap: var(--sp-8) var(--sp-18);
+  padding: var(--sp-12) var(--sp-16);
   border-radius: var(--r-md);
   background: var(--bg-wash);
   border: 1px solid var(--border-subtle);
   font-family: var(--font-mono);
-  font-size: var(--fs-chip);
+  font-size: var(--fs-small);
 }
+.ok, .miss { display: inline-flex; align-items: center; gap: var(--sp-6); }
 .ok { color: var(--signal-live); }
 .miss { color: var(--signal-warn); }
-.support { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-chip); line-height: 16px; color: var(--text-secondary); user-select: text; }
+.support { display: flex; flex-direction: column; gap: var(--sp-6); font-size: var(--fs-small); line-height: 20px; color: var(--text-secondary); user-select: text; }
 .support span { color: var(--text-muted); }
-.alternates { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: var(--r-md); border: 1px solid var(--border-subtle); font-size: var(--fs-chip); line-height: 16px; color: var(--text-primary); user-select: text; }
+.alternates { display: flex; flex-direction: column; gap: var(--sp-10); padding: var(--sp-12) var(--sp-16); border-radius: var(--r-md); border: 1px solid var(--border-subtle); font-size: var(--fs-small); line-height: 20px; color: var(--text-primary); user-select: text; }
 .alternates span { display: block; font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
-.footer { display: flex; align-items: center; gap: 8px; }
-.alt { flex: 1; min-width: 0; font-size: var(--fs-chip); line-height: 15px; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.secondary, .primary { flex: none; padding: 7px 12px; border-radius: var(--r-md); font-size: var(--fs-body); font-weight: 500; white-space: nowrap; }
-.secondary { background: rgba(238, 237, 234, 0.04); border: 1px solid var(--border-strong); color: var(--text-primary); }
-.primary { background: var(--text-primary); color: var(--text-inverse); }
+.footer { display: flex; align-items: center; gap: var(--sp-10); }
+.alt { flex: 1; min-width: 0; font-size: var(--fs-small); line-height: 19px; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

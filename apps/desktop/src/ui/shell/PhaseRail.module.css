@@ -3,52 +3,53 @@
   display: flex;
   align-items: center;
   height: var(--rail-h);
-  padding: 0 16px;
+  padding: 0 var(--sp-20);
   background: var(--bg-app);
   border-bottom: 1px solid var(--border-subtle);
   white-space: nowrap;
   overflow: hidden;
+  container: rail / inline-size;
 }
 .phase {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 7px 12px;
+  gap: var(--sp-12);
+  padding: var(--sp-8) var(--sp-16);
   border: 1px solid transparent;
   border-radius: var(--r-lg);
   transition: background var(--t-fast) var(--ease-out);
 }
 .phase:hover { background: var(--bg-raised); }
 .active { background: var(--bg-raised); border-color: var(--phase); }
-.index { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.index { font-family: var(--font-pixel); font-size: var(--fs-meta); letter-spacing: var(--tracking-micro); color: var(--text-muted); }
 .name { font-size: var(--fs-phase); font-weight: 500; color: var(--text-muted); }
 .done .name, .active .name { color: var(--text-primary); }
-.output { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.output { display: inline-flex; align-items: center; gap: var(--sp-4); font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
 .done .output { color: var(--text-secondary); }
 .active .output { color: var(--phase); }
-.connector { display: flex; align-items: center; width: 28px; height: 20px; padding: 0 4px; flex: none; }
+.connector { display: flex; align-items: center; width: 35px; height: 25px; padding: 0 var(--sp-6); flex: none; }
 .connector span { flex: 1; height: 1px; background: var(--border-strong); }
 .loop {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-8);
   flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding-left: 16px;
+  padding-left: var(--sp-20);
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
   color: var(--text-muted);
 }
-.spacer { flex: 1 0 12px; }
+.spacer { flex: 1 0 15px; }
 .focus {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
+  gap: var(--sp-10);
+  padding: var(--sp-8) var(--sp-12);
   border: 1px solid var(--border-strong);
   border-radius: var(--r-md);
   font-size: var(--fs-body);
@@ -56,6 +57,10 @@
 }
 
 /* Narrower windows: drop pending phases' output labels before anything else clips. */
-@media (max-width: 1560px) {
+@media (max-width: 1950px) {
   .pending .output { display: none; }
 }
+
+/* The loop explanation only shows when the rail has room; it's always in the tooltip. */
+.loopHint { color: var(--text-faint); }
+@container rail (max-width: 1900px) { .loopHint { display: none; } }

@@ -14,6 +14,7 @@ Work is queued in Notion, in the **Dev queue** database under the Design Compose
 - `pnpm check` (lint, typecheck, tests) passes before every commit.
 - Every change gets a CHANGELOG.md entry. Defaults picked without asking go in its Decisions list.
 - Commits go on `main`, one per milestone or feature.
+- UI follows DESIGN_SYSTEM.md: tokens from `styles/tokens.css`, components from `ui/primitives`, icons through `<Icon>` (Lucide). `pnpm lint` enforces the raw-value rules; `localhost:1420/?gallery` shows every component.
 - Check each changed screen in the browser preview before calling it done: `.claude/launch.json`, then `localhost:1420/?fake` for the scripted model.
 - Rebuild the Mac app with `cd apps/desktop && pnpm tauri build`, with `~/.cargo/bin` on PATH.
 - Secrets live in the macOS Keychain, never in the repo.

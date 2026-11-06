@@ -1,27 +1,53 @@
-/* Design tokens from Figma "Design Harness" variables (01 · Workspace).
-   Names mirror the Figma collection: bg/app -> --bg-app, phase/define -> --phase-define. */
+/* Composer's own UI tokens. Colors mirror the Figma "Design Harness" variables (bg/app -> --bg-app,
+   phase/define -> --phase-define); type, spacing and the rest are codified in DESIGN_SYSTEM.md.
+   This is the only stylesheet allowed raw colors and raw sizes: everything else uses these. */
 :root {
+  /* ── color: channels. Use rgba(var(--rgb-ink), 0.06) for a tint of any of these. */
+  --rgb-ink: 238, 237, 234;
+  --rgb-black: 0, 0, 0;
+  --rgb-white: 255, 255, 255;
+  --rgb-night: 5, 5, 6;
+  --rgb-canvas: 13, 13, 15;
+  --rgb-app: 10, 10, 11;
+  --rgb-secondary: 162, 158, 148;
+  --rgb-paper-ink: 25, 25, 28;
+  --rgb-understand: 222, 138, 69;
+  --rgb-define: 224, 90, 78;
+  --rgb-build: 152, 135, 227;
+  --rgb-validate: 82, 172, 217;
+  --rgb-share: 85, 201, 142;
+  --rgb-live: 85, 201, 142;
+  --rgb-hypothesis: 227, 194, 90;
+  --rgb-warn: 224, 154, 69;
+
   /* surfaces */
   --bg-app: #0a0a0b;
   --bg-canvas: #0d0d0f;
   --bg-panel: #121214;
   --bg-raised: #19191c;
   --bg-hover: #232327;
-  --bg-wash: rgba(238, 237, 234, 0.03);
-  --bg-wash-2: rgba(238, 237, 234, 0.05);
-  --bg-wash-3: rgba(238, 237, 234, 0.06);
+  --bg-wash: rgba(var(--rgb-ink), 0.03);
+  --bg-wash-2: rgba(var(--rgb-ink), 0.05);
+  --bg-wash-3: rgba(var(--rgb-ink), 0.06);
+  --bg-wash-4: rgba(var(--rgb-ink), 0.08);
+  --bg-note: #1d1a10;
+  --bg-inset: rgba(var(--rgb-black), 0.32); /* a well sunk into any surface: segmented tracks, meters */
+  --bg-playback: rgba(14, 26, 34, 0.94);
+  --white: #fff;
 
   /* borders */
   --border-subtle: #202024;
   --border-strong: #34343a;
-  --border-wash: rgba(238, 237, 234, 0.12);
+  --border-wash: rgba(var(--rgb-ink), 0.12);
 
   /* text */
   --text-primary: #eeedea;
+  --text-soft: #b5b0a6;
   --text-secondary: #a29e94;
   --text-muted: #69665e;
   --text-inverse: #0b0b0a;
-  --text-faint: rgba(238, 237, 234, 0.3);
+  --text-faint: rgba(var(--rgb-ink), 0.3);
+  --text-error: #f0b3ad;
 
   /* phases */
   --phase-understand: #de8a45;
@@ -32,49 +58,130 @@
 
   /* signals */
   --signal-live: #55c98e;
+  --signal-live-strong: #2f8f5f;
   --signal-hypothesis: #e3c25a;
   --signal-retired: #5a5852;
-  --signal-hypothesis-tint: rgba(227, 194, 90, 0.14);
+  --signal-hypothesis-tint: rgba(var(--rgb-hypothesis), 0.14);
   --signal-warn: #e09a45;
+  --signal-error: var(--phase-define);
 
   /* paper: rendered output previews */
   --paper-bg: #f2efe8;
+  --paper-bg-2: #f5f3ee;
   --paper-ink: #19191c;
   --paper-ink-2: #4a4741;
   --paper-ink-muted: #8a857a;
+  --paper-ink-deep: #1c1b19;
+  /* the hi-fi sketch swatch on fidelity pickers */
+  --sketch-warm: #c98a5a;
+  --sketch-plum: #5a3a6a;
 
-  /* type */
+  /* scrims behind sheets and dialogs */
+  --scrim: rgba(var(--rgb-night), 0.6);
+  --scrim-strong: rgba(var(--rgb-night), 0.72);
+
+  /* ── type. Body is 15px; the scale steps are deliberate, never in between. */
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --fs-micro: 9px;
-  --fs-meta: 10px;
-  --fs-small: 10.5px;
-  --fs-chip: 11px;
-  --fs-note: 11.5px;
-  --fs-body: 12px;
-  --fs-slot: 12.5px;
-  --fs-phase: 14px;
-  --fs-header: 19px;
-  --fs-display: 22px;
+  /* Accents, used sparingly (see DESIGN_SYSTEM.md): Serif for verdicts and locked statements, Pixel for tiny labels. */
+  --font-serif: "Geist Serif", ui-serif, "New York", Georgia, serif;
+  --font-pixel: "Geist Pixel", "Geist Mono", ui-monospace, monospace;
+  --fs-micro: 11px;
+  --fs-meta: 12px;
+  --fs-small: 13px;
+  --fs-body: 15px;
+  --fs-slot: 16px;
+  --fs-phase: 18px;
+  --fs-title: 20px;
+  --fs-header: 24px;
+  --fs-display: 28px;
+  --fs-hero: 40px;
   --tracking-caps: 0.08em;
   --tracking-micro: 0.04em;
 
+  /* ── spacing. Named by pixels; padding, margin and gap only take these (or 0, 1px, auto). */
+  --sp-2: 2px;
+  --sp-4: 4px;
+  --sp-6: 6px;
+  --sp-8: 8px;
+  --sp-10: 10px;
+  --sp-12: 12px;
+  --sp-14: 14px;
+  --sp-16: 16px;
+  --sp-18: 18px;
+  --sp-20: 20px;
+  --sp-24: 24px;
+  --sp-28: 28px;
+  --sp-32: 32px;
+  --sp-40: 40px;
+  --sp-48: 48px;
+  --sp-56: 56px;
+  --sp-64: 64px;
+  --sp-80: 80px;
+  --sp-96: 96px;
+  --sp-128: 128px;
+
   /* radii */
+  --r-2xs: 2px;
   --r-xs: 4px;
-  --r-sm: 5px;
-  --r-md: 6px;
-  --r-lg: 8px;
-  --r-xl: 10px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 10px;
+  --r-xl: 12px;
+  --r-2xl: 16px;
+  --r-3xl: 20px;
+  --r-device: 24px;
   --r-pill: 999px;
 
-  /* layout (01 Workspace at 1728 × 1080) */
-  --titlebar-h: 44px;
-  --rail-h: 56px;
-  --sidebar-w: 248px;
-  --inspector-w: 344px;
-  --history-h: 150px;
-  --grid: 28px;
-  --snap: 8px;
+  /* controls: buttons, inputs, selects, tabs */
+  --control-xs: 22px;
+  --control-sm: 26px;
+  --control-md: 32px;
+  --control-lg: 40px;
+
+  /* icons (Lucide, through the Icon primitive) */
+  --icon-sm: 14px;
+  --icon-md: 16px;
+  --icon-lg: 20px;
+  --icon-stroke: 1.5;
+
+  /* ── elevation */
+  --shadow-1: 0 8px 24px rgba(var(--rgb-black), 0.5); /* menus, popovers, tooltips */
+  --shadow-2: 0 12px 32px rgba(var(--rgb-black), 0.5); /* floating panels */
+  --shadow-3: 0 24px 64px rgba(var(--rgb-black), 0.6); /* sheets, dialogs, the palette */
+  --shadow-4: 0 30px 80px rgba(var(--rgb-black), 0.55); /* full-window overlays */
+
+  /* layers, lowest to highest. Inside a component, small local numbers (1–9) are fine. */
+  --z-popover: 20;
+  --z-bar: 30;
+  --z-sheet: 40;
+  --z-overlay: 50;
+  --z-palette: 60;
+  --z-toast: 80;
+  --z-fullscreen: 95;
+  --z-dialog: 100;
+  --z-tooltip: 110;
+  --z-coach: 120;
+
+  /* focus and states */
+  --focus-ring: 0 0 0 2px var(--bg-app), 0 0 0 3.5px var(--text-secondary);
+  --focus-outline: 1.5px solid var(--text-secondary);
+  --state-hover: var(--bg-hover);
+  --state-active: var(--border-strong);
+  --state-selected: var(--bg-raised);
+  --state-disabled-opacity: 0.4;
+  --state-press-scale: 0.98;
+
+  /* layout (01 Workspace, scaled for 15px type) */
+  --titlebar-h: 48px;
+  --rail-h: 64px;
+  --sidebar-w: 272px;
+  --inspector-w: 368px;
+  --history-h: 176px;
+  --keynode-w: 344px;
+  --traffic-lights: 68px; /* clear of the macOS window buttons; fixed by the OS, so it doesn't scale */
+  --grid: 35px;
+  --snap: 10px;
 
   /* motion (05 Interaction patterns: settle 180ms ease-out) */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -82,9 +189,15 @@
   --t-fast: 120ms;
 }
 
+/* On 14" screens and smaller windows the side panels and key node dock step down to their
+   pre-15px widths, so the workspaces between them keep the room they had. */
+@media (max-width: 1600px) {
+  :root { --sidebar-w: 248px; --inspector-w: 336px; --keynode-w: 312px; }
+}
+
 /* Per-phase accent, set with data-phase on any container. */
-[data-phase="understand"] { --phase: var(--phase-understand); --phase-rgb: 222, 138, 69; }
-[data-phase="define"] { --phase: var(--phase-define); --phase-rgb: 224, 90, 78; }
-[data-phase="build"] { --phase: var(--phase-build); --phase-rgb: 152, 135, 227; }
-[data-phase="validate"] { --phase: var(--phase-validate); --phase-rgb: 82, 172, 217; }
-[data-phase="share"] { --phase: var(--phase-share); --phase-rgb: 85, 201, 142; }
+[data-phase="understand"] { --phase: var(--phase-understand); --phase-rgb: var(--rgb-understand); }
+[data-phase="define"] { --phase: var(--phase-define); --phase-rgb: var(--rgb-define); }
+[data-phase="build"] { --phase: var(--phase-build); --phase-rgb: var(--rgb-build); }
+[data-phase="validate"] { --phase: var(--phase-validate); --phase-rgb: var(--rgb-validate); }
+[data-phase="share"] { --phase: var(--phase-share); --phase-rgb: var(--rgb-share); }

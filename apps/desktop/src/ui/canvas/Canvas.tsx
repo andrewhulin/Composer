@@ -6,6 +6,7 @@ import { useProject } from "../../store/project";
 import { useUi, type CanvasTool } from "../../store/ui";
 import { useSize } from "../primitives/useSize";
 import { cx } from "../primitives/cx";
+import { Button } from "../primitives/Button";
 import { Rulers } from "./Rulers";
 import { PhaseRails } from "./PhaseRails";
 import { FlowCanvas } from "./FlowCanvas";
@@ -79,7 +80,7 @@ export function Canvas() {
         <>
           <span className={styles.crossV} style={{ left: cursor.x }} />
           <span className={styles.crossH} style={{ top: cursor.y }} />
-          <span className={styles.readout} style={{ left: cursor.x + 12, top: cursor.y - 22 }}>
+          <span className={styles.readout} style={{ left: cursor.x + 15, top: cursor.y - 28 }}>
             {`X ${pad(cursor.x)}  Y ${pad(cursor.y)}`}
           </span>
         </>
@@ -109,20 +110,17 @@ export function Canvas() {
 
       <div className={styles.toolbar} role="toolbar" aria-label="Canvas tools" hidden={playing}>
         {!workspace && TOOLS.map((t) => (
-          <button key={t.id} type="button" className={cx(styles.tool, tool === t.id && styles.toolActive)} onClick={() => setTool(t.id)}>
-            <span>{t.label}</span>
-            <span className={styles.toolKey}>{t.key}</span>
-          </button>
+          <Button key={t.id} variant="ghost" size="sm" shortcut={t.key} pressed={tool === t.id} onClick={() => setTool(t.id)}>
+            {t.label}
+          </Button>
         ))}
-        <button type="button" className={cx(styles.tool, addMenuOpen && styles.toolActive)} onClick={() => setAddMenuOpen(!addMenuOpen)}>
-          <span>Add node</span>
-          <span className={styles.toolKey}>N</span>
-        </button>
+        <Button variant="ghost" size="sm" shortcut="N" pressed={addMenuOpen} onClick={() => setAddMenuOpen(!addMenuOpen)}>
+          Add node
+        </Button>
         {phase === "build" && focus && (
-          <button type="button" className={cx(styles.tool, variantsOpen && styles.toolActive)} onClick={() => setVariantsOpen(!variantsOpen)}>
-            <span>Variants</span>
-            <span className={styles.toolKey}>B</span>
-          </button>
+          <Button variant="ghost" size="sm" shortcut="B" pressed={variantsOpen} onClick={() => setVariantsOpen(!variantsOpen)}>
+            Variants
+          </Button>
         )}
         {!workspace && <span className={styles.zoom}>{Math.round(zoom * 100)}%</span>}
         {addMenuOpen && <AddNodeMenu onClose={() => setAddMenuOpen(false)} />}

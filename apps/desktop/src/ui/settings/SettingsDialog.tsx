@@ -7,6 +7,8 @@ import { CONNECTORS, type Connector } from "../../connectors";
 import { rendererDefaultDir } from "../../platform/share";
 import { UpdatesSection } from "./UpdatesSection";
 import { RequestsSection } from "./RequestsSection";
+import { Button } from "../primitives/Button";
+import { Input } from "../primitives/Field";
 import styles from "./SettingsDialog.module.css";
 
 /** ⌘, — the Anthropic API key (stored in Keychain) and a connection check. */
@@ -51,9 +53,7 @@ export function SettingsDialog() {
       <div className={styles.dialog} role="dialog" aria-label="Settings" onPointerDown={(e) => e.stopPropagation()}>
         <header className={styles.header}>
           <span className={styles.title}>Settings</span>
-          <button type="button" className={styles.close} onClick={() => setOpen(false)}>
-            esc
-          </button>
+          <Button variant="ghost" size="sm" shortcut="esc" onClick={() => setOpen(false)} />
         </header>
         <section className={styles.section} data-tour="settings-key">
           <span className="caps">Anthropic API key</span>
@@ -61,8 +61,10 @@ export function SettingsDialog() {
             Every Claude node runs on Claude Opus 5.5 with this key. It lives in your macOS Keychain under com.andrewhulin.composer and is never written to disk or the repo.
           </p>
           <div className={styles.row}>
-            <input
+            <Input
               className={styles.input}
+              size="sm"
+              mono
               type="password"
               autoFocus
               placeholder={hasKey ? "•••••••••••••••• saved in Keychain" : "sk-ant-…"}
@@ -74,25 +76,24 @@ export function SettingsDialog() {
                 e.stopPropagation();
               }}
             />
-            <button type="button" className={styles.primary} onClick={() => void save()} disabled={!value.trim()}>
+            <Button variant="primary" onClick={() => void save()} disabled={!value.trim()}>
               Save
-            </button>
+            </Button>
           </div>
           <div className={styles.row}>
-            <button type="button" className={styles.secondary} onClick={() => void check()} disabled={!hasKey || checking}>
+            <Button variant="secondary" onClick={() => void check()} disabled={!hasKey || checking}>
               {checking ? "Checking…" : "Check connection"}
-            </button>
+            </Button>
             {hasKey && (
-              <button
-                type="button"
-                className={styles.secondary}
+              <Button
+                variant="secondary"
                 onClick={async () => {
                   await deleteSecret(SECRET.anthropic);
                   setHasKey(false);
                 }}
               >
                 Remove key
-              </button>
+              </Button>
             )}
           </div>
         </section>
@@ -127,8 +128,10 @@ function PathSetting({ settingKey, label, placeholder }: { settingKey: string; l
   return (
     <label className={styles.pathRow}>
       <span>{label}</span>
-      <input
+      <Input
         className={styles.input}
+        size="sm"
+        mono
         placeholder={placeholder}
         defaultValue={value}
         onBlur={(e) => void repo?.setSetting(settingKey, e.currentTarget.value.trim())}
@@ -148,8 +151,10 @@ function SlackChannel() {
   if (value === null) return null;
   return (
     <div className={styles.row}>
-      <input
+      <Input
         className={styles.input}
+        size="sm"
+        mono
         placeholder="Feedback channel ID (C0123…)"
         defaultValue={value}
         onBlur={(e) => void repo?.setSetting("slack_channel", e.currentTarget.value.trim())}
@@ -182,8 +187,10 @@ function ConnectorRow({ connector }: { connector: Connector }) {
       {connector.platform === "slack" && <SlackChannel />}
       {connector.secret && (
         <div className={styles.row}>
-          <input
+          <Input
             className={styles.input}
+            size="sm"
+            mono
             type="password"
             placeholder={has ? "•••••••• saved" : "Paste token"}
             value={value}
@@ -193,20 +200,19 @@ function ConnectorRow({ connector }: { connector: Connector }) {
               if (e.key !== "Escape") e.stopPropagation();
             }}
           />
-          <button type="button" className={styles.secondary} onClick={() => void save()} disabled={!value.trim()}>
+          <Button variant="secondary" onClick={() => void save()} disabled={!value.trim()}>
             Save
-          </button>
+          </Button>
           {has && (
-            <button
-              type="button"
-              className={styles.secondary}
+            <Button
+              variant="secondary"
               onClick={async () => {
                 await deleteSecret(connector.secret!);
                 setHas(false);
               }}
             >
               Remove
-            </button>
+            </Button>
           )}
         </div>
       )}

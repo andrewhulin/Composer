@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowDown, Dot as Point, Minus, PenLine, Plus, Square, type LucideIcon } from "lucide-react";
 import { PHASE_INFO } from "@composer/core";
 import type { DesignSystem, DriftProposal, Philosophy, Principle } from "@composer/engine";
 import type { FoundationRow, ProposalRow } from "@composer/data";
@@ -6,7 +7,7 @@ import { inTauri } from "../../platform/env";
 import { readTextFile } from "../../platform/share";
 import { accept, evidence, importDesignSystem, loadCraft, importPhilosophy, lockPrinciple, notYet, openFoundations, reflect, reject, retire, useCraft, type PrincipleDiff, type RuleDiff } from "../../store/craft";
 import { toast, useProject } from "../../store/project";
-import { cx } from "../primitives/cx";
+import { Badge, Button, Dot, Icon, Input, cx } from "../primitives";
 import { ago, useNow } from "../../hooks/useNow";
 import { ReplayPanel } from "./ReplayPanel";
 import styles from "./FoundationsSheet.module.css";
@@ -39,9 +40,7 @@ export function FoundationsSheet() {
             <h1 className={styles.title}>Design system + philosophy</h1>
             <p className={styles.lede}>Two slots that ride along with every phase. The philosophy sharpens as you decide; the design system only changes when you accept a proposal.</p>
           </div>
-          <button type="button" className={styles.esc} onClick={() => openFoundations(false)}>
-            esc
-          </button>
+          <Button variant="secondary" size="sm" shortcut="esc" onClick={() => openFoundations(false)} />
         </header>
         <div className={styles.slots}>
           <PhilosophySlot />
@@ -77,10 +76,12 @@ function PhilosophySlot() {
             rev {c.rev} · {c.principles.length} principles{last?.changelog ? ` · ${last.changelog.title.toLowerCase()} ${ago(last.createdAt, now)}` : ""}
           </span>
         </div>
-        <span className={cx(styles.chip, styles.live)}>rev {c.rev}</span>
-        <button type="button" className={styles.button} onClick={() => setEditing((e) => !e)}>
+        <Badge tone="live" mono>
+          rev {c.rev}
+        </Badge>
+        <Button variant="secondary" size="lg" onClick={() => setEditing((e) => !e)}>
           {editing ? "Done" : "Edit principles"}
-        </button>
+        </Button>
       </div>
       <div className={styles.split}>
         <div className={styles.principles}>
@@ -113,8 +114,16 @@ function PrincipleRow({ p, recent }: { p: Principle; recent: boolean }) {
         <span className={styles.pbody}>{p.text}</span>
         <span className={styles.pmeta}>
           {decisions ? `${decisions} ${decisions === 1 ? "decision" : "decisions"}` : "from your writing"} · {p.strength}
-          {p.strength === "locked" && <span className={styles.chip}>locked</span>}
-          {p.strength === "forming" && <span className={cx(styles.chip, styles.hyp)}>new</span>}
+          {p.strength === "locked" && (
+            <Badge tone="neutral" mono>
+              locked
+            </Badge>
+          )}
+          {p.strength === "forming" && (
+            <Badge tone="hypothesis" mono>
+              new
+            </Badge>
+          )}
         </span>
       </div>
       <span className={styles.strength}>
@@ -149,19 +158,19 @@ function EditPrinciples({ ph, onDone }: { ph: Philosophy; onDone: () => void }) 
             onChange={(e) => setDraft((d) => d.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
             onKeyDown={(e) => e.stopPropagation()}
           />
-          <button type="button" className={styles.ghost} disabled={p.strength === "locked"} onClick={run(() => lockPrinciple(p.n))}>
+          <Button variant="ghost" size="sm" disabled={p.strength === "locked"} onClick={run(() => lockPrinciple(p.n))}>
             {p.strength === "locked" ? "Locked" : "Lock"}
-          </button>
+          </Button>
         </div>
       ))}
-      <button type="button" className={styles.primary} onClick={save}>
+      <Button variant="primary" size="lg" className={styles.save} onClick={save}>
         Save as rev {ph.rev + 1}
-      </button>
+      </Button>
     </div>
   );
 }
 
-const GLYPH: Record<string, string> = { sharpened: "~", reworded: "~", added: "+", retired: "−", import: "↓", locked: "■", change: "~", add: "+" };
+const GLYPH: Record<string, LucideIcon> = { sharpened: PenLine, reworded: PenLine, added: Plus, retired: Minus, import: ArrowDown, locked: Square, change: PenLine, add: Plus };
 
 function ChangeEntry({ row, tone }: { row: FoundationRow; tone: "define" | "build" }) {
   const now = useNow(true, 30_000);
@@ -169,7 +178,9 @@ function ChangeEntry({ row, tone }: { row: FoundationRow; tone: "define" | "buil
   if (!c) return null;
   return (
     <div className={styles.entry}>
-      <span className={cx(styles.glyph, c.kind === "added" || c.kind === "add" ? styles.glyphHyp : c.kind === "retired" ? styles.glyphMuted : styles[tone])}>{GLYPH[c.kind] ?? "·"}</span>
+      <span className={cx(styles.glyph, c.kind === "added" || c.kind === "add" ? styles.glyphHyp : c.kind === "retired" ? styles.glyphMuted : styles[tone])}>
+        <Icon icon={GLYPH[c.kind] ?? Point} size="md" />
+      </span>
       <div className={styles.entryText}>
         <div className={styles.entryHead}>
           <span>{c.title}</span>
@@ -191,12 +202,12 @@ function Forming({ p }: { p: ProposalRow }) {
         {label}: “{d.text}” <span>{d.why}</span>
       </p>
       <div className={styles.row}>
-        <button type="button" className={styles.keep} onClick={run(() => accept(p))}>
+        <Button variant="tint" size="lg" className={styles.keep} onClick={run(() => accept(p))}>
           Keep
-        </button>
-        <button type="button" className={styles.ghost} onClick={run(() => notYet(p))}>
+        </Button>
+        <Button variant="ghost" size="sm" onClick={run(() => notYet(p))}>
           Not yet
-        </button>
+        </Button>
       </div>
       <ReplayPanel p={p} onKeep={run(() => accept(p))} />
     </div>
@@ -251,10 +262,14 @@ function DesignSystemSlot() {
             {c.source || "markdown"} · {last ? `updated ${ago(last.createdAt, now)}` : ""} · read only to Composer
           </span>
         </div>
-        {proposals.length > 0 && <span className={cx(styles.chip, styles.hyp)}>{proposals.length} to review</span>}
-        <button type="button" className={styles.button} onClick={() => setSwap(true)}>
+        {proposals.length > 0 && (
+          <Badge tone="hypothesis" mono>
+            {proposals.length} to review
+          </Badge>
+        )}
+        <Button variant="secondary" size="lg" onClick={() => setSwap(true)}>
           Swap system
-        </button>
+        </Button>
       </div>
       <div className={styles.stats}>
         <Stat n={String(c.tokens.length)} label="tokens" />
@@ -315,7 +330,7 @@ function Tokens({ ds }: { ds: DesignSystem }) {
       <div className={styles.scale}>
         <div className={styles.type}>
           {sizes.map((t, i) => (
-            <span key={i} style={{ fontSize: Math.min(42, t.size), fontWeight: t.weight }} title={`${t.name} · ${t.size}px`}>
+            <span key={i} style={{ fontSize: Math.max(11, Math.min(42, t.size)), fontWeight: t.weight }} title={`${t.name} · ${t.size}px`}>
               Aa
             </span>
           ))}
@@ -342,16 +357,18 @@ function DsProposal({ p, open, onToggle }: { p: ProposalRow; open: boolean; onTo
   return (
     <div className={cx(styles.proposal, d.kind === "change" && styles.proposalChange)}>
       <div className={styles.proposalHead}>
-        <span className={cx(styles.chip, d.kind === "change" && styles.hyp)}>{d.kind}</span>
+        <Badge tone={d.kind === "change" ? "hypothesis" : "neutral"} mono>
+          {d.kind}
+        </Badge>
         <div className={styles.proposalText}>
           <span>{title}</span>
           <em>
             {p.rationale} · {d.builds.map((b) => b.title).slice(0, 3).join(", ")}
           </em>
         </div>
-        <button type="button" className={d.kind === "change" ? styles.light : styles.button} onClick={onToggle}>
+        <Button variant={d.kind === "change" ? "primary" : "secondary"} size="lg" onClick={onToggle}>
           {open ? "Close" : "Review"}
-        </button>
+        </Button>
       </div>
       {open && (
         <div className={styles.review}>
@@ -362,22 +379,22 @@ function DsProposal({ p, open, onToggle }: { p: ProposalRow; open: boolean; onTo
           {rejecting ? (
             <div className={styles.row}>
               <span className={styles.ask}>Wrong value, or wrong idea?</span>
-              <button type="button" className={styles.button} onClick={run(() => reject(p, "value"))}>
+              <Button variant="secondary" size="lg" onClick={run(() => reject(p, "value"))}>
                 Wrong value
-              </button>
-              <button type="button" className={styles.button} onClick={run(() => reject(p, "idea"))}>
+              </Button>
+              <Button variant="secondary" size="lg" onClick={run(() => reject(p, "idea"))}>
                 Wrong idea
-              </button>
+              </Button>
             </div>
           ) : (
             <div className={styles.actions}>
-              <button type="button" className={styles.light} onClick={run(() => accept(p, value !== d.to ? value : undefined))}>
+              <Button variant="primary" size="lg" onClick={run(() => accept(p, value !== d.to ? value : undefined))}>
                 Accept
-              </button>
-              <input value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.stopPropagation()} aria-label="Edit value" />
-              <button type="button" className={styles.button} onClick={() => setRejecting(true)}>
+              </Button>
+              <Input size="sm" mono className={styles.valueInput} value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.stopPropagation()} aria-label="Edit value" />
+              <Button variant="secondary" size="lg" onClick={() => setRejecting(true)}>
                 Reject
-              </button>
+              </Button>
             </div>
           )}
           <p className={styles.quiet}>Reject asks one question: wrong value, or wrong idea? The answer sharpens the philosophy either way.</p>
@@ -422,9 +439,9 @@ function ImportDesignSystem({ onDone, onCancel }: { onDone: () => void; onCancel
           <span className={styles.panelMeta}>import a token reference (markdown tables) and its usage guide · read only to Composer</span>
         </div>
         {onCancel && (
-          <button type="button" className={styles.button} onClick={onCancel}>
+          <Button variant="secondary" size="lg" onClick={onCancel}>
             Cancel
-          </button>
+          </Button>
         )}
       </div>
       <Importer
@@ -455,25 +472,26 @@ function ImportDesignSystem({ onDone, onCancel }: { onDone: () => void; onCancel
 
 /** Paths in the app; a file picker anywhere (and the only option in the browser preview). */
 function Importer({ fields, onPaths, onFiles }: { fields: { label: string; value: string; set: (v: string) => void }[]; onPaths: (paths: string[]) => void; onFiles: (files: File[]) => void }) {
+  const picker = useRef<HTMLInputElement>(null);
   return (
     <div className={styles.importer}>
       {inTauri() &&
         fields.map((f) => (
           <label key={f.label}>
             <span>{f.label}</span>
-            <input value={f.value} onChange={(e) => f.set(e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
+            <Input size="sm" mono value={f.value} onChange={(e) => f.set(e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
           </label>
         ))}
       <div className={styles.row}>
         {inTauri() && (
-          <button type="button" className={styles.light} onClick={() => onPaths(fields.map((f) => f.value.trim()))}>
+          <Button variant="primary" size="lg" onClick={() => onPaths(fields.map((f) => f.value.trim()))}>
             Import
-          </button>
+          </Button>
         )}
-        <label className={styles.button}>
+        <Button variant="secondary" size="lg" onClick={() => picker.current?.click()}>
           Choose {fields.length > 1 ? "files" : "file"}…
-          <input type="file" accept=".md,.json,.txt" multiple={fields.length > 1} hidden onChange={(e) => e.target.files?.length && onFiles([...e.target.files])} />
-        </label>
+        </Button>
+        <input ref={picker} type="file" accept=".md,.json,.txt" multiple={fields.length > 1} hidden onChange={(e) => e.target.files?.length && onFiles([...e.target.files])} />
       </div>
     </div>
   );
@@ -501,16 +519,16 @@ function LearningPanel() {
             {scoredCount} scored {scoredCount === 1 ? "run" : "runs"} · {rules.length} {rules.length === 1 ? "rule" : "rules"} kept · needs 5 high and 5 low, or 5 pairwise picks, in a phase before it proposes anything · replay a proposal on past briefs before you keep it
           </span>
         </div>
-        <button type="button" className={styles.button} disabled={reflecting} onClick={() => void reflect()}>
+        <Button variant="secondary" size="lg" disabled={reflecting} onClick={() => void reflect()}>
           {reflecting ? "Reflecting…" : "Reflect now"}
-        </button>
+        </Button>
       </div>
       <div className={styles.learnBody}>
         <div className={styles.evidence}>
           {progress.length === 0 && <p className={styles.quiet}>Score runs from the inspector (1–5). Composer compares what scored high with what scored low.</p>}
           {progress.map((e) => (
             <div key={e.phase} className={styles.evRow}>
-              <span className={cx(styles.dot)} style={{ background: `var(--phase-${e.phase})` }} />
+              <Dot color={`var(--phase-${e.phase})`} size={9} />
               <span>{PHASE_INFO[e.phase as keyof typeof PHASE_INFO].name}</span>
               <em>
                 {Math.min(e.high, 5)}/5 high · {Math.min(e.low, 5)}/5 low{e.picks ? ` · ${e.picks} picks` : ""}
@@ -524,7 +542,9 @@ function LearningPanel() {
             return (
               <div key={p.id} className={cx(styles.proposal, styles.proposalChange)}>
                 <div className={styles.proposalHead}>
-                  <span className={cx(styles.chip, styles.hyp)}>{PHASE_INFO[d.phase].name}</span>
+                  <Badge tone="hypothesis" mono>
+                    {PHASE_INFO[d.phase].name}
+                  </Badge>
                   <div className={styles.proposalText}>
                     <span>{d.text}</span>
                     <em>
@@ -532,12 +552,12 @@ function LearningPanel() {
                       {d.stats.picks ? `${d.stats.nHigh || d.stats.nLow ? " · " : ""}${d.stats.picks} picks` : ""} · {d.why}
                     </em>
                   </div>
-                  <button type="button" className={styles.light} onClick={run(() => accept(p))}>
+                  <Button variant="primary" size="lg" onClick={run(() => accept(p))}>
                     Keep rule
-                  </button>
-                  <button type="button" className={styles.button} onClick={run(() => notYet(p))}>
+                  </Button>
+                  <Button variant="secondary" size="lg" onClick={run(() => notYet(p))}>
                     Not yet
-                  </button>
+                  </Button>
                 </div>
                 <ReplayPanel p={p} onKeep={run(() => accept(p))} />
               </div>
@@ -545,11 +565,13 @@ function LearningPanel() {
           })}
           {rules.map((r) => (
             <div key={r.id} className={styles.rule}>
-              <span className={styles.chip}>{PHASE_INFO[r.phase].name}</span>
+              <Badge tone="neutral" mono>
+                {PHASE_INFO[r.phase].name}
+              </Badge>
               <span className={styles.ruleBody}>{r.body}</span>
-              <button type="button" className={styles.ghost} onClick={run(() => retire(r))}>
+              <Button variant="ghost" size="sm" onClick={run(() => retire(r))}>
                 Retire
-              </button>
+              </Button>
             </div>
           ))}
           {rules.length === 0 && proposals.length === 0 && <p className={styles.quiet}>No rules yet. Nothing goes live without your approval, and every change can be retired here.</p>}

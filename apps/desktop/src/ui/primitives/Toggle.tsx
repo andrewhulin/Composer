@@ -4,7 +4,7 @@ import styles from "./Toggle.module.css";
 interface ToggleProps {
   on: boolean;
   onChange: () => void;
-  /** "sm" is the 22×12 context-chip switch; "md" is the 24×14 Focus switch. */
+  /** "sm" is the 28×16 context-chip switch; "md" is the 32×18 Focus switch. */
   size?: "sm" | "md";
   /** "live" uses the green signal; "phase" uses the current phase accent. */
   tone?: "live" | "phase";

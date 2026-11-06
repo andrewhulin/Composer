@@ -1,26 +1,27 @@
 .region {
-  width: 1320px;
-  height: 900px;
+  width: 1650px;
+  height: 1125px;
   border: 1px dashed rgba(var(--phase-rgb), 0.35);
-  border-radius: 16px;
+  border-radius: var(--r-3xl);
   background: rgba(var(--phase-rgb), 0.025);
   pointer-events: none;
 }
-.label { position: absolute; left: 20px; top: 16px; display: flex; align-items: baseline; gap: 8px; font-size: var(--fs-header); font-weight: 600; letter-spacing: -0.02em; color: var(--text-primary); }
-.index { font-family: var(--font-mono); font-size: var(--fs-chip); font-weight: 500; color: var(--phase); }
+.label { position: absolute; left: 25px; top: 20px; display: flex; align-items: baseline; gap: var(--sp-10); font-size: var(--fs-header); font-weight: 600; letter-spacing: -0.02em; color: var(--text-primary); }
+.index { font-family: var(--font-mono); font-size: var(--fs-small); font-weight: 500; color: var(--phase); }
 .output { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 500; letter-spacing: var(--tracking-micro); color: var(--text-muted); }
 .drop {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  width: 472px;
-  padding: 10px 14px;
-  border: 1px dashed rgba(222, 138, 69, 0.55);
+  gap: var(--sp-8);
+  width: 590px;
+  padding: var(--sp-12) var(--sp-18);
+  border: 1px dashed rgba(var(--rgb-understand), 0.55);
   border-radius: var(--r-md);
-  background: rgba(222, 138, 69, 0.05);
+  background: rgba(var(--rgb-understand), 0.05);
   font-family: var(--font-mono);
-  font-size: var(--fs-chip);
+  font-size: var(--fs-small);
   color: var(--phase-understand);
   pointer-events: none;
 }
+.dropTitle { display: flex; align-items: center; gap: var(--sp-6); }
 .dropSub { font-size: var(--fs-meta); color: var(--text-muted); }

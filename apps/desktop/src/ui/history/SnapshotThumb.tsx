@@ -1,9 +1,10 @@
+/* eslint-disable no-restricted-syntax -- drawn as a data graphic in SVG, not icons */
 import { useEffect, useState } from "react";
 import type { Graph, Phase } from "@composer/core";
 import type { SnapshotRow } from "@composer/data";
 import { graphAt } from "../../store/playback";
 
-const FILL: Record<string, string> = { source: "#a29e94", claude: "#eeedea", hypothesis: "#e3c25a" };
+const FILL: Record<string, string> = { source: "var(--text-secondary)", claude: "var(--text-primary)", hypothesis: "var(--signal-hypothesis)" };
 const SIZE: Record<string, [number, number]> = { source: [150, 70], claude: [256, 174], hypothesis: [248, 190], output: [232, 120] };
 
 /** A minimap of one snapshot's phase: blocks where the nodes were (Figma 04 filmstrip). */
@@ -27,7 +28,7 @@ export function SnapshotThumb({ snap, width = 120, height = 56 }: { snap: Snapsh
     <svg width={width} height={height} aria-hidden>
       {nodes.map((n) => {
         const [w, h] = SIZE[n.kind] ?? [200, 100];
-        const fill = n.kind === "output" ? `var(--phase-${n.phase})` : (FILL[n.kind] ?? "#888");
+        const fill = n.kind === "output" ? `var(--phase-${n.phase})` : (FILL[n.kind] ?? "var(--text-muted)");
         return (
           <rect
             key={n.id}

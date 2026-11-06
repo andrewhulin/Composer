@@ -1,9 +1,10 @@
 import { useMemo } from "react";
+import { Check, X } from "lucide-react";
 import { type ClaudeNode, type OutputNode, type SourceNode, type TextArtifact } from "@composer/core";
 import { FRAMES, checkForm, statementForm, type Frame, type InsightsData, type StatementData, type StatementForm as Form } from "@composer/engine";
 import { actions, toast, useProject } from "../../store/project";
 import { primaryClaude } from "../../app/scaffold";
-import { cx } from "../primitives/cx";
+import { Button, Icon, Tabs, Textarea, cx } from "../primitives";
 import { StatementForm } from "./StatementForm";
 import { useKey } from "./useKey";
 import styles from "./Workspace.module.css";
@@ -105,48 +106,51 @@ export function DefineWorkspace() {
             <span className={styles.citeLabel}>{c.label}</span>
             <span className={styles.citeText}>{c.text}</span>
             {!readOnly && (
-              <button type="button" className={styles.citeBtn} onClick={() => cite(c)}>
-                {cites.has(c.id) ? "Cited ✓" : "Cite"}
-              </button>
+              <Button variant={cites.has(c.id) ? "tint" : "secondary"} size="sm" className={styles.citeBtn} {...(cites.has(c.id) ? { iconAfter: Check } : {})} onClick={() => cite(c)}>
+                {cites.has(c.id) ? "Cited" : "Cite"}
+              </Button>
             )}
           </div>
         ))}
       </aside>
 
       <section className={styles.hero}>
-        <div className={styles.frames} role="tablist" aria-label="Frame">
-          {(Object.keys(FRAMES) as Frame[]).map((f) => (
-            <button key={f} type="button" role="tab" aria-selected={frame === f} className={cx(styles.frameTab, frame === f && styles.frameOn)} onClick={() => actions.update<ClaudeNode>(claude.id, { options: { ...claude.options, frame: f } })} title={`Claude drafts a ${FRAMES[f].toLowerCase()} next`}>
-              {FRAMES[f]}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          variant="segmented"
+          size="sm"
+          label="Frame"
+          className={styles.frames}
+          value={frame}
+          onChange={(f) => actions.update<ClaudeNode>(claude.id, { options: { ...claude.options, frame: f } })}
+          items={(Object.keys(FRAMES) as Frame[]).map((f) => ({ value: f, label: <span title={`Claude drafts a ${FRAMES[f].toLowerCase()} next`}>{FRAMES[f]}</span> }))}
+        />
         <StatementForm form={form} onChange={readOnly ? undefined : set} readOnly={readOnly} {...(hasRun ? { claude } : {})} />
         <div className={styles.checks}>
           {checkList.map((c) => (
             <span key={c.label} className={c.ok ? styles.ok : styles.miss}>
-              {c.ok ? "✓" : "✕"} {c.label}
+              <Icon icon={c.ok ? Check : X} size="sm" />
+              {c.label}
             </span>
           ))}
         </div>
         <label className={styles.evidenceLabel} htmlFor="define-evidence">
           <span className="caps">Evidence it rests on</span>
         </label>
-        <textarea id="define-evidence" className={styles.evidence} value={evidenceText} readOnly={readOnly} rows={3} placeholder="Cite from the rail, or write the evidence in your own words." onChange={(e) => actions.setDraft(output.id, { evidence: e.target.value })} onKeyDown={(e) => e.stopPropagation()} />
+        <Textarea id="define-evidence" size="sm" value={evidenceText} readOnly={readOnly} rows={3} placeholder="Cite from the rail, or write the evidence in your own words." onChange={(e) => actions.setDraft(output.id, { evidence: e.target.value })} onKeyDown={(e) => e.stopPropagation()} />
         {!readOnly && (
           <div className={styles.actions}>
-            <button type="button" className={styles.secondary} disabled={running} onClick={() => actions.run(claude.id)}>
+            <Button variant="secondary" disabled={running} onClick={() => actions.run(claude.id)}>
               {running ? "Drafting…" : hasRun ? "Redraft with Claude" : "Draft with Claude"}
-            </button>
+            </Button>
             {edited && base && (
-              <button type="button" className={styles.secondary} onClick={() => actions.setDraft(output.id, { believe: undefined, whom: undefined, know_when: undefined })}>
+              <Button variant="secondary" onClick={() => actions.setDraft(output.id, { believe: undefined, whom: undefined, know_when: undefined })}>
                 Use Claude's draft
-              </button>
+              </Button>
             )}
             <span className={styles.fill} />
-            <button type="button" className={styles.primary} onClick={() => void actions.lockStatement(output.id)} data-tour="lock-statement" disabled={!form.believe.trim() || !form.whom.trim() || !form.know_when.trim()}>
+            <Button variant="phase" onClick={() => void actions.lockStatement(output.id)} data-tour="lock-statement" disabled={!form.believe.trim() || !form.whom.trim() || !form.know_when.trim()}>
               Lock {frame === "hypothesis" ? "hypothesis" : FRAMES[frame].toLowerCase()}
-            </button>
+            </Button>
           </div>
         )}
         {running && live[claude.id]?.text && <p className={styles.streaming}>{live[claude.id]!.text.slice(-220)}</p>}
@@ -168,9 +172,9 @@ export function DefineWorkspace() {
               <b>We'll know when</b> {v.know_when}
             </p>
             {!readOnly && (
-              <button type="button" className={styles.secondary} onClick={() => void takeVariant(v)}>
+              <Button variant="secondary" size="sm" className={styles.variantUse} onClick={() => void takeVariant(v)}>
                 Use this
-              </button>
+              </Button>
             )}
           </article>
         ))}

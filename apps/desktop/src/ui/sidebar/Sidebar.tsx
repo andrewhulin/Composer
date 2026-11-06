@@ -5,8 +5,10 @@ import { Dot } from "../primitives/Dot";
 import { openFoundations, useCraft } from "../../store/craft";
 import { cx } from "../primitives/cx";
 import { PLATFORM_LABEL } from "../nodes/kinds";
-import searchIcon from "../../assets/icons/search.svg";
-import plusIcon from "../../assets/icons/plus.svg";
+import { Pilcrow, Plus, Search } from "lucide-react";
+import { Icon } from "../primitives/Icon";
+import { IconButton } from "../primitives/Button";
+import { Kbd } from "../primitives/Kbd";
 import styles from "./Sidebar.module.css";
 import rowStyles from "./SourceRow.module.css";
 
@@ -45,17 +47,15 @@ export function Sidebar() {
   return (
     <aside className={styles.sidebar} data-phase={phase}>
       <button type="button" className={styles.search} onClick={() => useUi.getState().setPaletteOpen(true)}>
-        <img src={searchIcon} alt="" width={12} height={12} />
+        <Icon icon={Search} size="sm" />
         <span className={styles.searchText}>Search sources and memory</span>
-        <span className={styles.kbd}>⌘K</span>
+        <Kbd className={styles.kbd}>⌘K</Kbd>
       </button>
 
       <section className={styles.section}>
         <header className={styles.heading}>
           <span className="caps">Sources</span>
-          <button type="button" aria-label="Add source" className={styles.add} onClick={() => setAddMenuOpen(true)}>
-            <img src={plusIcon} alt="" width={12} height={12} />
-          </button>
+          <IconButton icon={Plus} label="Add source" size="sm" onClick={() => setAddMenuOpen(true)} />
         </header>
         {sources.length === 0 && <p className={styles.empty}>Drop files or links on the canvas, or paste with ⌘V.</p>}
         {sources.map((s) => {
@@ -122,10 +122,10 @@ export function Sidebar() {
         </header>
         <button type="button" className={styles.slot} onClick={() => openFoundations()}>
           <span className={styles.tile} aria-hidden>
-            <i style={{ left: 5, top: 5, background: "var(--phase-understand)" }} />
-            <i style={{ left: 13, top: 5, background: "var(--phase-define)" }} />
-            <i style={{ left: 5, top: 13, background: "var(--phase-build)" }} />
-            <i style={{ left: 13, top: 13, background: "var(--phase-validate)" }} />
+            <i style={{ left: 6, top: 6, background: "var(--phase-understand)" }} />
+            <i style={{ left: 18, top: 6, background: "var(--phase-define)" }} />
+            <i style={{ left: 6, top: 18, background: "var(--phase-build)" }} />
+            <i style={{ left: 18, top: 18, background: "var(--phase-validate)" }} />
           </span>
           <div className={styles.slotText}>
             <span className={styles.slotTitle}>{craft.ds ? craft.ds.content.name : "Design system"}</span>
@@ -134,7 +134,7 @@ export function Sidebar() {
         </button>
         <button type="button" className={styles.slot} onClick={() => openFoundations()}>
           <span className={cx(styles.tile, styles.glyphTile)} aria-hidden>
-            ¶
+            <Icon icon={Pilcrow} size="md" />
           </span>
           <div className={styles.slotText}>
             <span className={styles.slotTitle}>Design philosophy</span>

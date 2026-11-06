@@ -1,0 +1,30 @@
+.list { display: flex; align-items: stretch; min-width: 0; }
+.tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-6);
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
+}
+.tab:hover:not(:disabled) { color: var(--text-primary); }
+.tab:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.tab:disabled { opacity: var(--state-disabled-opacity); }
+.meta { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 400; color: var(--text-muted); }
+
+.underline { gap: var(--sp-18); border-bottom: 1px solid var(--border-subtle); }
+.underline .tab { padding: var(--sp-10) 0; margin-bottom: -1px; border-bottom: 1.5px solid transparent; }
+.underline .on { color: var(--text-primary); border-bottom-color: var(--phase, var(--text-primary)); }
+.underline.sm .tab { padding: var(--sp-6) 0; font-size: var(--fs-small); }
+.underline.md .tab { font-size: var(--fs-body); }
+
+.segmented { width: fit-content; gap: var(--sp-2); padding: var(--sp-2); border-radius: var(--r-md); background: var(--bg-inset); }
+.segmented .tab { flex: 1 1 auto; padding: 0 var(--sp-12); border-radius: var(--r-sm); }
+.segmented.sm .tab { min-height: calc(var(--control-sm) - var(--sp-2)); font-size: var(--fs-small); }
+.segmented.md .tab { min-height: calc(var(--control-md) - var(--sp-2)); font-size: var(--fs-body); }
+/* Inside a phase (data-phase), the chosen option takes the phase tint; elsewhere it's a neutral lift. */
+.segmented .on, .segmented .on:hover:not(:disabled) { background: rgba(var(--phase-rgb, var(--rgb-ink)), 0.16); color: var(--phase, var(--text-primary)); }
+.block { width: 100%; }
+.block .tab { flex: 1 1 0; }

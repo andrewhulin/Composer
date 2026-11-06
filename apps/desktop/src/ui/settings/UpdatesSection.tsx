@@ -2,6 +2,7 @@ import type { UpdateState } from "../../app/updates";
 import { updates, useUpdates } from "../../store/updates";
 import { ago, useNow } from "../../hooks/useNow";
 import { Dot } from "../primitives/Dot";
+import { Button } from "../primitives/Button";
 import styles from "./SettingsDialog.module.css";
 
 function describe(state: UpdateState, checkedAt: number | null, now: number): { text: string; color: string } {
@@ -49,22 +50,21 @@ export function UpdatesSection() {
       </div>
       <div className={styles.row}>
         {state.status === "available" || state.status === "failed" ? (
-          <button type="button" className={styles.primary} onClick={() => void updates.restart()}>
+          <Button variant="primary" onClick={() => void updates.restart()}>
             {state.status === "failed" ? "Try again" : `Restart to update`}
-          </button>
+          </Button>
         ) : state.status === "waiting" ? (
-          <button type="button" className={styles.secondary} onClick={updates.cancelRestart}>
+          <Button variant="secondary" onClick={updates.cancelRestart}>
             Don't restart yet
-          </button>
+          </Button>
         ) : (
-          <button
-            type="button"
-            className={styles.secondary}
+          <Button
+            variant="secondary"
             onClick={() => void updates.check({ manual: true })}
             disabled={state.status === "unsupported" || state.status === "checking" || state.status === "downloading" || state.status === "restarting"}
           >
             {state.status === "checking" ? "Checking…" : "Check for updates"}
-          </button>
+          </Button>
         )}
       </div>
     </section>

@@ -13,25 +13,38 @@ import { initTutorial, tutorial as tutorialApi, useTutorial } from "./tutorial/s
 import { flushRequests } from "./requests/store";
 import { startUpdateChecks, updates } from "./store/updates";
 
-boot()
-  .then(async (booted) => {
-    useSession.setState({ status: "ready", booted });
-    await loadProject(booted);
-    await loadCraft();
-    await loadComments();
-    await initTutorial();
-    // Requests saved offline or before Notion was connected go out at launch.
-    void flushRequests().catch(() => undefined);
-  })
-  .catch((e: unknown) => useSession.setState({ status: "error", message: e instanceof Error ? e.message : String(e) }));
+// Dev only: ?gallery shows the design system instead of the app. The branch drops out of release builds.
+const gallery = import.meta.env.DEV && new URLSearchParams(location.search).has("gallery");
 
-startUpdateChecks();
+if (gallery) {
+  void import("./ui/gallery/Gallery").then(({ Gallery }) =>
+    createRoot(document.getElementById("root")!).render(
+      <StrictMode>
+        <Gallery />
+      </StrictMode>,
+    ),
+  );
+} else {
+  boot()
+    .then(async (booted) => {
+      useSession.setState({ status: "ready", booted });
+      await loadProject(booted);
+      await loadCraft();
+      await loadComments();
+      await initTutorial();
+      // Requests saved offline or before Notion was connected go out at launch.
+      void flushRequests().catch(() => undefined);
+    })
+    .catch((e: unknown) => useSession.setState({ status: "error", message: e instanceof Error ? e.message : String(e) }));
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <AppShell />
-  </StrictMode>,
-);
+  startUpdateChecks();
+
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <AppShell />
+    </StrictMode>,
+  );
+}
 
 // Dev builds expose the store for scripted UI checks from the console.
 if (import.meta.env.DEV) Object.assign(window, { __composer: { actions, useProject, storyProps, craft, tutorial: { ...tutorialApi, useTutorial }, updates } });

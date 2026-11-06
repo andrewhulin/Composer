@@ -1,8 +1,9 @@
 import { useState } from "react";
 import type { Id } from "@composer/core";
 import { FRAMES, type Frame, type StatementData } from "@composer/engine";
+import { Check, X } from "lucide-react";
 import { actions } from "../../store/project";
-import { cx } from "../primitives/cx";
+import { Badge, Button, Icon, Tabs } from "../primitives";
 import styles from "./StatementCard.module.css";
 
 const PART_TONE = { who: "define", behavior: "build", because: "understand", metric: "validate" } as const;
@@ -44,35 +45,35 @@ export function StatementCard({ data, claudeId, outputId, frame }: { data: State
   ];
   return (
     <div className={styles.card}>
-      <div className={styles.frames} role="tablist">
-        {(Object.keys(FRAMES) as Frame[]).map((f) => (
-          <button
-            key={f}
-            type="button"
-            role="tab"
-            aria-selected={frame === f}
-            className={cx(styles.frame, frame === f && styles.frameOn)}
-            onClick={() => claudeId && actions.update(claudeId, { options: { frame: f } })}
-            title={claudeId ? `Draft a ${FRAMES[f].toLowerCase()} next run` : undefined}
-          >
-            {FRAMES[f]}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        label="Frame"
+        variant="segmented"
+        size="sm"
+        block
+        value={frame}
+        onChange={(f) => claudeId && actions.update(claudeId, { options: { frame: f } })}
+        items={(Object.keys(FRAMES) as Frame[]).map((f) => ({
+          value: f,
+          label: <span title={claudeId ? `Draft a ${FRAMES[f].toLowerCase()} next run` : undefined}>{FRAMES[f]}</span>,
+        }))}
+      />
       <div className={styles.paper}>
         <Highlighted text={data.statement} parts={data.parts} />
       </div>
       <div className={styles.chips}>
         {(Object.keys(PART_TONE) as (keyof typeof PART_TONE)[]).map((k) => (
-          <span key={k} className={cx(styles.chip, styles[`chip_${PART_TONE[k]}`])} title={data.parts[k]}>
-            {k}
+          <span key={k} className={styles.part} data-phase={PART_TONE[k]} title={data.parts[k]}>
+            <Badge tone="phase" mono>
+              {k}
+            </Badge>
           </span>
         ))}
       </div>
       <div className={styles.checks}>
         {checks.map((c) => (
           <span key={c.label} className={c.ok ? styles.ok : styles.miss}>
-            {c.ok ? "✓" : "✕"} {c.label}
+            <Icon icon={c.ok ? Check : X} size="sm" label={c.ok ? "Yes" : "No"} />
+            {c.label}
           </span>
         ))}
       </div>
@@ -101,14 +102,14 @@ export function StatementCard({ data, claudeId, outputId, frame }: { data: State
           {data.alternates[0] ? ` · ${FRAMES[data.alternates[0].frame] ?? ""}: “${data.alternates[0].statement}”` : ""}
         </p>
         {data.alternates.length > 0 && (
-          <button type="button" className={styles.secondary} onClick={() => setCompare(!compare)}>
+          <Button variant="secondary" onClick={() => setCompare(!compare)}>
             {compare ? "Hide" : "Compare"}
-          </button>
+          </Button>
         )}
         {outputId && (
-          <button type="button" className={styles.primary} onClick={() => void actions.lockStatement(outputId)} data-tour="lock-statement">
+          <Button variant="primary" onClick={() => void actions.lockStatement(outputId)} data-tour="lock-statement">
             Lock {frame === "hypothesis" ? "hypothesis" : FRAMES[frame].toLowerCase()}
-          </button>
+          </Button>
         )}
       </div>
     </div>

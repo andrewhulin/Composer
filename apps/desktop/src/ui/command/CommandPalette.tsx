@@ -7,6 +7,9 @@ import { openFoundations, reflect } from "../../store/craft";
 import { tutorial, useTutorial } from "../../tutorial/store";
 import { updateCommand } from "../../store/updates";
 import { cx } from "../primitives/cx";
+import { Button } from "../primitives/Button";
+import { Dot } from "../primitives/Dot";
+import { Kbd } from "../primitives/Kbd";
 import styles from "./CommandPalette.module.css";
 
 interface Item {
@@ -161,10 +164,14 @@ export function CommandPalette() {
               <div key={item.id}>
                 {head && <span className={styles.group}>{head}</span>}
                 <button type="button" data-index={i} className={cx(styles.item, i === index && styles.active)} onPointerEnter={() => setIndex(i)} onClick={() => choose(item)}>
-                  {item.phase && <span className={styles.dot} style={{ background: `var(--phase-${item.phase})` }} />}
+                  {item.phase && <Dot color={`var(--phase-${item.phase})`} size={9} />}
                   <span className={styles.label}>{item.label}</span>
                   {item.hint && <span className={styles.hint}>{item.hint}</span>}
-                  {item.keys && <span className={styles.keys}>{item.keys}</span>}
+                  {item.keys && (
+                    <Kbd boxed className={styles.keys}>
+                      {item.keys}
+                    </Kbd>
+                  )}
                 </button>
               </div>
             );
@@ -192,9 +199,7 @@ export function KeyboardMap() {
       <div className={cx(styles.palette, styles.keymap)} role="dialog" aria-label="Keyboard shortcuts" onPointerDown={(e) => e.stopPropagation()}>
         <div className={styles.mapHead}>
           <span>Keyboard shortcuts</span>
-          <button type="button" className={styles.esc} onClick={() => setOpen(false)}>
-            esc
-          </button>
+          <Button variant="secondary" size="sm" shortcut="esc" onClick={() => setOpen(false)} />
         </div>
         <div className={styles.map}>
           {MAP.map((g) => (
@@ -202,7 +207,9 @@ export function KeyboardMap() {
               <span className={styles.group}>{g.group}</span>
               {g.keys.map(([k, what]) => (
                 <div key={k} className={styles.mapRow}>
-                  <span className={styles.keys}>{k}</span>
+                  <Kbd boxed className={styles.keys}>
+                    {k}
+                  </Kbd>
                   <span>{what}</span>
                 </div>
               ))}

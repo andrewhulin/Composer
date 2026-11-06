@@ -1,0 +1,22 @@
+.anchor { display: contents; }
+.tip {
+  position: fixed;
+  z-index: var(--z-tooltip);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-8);
+  max-width: 320px;
+  padding: var(--sp-4) var(--sp-8);
+  border-radius: var(--r-sm);
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  line-height: 1.35;
+  pointer-events: none;
+  box-shadow: var(--shadow-1);
+  animation: tip-in var(--t-fast) var(--ease-out);
+}
+.top { transform: translate(-50%, calc(-100% - var(--sp-6))); }
+.bottom { transform: translate(-50%, var(--sp-6)); }
+@keyframes tip-in { from { opacity: 0; } to { opacity: 1; } }

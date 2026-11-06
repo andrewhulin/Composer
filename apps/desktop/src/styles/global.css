@@ -3,6 +3,8 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
+/* Native scrollbars, selects and pickers draw dark to match. */
+:root { color-scheme: dark; }
 body {
   background: var(--bg-app);
   color: var(--text-primary);
@@ -20,8 +22,8 @@ p, h1, h2, h3, h4 { margin: 0; font-weight: inherit; font-size: inherit; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: default; }
 input, textarea { font: inherit; color: inherit; }
 img { display: block; }
-::selection { background: rgba(238, 237, 234, 0.18); }
-:focus-visible { outline: 1px solid var(--text-secondary); outline-offset: 2px; }
+::selection { background: rgba(var(--rgb-ink), 0.18); }
+:focus-visible { outline: var(--focus-outline); outline-offset: 2px; }
 
 /* Shared text roles */
 .mono { font-family: var(--font-mono); }

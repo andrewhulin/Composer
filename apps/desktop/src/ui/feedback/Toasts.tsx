@@ -1,5 +1,6 @@
 import { useProject } from "../../store/project";
 import { cx } from "../primitives/cx";
+import { Button } from "../primitives/Button";
 import styles from "./Toasts.module.css";
 
 /** Transient messages: bounced wires, locks, errors. */
@@ -21,9 +22,9 @@ export function KeyBanner({ onAdd }: { onAdd: () => void }) {
   return (
     <div className={styles.banner}>
       <span>Add your Anthropic API key to run Claude nodes.</span>
-      <button type="button" onClick={onAdd}>
-        Add key <span>⌘,</span>
-      </button>
+      <Button variant="primary" size="md" shortcut="⌘," onClick={onAdd}>
+        Add key
+      </Button>
     </div>
   );
 }

@@ -7,11 +7,11 @@ function colorFor(from: GraphNode | undefined): string {
   if (!from) return "var(--text-muted)";
   switch (from.kind) {
     case "source":
-      return "rgba(162, 158, 148, 0.75)";
+      return "rgba(var(--rgb-secondary), 0.75)";
     case "hypothesis":
       return "var(--signal-hypothesis)";
     case "claude":
-      return "rgba(238, 237, 234, 0.8)";
+      return "rgba(var(--rgb-ink), 0.8)";
     case "output":
       return "var(--phase-understand)";
   }

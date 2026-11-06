@@ -1,16 +1,15 @@
 .chip {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-10);
   width: 100%;
-  padding: 6px 8px;
+  padding: var(--sp-8) var(--sp-10);
   border-radius: var(--r-md);
   background: var(--bg-raised);
   border: 1px solid var(--border-subtle);
 }
-.dropping { border: 1px dashed var(--phase); }
 .off .label, .off .tokens { opacity: 0.5; }
-.label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-chip); color: var(--text-primary); }
+.label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: var(--r-xs); text-align: left; font-size: var(--fs-small); color: var(--text-primary); }
+.label:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .tokens { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
-.label { text-align: left; }
 .weight { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-muted); text-transform: uppercase; letter-spacing: var(--tracking-micro); }

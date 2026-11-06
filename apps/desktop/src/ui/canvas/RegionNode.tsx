@@ -1,5 +1,7 @@
 import type { NodeProps } from "@xyflow/react";
 import { PHASE_INFO, type Phase } from "@composer/core";
+import { Plus } from "lucide-react";
+import { Icon } from "../primitives/Icon";
 import styles from "./RegionNode.module.css";
 
 /** A phase's area when every phase shares one canvas (Focus off). */
@@ -20,7 +22,10 @@ export function RegionNode({ data }: NodeProps) {
 export function DropHint() {
   return (
     <div className={styles.drop}>
-      + Drop files, links, boards, transcripts. Composer keeps all of it.
+      <span className={styles.dropTitle}>
+        <Icon icon={Plus} size="sm" />
+        Drop files, links, boards, transcripts. Composer keeps all of it.
+      </span>
       <span className={styles.dropSub}>Or paste with ⌘V. Each item becomes a context card you can weigh.</span>
     </div>
   );

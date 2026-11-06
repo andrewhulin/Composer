@@ -5,55 +5,37 @@
   background: var(--bg-panel);
   border-top: 1px solid var(--border-subtle);
 }
-.transport { position: absolute; left: 16px; top: 13px; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.transport { position: absolute; left: 20px; top: 16px; display: flex; align-items: center; gap: var(--sp-12); white-space: nowrap; }
 .play {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   background: var(--text-primary);
+  color: var(--text-inverse);
 }
-.step { display: flex; opacity: 0.85; }
-.step:hover { opacity: 1; }
-.speed {
-  padding: 3px 6px;
-  border-radius: var(--r-xs);
-  border: 1px solid var(--border-strong);
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  color: var(--text-secondary);
-}
+.play:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.play:disabled { opacity: 0.5; }
 .position { font-size: var(--fs-body); color: var(--text-primary); }
 .when { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
-.actions { position: absolute; right: 16px; top: 13px; display: flex; gap: 8px; }
-.action {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: var(--r-md);
-  border: 1px solid var(--border-strong);
-  font-size: var(--fs-chip);
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-.action:hover { background: var(--bg-raised); }
-.action span { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
-.timeline { position: absolute; left: 16px; right: 16px; top: 0; bottom: 0; }
-.track, .segment { position: absolute; top: 103px; height: 4px; border-radius: 2px; }
+.actions { position: absolute; right: 20px; top: 16px; display: flex; gap: var(--sp-10); }
+.count { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+/* Button has no pressed look for text buttons, so an open menu's button keeps this one. */
+.timeline { position: absolute; left: 20px; right: 20px; top: 0; bottom: 0; }
+.track, .segment { position: absolute; top: 129px; height: 5px; border-radius: var(--r-2xs); }
 .track { left: 0; right: 0; background: var(--border-subtle); }
 .segment { background: var(--phase); }
-.segmentLabel { position: absolute; top: 115px; font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-muted); }
-.tick { position: absolute; top: 100px; width: 2px; height: 10px; border-radius: 1px; background: var(--text-secondary); }
-.bookmark { position: absolute; top: 69px; }
+.segmentLabel { position: absolute; top: 144px; font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-muted); }
+.tick { position: absolute; top: 125px; width: 2px; height: 13px; border-radius: var(--r-2xs); background: var(--text-secondary); }
+.bookmark { position: absolute; top: 86px; }
 .flag {
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin-left: -8px;
-  padding: 3px 7px 3px 5px;
+  gap: var(--sp-6);
+  margin-left: calc(-1 * var(--sp-10));
+  padding: var(--sp-4) var(--sp-8) var(--sp-4) var(--sp-6);
   border-radius: var(--r-xs);
   background: var(--bg-raised);
   border: 1px solid var(--border-strong);
@@ -61,108 +43,88 @@
   color: var(--text-secondary);
   white-space: nowrap;
 }
-.stem { position: absolute; left: 0; top: 22px; width: 1px; height: 12px; background: var(--signal-hypothesis); }
-.branch { position: absolute; top: 71px; height: 32px; }
+.stem { position: absolute; left: 0; top: 28px; width: 1px; height: 15px; background: var(--signal-hypothesis); }
+.branch { position: absolute; top: 89px; height: 40px; }
 .branchCurve { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .branchCurve path { fill: none; stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; }
 .branchLabel {
   position: absolute;
   left: 29%;
-  top: -14px;
+  top: -18px;
   font-family: var(--font-mono);
   font-size: var(--fs-micro);
   color: var(--text-muted);
   white-space: nowrap;
 }
-.branchX { position: absolute; right: -12px; top: -8px; font-family: var(--font-mono); font-size: var(--fs-body); color: var(--text-muted); }
-.playhead { position: absolute; top: 57px; width: 2px; height: 74px; margin-left: -1px; background: var(--text-primary); }
-.knob { position: absolute; left: -4px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--text-primary); }
+.playhead { position: absolute; top: 71px; width: 2px; height: 93px; margin-left: -1px; background: var(--text-primary); }
+.knob { position: absolute; left: -5px; top: -5px; width: 13px; height: 13px; border-radius: 50%; background: var(--text-primary); }
 .time {
   position: absolute;
-  left: 9px;
-  top: 66px;
-  padding: 2px 6px;
+  left: 11px;
+  top: 83px;
+  padding: var(--sp-2) var(--sp-8);
   border-radius: var(--r-xs);
   background: var(--text-primary);
   font-family: var(--font-mono);
   font-size: var(--fs-micro);
   color: var(--text-inverse);
 }
-.play:disabled, .step:disabled { opacity: 0.5; }
-.actionOn { background: var(--bg-raised); color: var(--text-primary); }
-.action:disabled { opacity: 0.4; }
-.step:disabled { opacity: 0.35; }
-.menu {
+/* Placement only; Popover gives the surface. The parent selector keeps this layer above Popover's own. */
+.actions .menu {
   position: absolute;
   right: 0;
-  bottom: calc(100% + 8px);
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 260px;
-  max-height: 320px;
+  bottom: calc(100% + 10px);
+  z-index: calc(var(--z-bar) + 2);
+  min-width: 325px;
+  max-height: 400px;
   overflow-y: auto;
-  padding: 6px;
-  border-radius: var(--r-xl);
-  background: var(--bg-raised);
-  border: 1px solid var(--border-strong);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
 }
-.menu button { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: var(--r-md); font-size: var(--fs-body); color: var(--text-primary); text-align: left; }
-.menu button:hover:not(:disabled) { background: var(--bg-hover); }
-.menu button:disabled { opacity: 0.7; }
-.menu button span { flex: 1; }
-.menu em { font-style: normal; font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
-.menuEmpty { padding: 6px 8px; font-size: var(--fs-chip); line-height: 16px; color: var(--text-muted); }
-.branchDot { flex: none !important; width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
-.branchCurrent { background: var(--signal-live); }
-.tickHit { position: absolute; top: 92px; width: 12px; height: 26px; margin-left: -5px; display: flex; justify-content: center; }
-.tickHit .tick { position: static; margin-top: 8px; }
-.tickHit:hover .tick { background: var(--text-primary); }
+.menuEmpty { padding: var(--sp-8) var(--sp-10); font-size: var(--fs-small); line-height: 20px; color: var(--text-muted); }
+.bookmarkItem svg { color: var(--signal-hypothesis); }
+.tickHit { position: absolute; top: 115px; width: 15px; height: 33px; margin-left: calc(-1 * var(--sp-6)); display: flex; justify-content: center; border-radius: var(--r-xs); }
+.tickHit .tick { position: static; margin-top: var(--sp-10); }
+.tickHit:hover .tick, .tickHit:focus-visible .tick { background: var(--text-primary); }
+.tickHit:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .hoverThumb {
   position: absolute;
-  bottom: 52px;
+  bottom: 65px;
   transform: translateX(-50%);
-  z-index: 25;
+  z-index: var(--z-bar);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 6px;
+  gap: var(--sp-6);
+  padding: var(--sp-8);
   border-radius: var(--r-lg);
   background: var(--bg-raised);
   border: 1px solid var(--border-strong);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-1);
   pointer-events: none;
 }
 .hoverThumb svg { background: var(--bg-canvas); border-radius: var(--r-xs); }
-.hoverThumb span { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-muted); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.hoverThumb span { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-muted); white-space: nowrap; max-width: 275px; overflow: hidden; text-overflow: ellipsis; }
 .bookmarkField {
   position: absolute;
-  top: 60px;
+  top: 75px;
   transform: translateX(-50%);
-  z-index: 26;
+  z-index: calc(var(--z-bar) + 1);
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
+  gap: var(--sp-8);
+  padding: var(--sp-6) var(--sp-10);
   border-radius: var(--r-md);
   background: var(--bg-raised);
   border: 1px solid var(--signal-hypothesis);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-1);
 }
-.bookmarkField input { width: 220px; border: 0; outline: 0; background: transparent; font-size: var(--fs-body); color: var(--text-primary); user-select: text; }
-.bookmarkField span { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.bookmarkField input { width: 275px; border: 0; outline: 0; background: transparent; font-size: var(--fs-body); color: var(--text-primary); user-select: text; }
 /* Playback (Figma 04): controls row and filmstrip */
-.playback { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; }
-.controls { display: flex; align-items: center; gap: 8px; }
-.pause { width: 10px; height: 10px; border-left: 3px solid var(--text-inverse); border-right: 3px solid var(--text-inverse); }
-.chip { padding: 3px 8px; border-radius: var(--r-xs); border: 1px solid var(--border-strong); font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
-.chipOn { border-color: var(--text-primary); color: var(--text-primary); }
-.hint { margin-left: 6px; font-size: var(--fs-chip); color: var(--text-muted); }
-.strip { display: flex; gap: 8px; overflow: hidden; }
-.frame { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: var(--r-md); border: 1px solid var(--border-subtle); background: var(--bg-raised); }
+.playback { position: absolute; inset: 0; display: flex; flex-direction: column; gap: var(--sp-12); padding: var(--sp-16) var(--sp-20); }
+.controls { display: flex; align-items: center; gap: var(--sp-10); }
+.hint { margin-left: var(--sp-8); font-size: var(--fs-small); color: var(--text-muted); }
+.strip { display: flex; gap: var(--sp-10); overflow: hidden; }
+.frame { position: relative; display: flex; flex-direction: column; gap: var(--sp-6); padding: var(--sp-8); border-radius: var(--r-md); border: 1px solid var(--border-subtle); background: var(--bg-raised); }
+.frame:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .frameOn { border: 1.5px solid var(--phase-validate); }
 .frameThumb { border-radius: var(--r-xs); background: var(--bg-canvas); }
 .frameMeta { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-muted); }
-.frameMark { display: flex; align-items: center; gap: 4px; font-size: var(--fs-micro); color: var(--signal-hypothesis); white-space: nowrap; overflow: hidden; max-width: 118px; }
+.frameMark { display: flex; align-items: center; gap: var(--sp-6); font-size: var(--fs-micro); color: var(--signal-hypothesis); white-space: nowrap; overflow: hidden; max-width: 148px; }

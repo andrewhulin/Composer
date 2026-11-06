@@ -7,6 +7,8 @@ import { useUi, type InspectorTab } from "../../store/ui";
 import { useDisplayGraph, usePlaybackActive } from "../../store/display";
 import { useDebounced } from "../../hooks/useDebounced";
 import { ago, useNow } from "../../hooks/useNow";
+import { Pilcrow } from "lucide-react";
+import { Button, Kbd, Tabs, type TabItem } from "../primitives";
 import { Dot } from "../primitives/Dot";
 import { cx } from "../primitives/cx";
 import { formatTokens } from "../primitives/format";
@@ -26,10 +28,10 @@ import { PromptTab } from "./PromptTab";
 import { countKey, partialField } from "./partial";
 import styles from "./Inspector.module.css";
 
-const TABS: { id: InspectorTab; label: string }[] = [
-  { id: "preview", label: "Preview" },
-  { id: "prompt", label: "Prompt" },
-  { id: "node", label: "Node" },
+const TABS: TabItem<InspectorTab>[] = [
+  { value: "preview", label: "Preview" },
+  { value: "prompt", label: "Prompt" },
+  { value: "node", label: "Node" },
 ];
 
 /** The artifact a node shows: a Claude node's latest output, or an Output node's draft or lock. */
@@ -74,13 +76,7 @@ export function Inspector() {
 
   return (
     <aside className={styles.inspector} data-phase={phase}>
-      <nav className={styles.tabs} role="tablist">
-        {TABS.map((t) => (
-          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={cx(styles.tab, tab === t.id && styles.tabActive)} onClick={() => setTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
-      </nav>
+      <Tabs label="Inspector" items={TABS} value={tab} onChange={setTab} className={styles.tabs} />
       <div className={styles.scroll}>
         {tab === "preview" && (
           <>
@@ -153,7 +149,7 @@ function Preview({ node, graph }: { node: GraphNode | undefined; graph: Graph })
         </div>
         {PHASE_SURFACE[s.activePhase] !== "canvas" ? (
           <p className={styles.workspaceNote}>
-            {PHASE_SURFACE[s.activePhase] === "writing" ? "Writing workspace." : "Scorecard."} The key node, top right, shows exactly what the next phase will read. Below and in the Prompt tab is what Claude reads for the draft. Press G for the graph underneath.
+            {PHASE_SURFACE[s.activePhase] === "writing" ? "Writing workspace." : "Scorecard."} The key node, top right, shows exactly what the next phase will read. Below and in the Prompt tab is what Claude reads for the draft. Press <Kbd>G</Kbd> for the graph underneath.
           </p>
         ) : (
           <p className={styles.emptyText}>{info.purpose} Select a node to preview it. Its output renders here as it streams.</p>
@@ -186,7 +182,13 @@ function Preview({ node, graph }: { node: GraphNode | undefined; graph: Graph })
       ) : live?.status === "failed" ? (
         <p className={styles.error}>{live.error}</p>
       ) : !artifact ? (
-        <p className={styles.emptyText}>{claude ? "Not run yet. Press ⌘↵ to run this step." : "Nothing here yet. Run the Claude node that feeds it."}</p>
+        <p className={styles.emptyText}>{claude ? (
+            <>
+              Not run yet. Press <Kbd>⌘↵</Kbd> to run this step.
+            </>
+          ) : (
+            "Nothing here yet. Run the Claude node that feeds it."
+          )}</p>
       ) : artifact.artifact === "testable_statement" && artifact.data ? (
         <StatementCard
           data={artifact.data as StatementData}
@@ -354,21 +356,21 @@ function ContextSection({ claude, prompt }: { claude: ClaudeNode; prompt: Assemb
         {craft.ds || craft.philosophy ? (
           <>
             {craft.ds && (
-              <button type="button" className={styles.pill} onClick={() => openFoundations()}>
+              <Button variant="secondary" size="sm" onClick={() => openFoundations()}>
                 {craft.ds.content.name} v{craft.ds.content.version}
-              </button>
+              </Button>
             )}
             {craft.philosophy && (
-              <button type="button" className={styles.pill} onClick={() => openFoundations()}>
-                ¶ rev {craft.philosophy.content.rev}
-              </button>
+              <Button variant="secondary" size="sm" icon={Pilcrow} onClick={() => openFoundations()}>
+                rev {craft.philosophy.content.rev}
+              </Button>
             )}
             {(craft.rules.filter((r) => r.phase === claude.phase).length > 0) && <span className={styles.pillMuted}>{craft.rules.filter((r) => r.phase === claude.phase).length} rules</span>}
           </>
         ) : (
-          <button type="button" className={styles.pillMuted} onClick={() => openFoundations()}>
+          <Button variant="ghost" size="sm" onClick={() => openFoundations()}>
             No foundations slotted
-          </button>
+          </Button>
         )}
       </div>
       {chips.map((c) => (
@@ -401,32 +403,27 @@ function Actions({ node, running, claudeId }: { node: GraphNode | undefined; run
   return (
     <footer className={styles.actions}>
       {output ? (
-        <button type="button" className={styles.run} onClick={() => void actions.lock(output.id)} data-tour="primary-action">
-          <span>Lock {output.title.toLowerCase()}</span>
-          <span className={styles.runKey}>⌘L</span>
-        </button>
+        <Button variant="primary" className={styles.run} shortcut="⌘L" onClick={() => void actions.lock(output.id)} data-tour="primary-action">
+          Lock {output.title.toLowerCase()}
+        </Button>
       ) : claudeId && node?.kind === "claude" ? (
         running ? (
-          <button type="button" className={cx(styles.run, styles.cancel)} onClick={() => actions.cancel(claudeId)}>
-            <span>Cancel run</span>
-            <span className={styles.runKey}>⌘.</span>
-          </button>
+          <Button variant="secondary" className={styles.run} shortcut="⌘." onClick={() => actions.cancel(claudeId)}>
+            Cancel run
+          </Button>
         ) : (
-          <button type="button" className={styles.run} onClick={() => actions.run(claudeId)} data-tour="primary-action">
-            <span>Run node</span>
-            <span className={styles.runKey}>⌘↵</span>
-          </button>
+          <Button variant="primary" className={styles.run} shortcut="⌘↵" onClick={() => actions.run(claudeId)} data-tour="primary-action">
+            Run node
+          </Button>
         )
       ) : (
-        <button type="button" className={styles.run} disabled={!node} onClick={() => node && actions.select(null)}>
-          <span>{node ? "Deselect" : "Select a node"}</span>
-          <span className={styles.runKey}>esc</span>
-        </button>
+        <Button variant="primary" className={styles.run} shortcut="esc" disabled={!node} onClick={() => node && actions.select(null)}>
+          {node ? "Deselect" : "Select a node"}
+        </Button>
       )}
-      <button type="button" className={styles.snapshot} onClick={() => useUi.getState().setBookmarkOpen(true)}>
-        <span>Snapshot</span>
-        <span className={styles.snapshotKey}>⌘B</span>
-      </button>
+      <Button variant="secondary" shortcut="⌘B" onClick={() => useUi.getState().setBookmarkOpen(true)}>
+        Snapshot
+      </Button>
     </footer>
   );
 }

@@ -5,7 +5,9 @@ import { useProject } from "../../store/project";
 import { useDisplayGraph, usePlaybackActive } from "../../store/display";
 import { SwapPopover } from "./SwapPopover";
 import { useState } from "react";
+import { ArrowLeftRight } from "lucide-react";
 import { cx } from "../primitives/cx";
+import { Icon } from "../primitives/Icon";
 import { Port } from "./Port";
 import styles from "./Node.module.css";
 import own from "./HypothesisNodeView.module.css";
@@ -36,6 +38,7 @@ export const HypothesisNodeView = memo(function HypothesisNodeView({ id, selecte
                 <button
                   type="button"
                   className={cx(own.swap, "nodrag")}
+                  aria-label={`Swap ${v.key}`}
                   disabled={!canSwap}
                   title={canSwap ? `Swap ${v.key}` : block.status === "draft" ? "Lock or test the hypothesis before swapping" : undefined}
                   onClick={(e) => {
@@ -43,7 +46,7 @@ export const HypothesisNodeView = memo(function HypothesisNodeView({ id, selecte
                     setSwapping(swapping === v.key ? null : v.key);
                   }}
                 >
-                  ⇄
+                  <Icon icon={ArrowLeftRight} size="sm" />
                 </button>
               </div>
             ))}
@@ -55,8 +58,8 @@ export const HypothesisNodeView = memo(function HypothesisNodeView({ id, selecte
         </div>
       </div>
       {swapping && block && <SwapPopover nodeId={id} block={block} varKey={swapping} onClose={() => setSwapping(null)} />}
-      <Port nodeId={id} port="evidence" type="text" side="in" top={14} color="var(--signal-hypothesis)" />
-      <Port nodeId={id} port="out" type="hypothesis" side="out" top={14} />
+      <Port nodeId={id} port="evidence" type="text" side="in" top={18} color="var(--signal-hypothesis)" />
+      <Port nodeId={id} port="out" type="hypothesis" side="out" top={18} />
     </div>
   );
 });

@@ -74,7 +74,7 @@ export const SourceNodeView = memo(function SourceNodeView({ id, selected }: Nod
           {node.weight === "mute" ? "muted" : node.weight}
           {node.why ? ` · ${node.why}` : ""}
         </span>
-        <Port nodeId={id} port="out" type="context" side="out" top={14} />
+        <Port nodeId={id} port="out" type="context" side="out" top={12} />
         {selected && !playing && <WeightPopover id={id} weight={node.weight} pinned={node.pinned} {...(node.why ? { why: node.why } : {})} />}
       </div>
     );
@@ -132,7 +132,7 @@ export const SourceNodeView = memo(function SourceNodeView({ id, selected }: Nod
           <div className={own.preview}>
             <div className={own.wave}>
               {bars(first!.title).map((h, i) => (
-                <span key={i} style={{ height: h, background: i < 31 ? "var(--phase-understand)" : "#4a4a52" }} />
+                <span key={i} style={{ height: h, background: i < 31 ? "var(--phase-understand)" : "var(--signal-retired)" }} />
               ))}
             </div>
             <p className={own.quote}>“{quote.text.length > 60 ? `${quote.text.slice(0, 58)}…` : quote.text}”</p>
@@ -158,7 +158,7 @@ export const SourceNodeView = memo(function SourceNodeView({ id, selected }: Nod
           <span>{synced || summary(content)}</span>
         </div>
       )}
-      <Port nodeId={id} port="out" type="context" side="out" top={14} />
+      <Port nodeId={id} port="out" type="context" side="out" top={12} />
     </div>
   );
 });

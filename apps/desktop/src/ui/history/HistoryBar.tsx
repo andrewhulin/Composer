@@ -3,11 +3,8 @@ import { PHASE_INFO } from "@composer/core";
 import { actions, useProject } from "../../store/project";
 import { branchLine, frames, playback, usePlayback, type Speed } from "../../store/playback";
 import { useUi } from "../../store/ui";
-import { cx } from "../primitives/cx";
-import playIcon from "../../assets/icons/play.svg";
-import backIcon from "../../assets/icons/step-back.svg";
-import forwardIcon from "../../assets/icons/step-forward.svg";
-import flagIcon from "../../assets/icons/flag.svg";
+import { Flag, GitBranch, Pause, Play, SkipBack, SkipForward } from "lucide-react";
+import { Badge, Button, Chip, Icon, IconButton, Kbd, Menu, MenuItem, Popover, cx } from "../primitives";
 import { timelineFrom } from "./timeline";
 import { SnapshotThumb } from "./SnapshotThumb";
 import styles from "./HistoryBar.module.css";
@@ -42,52 +39,59 @@ function Timeline() {
     <>
       <div className={styles.transport}>
         <button type="button" className={styles.play} aria-label="Play history" onClick={() => void playback.play()}>
-          <img src={playIcon} alt="" width={12} height={12} />
+          <Icon icon={Play} size="sm" fill="currentColor" />
         </button>
-        <button type="button" aria-label="Previous snapshot" className={styles.step} onClick={() => void playback.step(-1)}>
-          <img src={backIcon} alt="" width={14} height={14} />
-        </button>
-        <button type="button" aria-label="Next snapshot" className={styles.step} onClick={() => void playback.step(1)} disabled>
-          <img src={forwardIcon} alt="" width={14} height={14} />
-        </button>
-        <span className={styles.speed}>1×</span>
+        <IconButton icon={SkipBack} label="Previous snapshot" onClick={() => void playback.step(-1)} />
+        <IconButton icon={SkipForward} label="Next snapshot" onClick={() => void playback.step(1)} disabled />
+        <Badge tone="muted" mono>
+          1×
+        </Badge>
         <span className="caps">History</span>
         <span className={styles.position}>{line.length ? `Snapshot ${line.length} of ${line.length}` : "Every run is recorded"}</span>
         <span className={styles.when}>{last ? fmt(last.createdAt) : ""}</span>
       </div>
 
       <div className={styles.actions}>
-        <button type="button" className={cx(styles.action, menu === "bookmarks" && styles.actionOn)} onClick={() => setMenu(menu === "bookmarks" ? null : "bookmarks")}>
-          Bookmarks <span>{bookmarks.length}</span>
-        </button>
-        <button type="button" className={cx(styles.action, menu === "branches" && styles.actionOn)} onClick={() => setMenu(menu === "branches" ? null : "branches")}>
-          Branches <span>{branches.length}</span>
-        </button>
-        <button type="button" className={styles.action} onClick={() => setCompareOpen(true)} disabled={line.length < 2}>
+        <Button variant="secondary" size="sm" aria-expanded={menu === "bookmarks"} pressed={menu === "bookmarks"} onClick={() => setMenu(menu === "bookmarks" ? null : "bookmarks")}>
+          Bookmarks <span className={styles.count}>{bookmarks.length}</span>
+        </Button>
+        <Button variant="secondary" size="sm" aria-expanded={menu === "branches"} pressed={menu === "branches"} onClick={() => setMenu(menu === "branches" ? null : "branches")}>
+          Branches <span className={styles.count}>{branches.length}</span>
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => setCompareOpen(true)} disabled={line.length < 2}>
           Compare
-        </button>
+        </Button>
         {menu === "bookmarks" && (
-          <div className={styles.menu}>
+          <Popover padding="sm" className={styles.menu}>
             {bookmarks.length === 0 && <p className={styles.menuEmpty}>⌘B marks the moment that matters. Snapshots are automatic; bookmarks are yours.</p>}
-            {bookmarks.map((b) => (
-              <button key={b.snapshotId} type="button" onClick={() => (setMenu(null), void playback.open(b.snapshotId))}>
-                <img src={flagIcon} alt="" width={11} height={11} />
-                <span>{b.label}</span>
-                <em>#{b.seq}</em>
-              </button>
-            ))}
-          </div>
+            {bookmarks.length > 0 && (
+              <Menu label="Bookmarks">
+                {bookmarks.map((b) => (
+                  <MenuItem key={b.snapshotId} icon={Flag} meta={`#${b.seq}`} className={styles.bookmarkItem} onClick={() => (setMenu(null), void playback.open(b.snapshotId))}>
+                    {b.label}
+                  </MenuItem>
+                ))}
+              </Menu>
+            )}
+          </Popover>
         )}
         {menu === "branches" && (
-          <div className={styles.menu}>
-            {branches.map((b) => (
-              <button key={b.id} type="button" disabled={b.id === project?.branchId} onClick={() => (setMenu(null), void actions.switchBranch(b.id))}>
-                <span className={cx(styles.branchDot, b.id === project?.branchId && styles.branchCurrent)} />
-                <span>{b.name}</span>
-                <em>{b.id === project?.branchId ? "current" : b.state.replace("_", " ")}</em>
-              </button>
-            ))}
-          </div>
+          <Popover padding="sm" className={styles.menu}>
+            <Menu label="Branches">
+              {branches.map((b) => (
+                <MenuItem
+                  key={b.id}
+                  icon={GitBranch}
+                  hint={b.id === project?.branchId ? "current" : b.state.replace("_", " ")}
+                  checked={b.id === project?.branchId}
+                  disabled={b.id === project?.branchId}
+                  onClick={() => (setMenu(null), void actions.switchBranch(b.id))}
+                >
+                  {b.name}
+                </MenuItem>
+              ))}
+            </Menu>
+          </Popover>
         )}
       </div>
 
@@ -120,6 +124,7 @@ function Timeline() {
           if (forkAt === undefined) return null;
           return (
             <span key={b.id} className={styles.branch} style={{ left: pct(forkAt), width: "9%" }}>
+              {/* eslint-disable-next-line no-restricted-syntax -- the branch curve is a data graphic */}
               <svg className={styles.branchCurve} viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden>
                 <path d="M0 32 C 18 32, 22 2, 40 2 L 100 2" vectorEffect="non-scaling-stroke" />
               </svg>
@@ -132,7 +137,7 @@ function Timeline() {
         {t.bookmarks.map((b) => (
           <span key={b.label + b.at} className={styles.bookmark} style={{ left: pct(b.at) }}>
             <span className={styles.flag}>
-              <img src={flagIcon} alt="" width={11} height={11} />
+              <Icon icon={Flag} size="sm" />
               {b.label}
             </span>
             <span className={styles.stem} />
@@ -185,7 +190,7 @@ function BookmarkField({ at }: { at: number }) {
         }}
         onBlur={() => setBookmarkOpen(false)}
       />
-      <span>↵</span>
+      <Kbd>↵</Kbd>
     </span>
   );
 }
@@ -204,17 +209,19 @@ function PlaybackControls() {
     <div className={styles.playback}>
       <div className={styles.controls}>
         <button type="button" className={styles.play} aria-label={playing ? "Pause" : "Play"} onClick={() => (playing ? playback.pause() : void playback.play())}>
-          {playing ? <span className={styles.pause} /> : <img src={playIcon} alt="" width={12} height={12} />}
+          <Icon icon={playing ? Pause : Play} size="sm" fill="currentColor" />
         </button>
         {SPEEDS.map((s) => (
-          <button key={s} type="button" className={cx(styles.chip, speed === s && styles.chipOn)} onClick={() => playback.setSpeed(s)}>
+          <Chip key={s} size="sm" selected={speed === s} onClick={() => playback.setSpeed(s)}>
             {s === 0.5 ? "0.5×" : `${s}×`}
-          </button>
+          </Chip>
         ))}
-        <button type="button" className={cx(styles.chip, runsOnly && styles.chipOn)} onClick={() => playback.toggleRunsOnly()}>
+        <Chip size="sm" selected={runsOnly} onClick={() => playback.toggleRunsOnly()}>
           Runs only
-        </button>
-        <span className={styles.hint}>Scrub to rebuild the canvas. ⇧← ⇧→ jump between bookmarks. Space plays at 2×.</span>
+        </Chip>
+        <span className={styles.hint}>
+          Scrub to rebuild the canvas. <Kbd boxed>⇧←</Kbd> <Kbd boxed>⇧→</Kbd> jump between bookmarks. <Kbd boxed>Space</Kbd> plays at 2×.
+        </span>
       </div>
       <div className={styles.strip}>
         {strip.map((snap, i) => {
@@ -230,7 +237,7 @@ function PlaybackControls() {
               </span>
               {mark.get(snap.id) && (
                 <span className={styles.frameMark}>
-                  <img src={flagIcon} alt="" width={9} height={9} /> {mark.get(snap.id)}
+                  <Icon icon={Flag} size="sm" /> {mark.get(snap.id)}
                 </span>
               )}
             </button>

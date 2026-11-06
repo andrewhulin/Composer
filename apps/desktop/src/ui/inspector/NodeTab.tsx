@@ -2,6 +2,7 @@ import { WEIGHTS, type ClaudeNode, type Effort, type GraphNode, type HypothesisN
 import { FRAMES, recipe, type Frame } from "@composer/engine";
 import { actions, useProject } from "../../store/project";
 import { MODELS } from "../../app/scaffold";
+import { Button, Input, Select, Tabs, Textarea } from "../primitives";
 import { Toggle } from "../primitives/Toggle";
 import { formatTokens } from "../primitives/format";
 import styles from "./NodeTab.module.css";
@@ -20,9 +21,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Text({ value, onCommit, mono }: { value: string; onCommit: (v: string) => void; mono?: boolean }) {
   return (
-    <input
+    <Input
       key={value}
-      className={mono ? `${styles.input} ${styles.mono}` : styles.input}
+      mono={mono}
       defaultValue={value}
       onBlur={(e) => e.currentTarget.value !== value && onCommit(e.currentTarget.value)}
       onKeyDown={(e) => {
@@ -50,13 +51,15 @@ export function NodeTab({ node }: { node: GraphNode }) {
       {(node.kind === "source" || (node.kind === "output" && node.mode === "inlet")) && (
         <>
           <Field label="Weight">
-            <div className={styles.segmented}>
-              {WEIGHTS.map((w) => (
-                <button key={w} type="button" className={(node.weight ?? "normal") === w ? styles.on : undefined} onClick={() => actions.setWeight(node.id, w)}>
-                  {w === "mute" ? "Mute" : w[0]!.toUpperCase() + w.slice(1)}
-                </button>
-              ))}
-            </div>
+            <Tabs
+              label="Weight"
+              variant="segmented"
+              size="sm"
+              block
+              value={node.weight ?? "normal"}
+              onChange={(w) => actions.setWeight(node.id, w)}
+              items={WEIGHTS.map((w) => ({ value: w, label: w === "mute" ? "Mute" : w[0]!.toUpperCase() + w.slice(1) }))}
+            />
           </Field>
           <label className={styles.toggleRow}>
             <Toggle on={!!node.pinned} onChange={() => actions.togglePin(node.id)} size="md" label="Pin into every phase" />
@@ -70,9 +73,9 @@ export function NodeTab({ node }: { node: GraphNode }) {
 
       {node.kind === "source" && (node.platform !== "paste" && node.platform !== "file" && node.platform !== "image" && node.platform !== "transcript") && (
         <div className={styles.syncRow}>
-          <button type="button" className={styles.secondary} onClick={() => void actions.sync(node.id)}>
+          <Button variant="secondary" size="sm" className={styles.start} onClick={() => void actions.sync(node.id)}>
             Sync from {node.platform === "link" ? "the web" : node.platform}
-          </button>
+          </Button>
           {node.config.url && <span className={styles.meta}>{node.config.url}</span>}
         </div>
       )}
@@ -83,9 +86,9 @@ export function NodeTab({ node }: { node: GraphNode }) {
         {node.kind} · {node.phase} · loop {node.loop} · id {node.id.slice(-8)}
       </p>
       {!(node.kind === "output" && node.mode === "inlet") && (
-        <button type="button" className={styles.danger} onClick={() => actions.remove([node.id])}>
+        <Button variant="danger" size="sm" className={styles.start} onClick={() => actions.remove([node.id])}>
           Remove node
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -100,41 +103,45 @@ function ClaudeFields({ node }: { node: ClaudeNode }) {
       </Field>
       {node.recipe === "draft_statement" && (
         <Field label="Frame">
-          <select className={styles.input} value={node.options.frame ?? "hypothesis"} onChange={(e) => actions.update<ClaudeNode>(node.id, { options: { ...node.options, frame: e.target.value as Frame } })}>
+          <Select value={node.options.frame ?? "hypothesis"} onChange={(e) => actions.update<ClaudeNode>(node.id, { options: { ...node.options, frame: e.target.value as Frame } })}>
             {(Object.keys(FRAMES) as Frame[]).map((f) => (
               <option key={f} value={f}>
                 {FRAMES[f]}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
       )}
       <Field label="Model">
-        <select className={styles.input} value={node.model} onChange={(e) => actions.update<ClaudeNode>(node.id, { model: e.target.value })}>
+        <Select value={node.model} onChange={(e) => actions.update<ClaudeNode>(node.id, { model: e.target.value })}>
           {MODELS.map((m) => (
             <option key={m.id} value={m.id}>
               {m.label}
             </option>
           ))}
-        </select>
+        </Select>
       </Field>
       <Field label="Effort">
-        <div className={styles.segmented}>
-          {EFFORTS.map((e) => (
-            <button key={e} type="button" className={node.effort === e ? styles.on : undefined} onClick={() => actions.update<ClaudeNode>(node.id, { effort: e })}>
-              {e}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          label="Effort"
+          variant="segmented"
+          size="sm"
+          block
+          value={node.effort}
+          onChange={(effort) => actions.update<ClaudeNode>(node.id, { effort })}
+          items={EFFORTS.map((e) => ({ value: e, label: e }))}
+        />
       </Field>
       <Field label="Context budget">
-        <div className={styles.segmented}>
-          {BUDGETS.map((b) => (
-            <button key={b} type="button" className={node.budget === b ? styles.on : undefined} onClick={() => actions.update<ClaudeNode>(node.id, { budget: b })}>
-              {formatTokens(b)}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          label="Context budget"
+          variant="segmented"
+          size="sm"
+          block
+          value={String(node.budget)}
+          onChange={(b) => actions.update<ClaudeNode>(node.id, { budget: Number(b) })}
+          items={BUDGETS.map((b) => ({ value: String(b), label: formatTokens(b) }))}
+        />
       </Field>
     </>
   );
@@ -147,8 +154,7 @@ function HypothesisFields({ node, draft }: { node: HypothesisNode; draft: boolea
     <>
       <Field label={`Statement · ${block.label} · ${block.status}`}>
         {draft ? (
-          <textarea
-            className={styles.textarea}
+          <Textarea
             defaultValue={block.statement}
             rows={4}
             onBlur={(e) => e.currentTarget.value !== block.statement && actions.updateHypothesis(block.id, { statement: e.currentTarget.value })}
@@ -168,9 +174,9 @@ function HypothesisFields({ node, draft }: { node: HypothesisNode; draft: boolea
         </Field>
       ))}
       {draft && (
-        <button type="button" className={styles.secondary} onClick={() => actions.updateHypothesis(block.id, { vars: [...block.vars, { key: `var${block.vars.length + 1}`, value: "" }] })}>
+        <Button variant="secondary" size="sm" className={styles.start} onClick={() => actions.updateHypothesis(block.id, { vars: [...block.vars, { key: `var${block.vars.length + 1}`, value: "" }] })}>
           Add variable
-        </button>
+        </Button>
       )}
     </>
   );

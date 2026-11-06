@@ -1,7 +1,7 @@
 .port {
   position: absolute;
-  width: 10px;
-  height: 10px;
+  width: 13px;
+  height: 13px;
   min-width: 0;
   min-height: 0;
   border-radius: 50%;
@@ -11,7 +11,7 @@
   transition: box-shadow var(--t-fast) var(--ease-out), opacity var(--t-fast);
   z-index: 2;
 }
-.in { left: -6px; }
-.out { right: -6px; left: auto; }
-.ok { box-shadow: 0 0 0 4px rgba(238, 237, 234, 0.14), 0 0 12px var(--port-color); }
+.in { left: -8px; }
+.out { right: -8px; left: auto; }
+.ok { box-shadow: 0 0 0 4px rgba(var(--rgb-ink), 0.14), 0 0 12px var(--port-color); }
 .no { opacity: 0.25; }

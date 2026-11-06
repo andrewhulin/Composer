@@ -1,5 +1,6 @@
 import { PHASE_SURFACE, type Phase } from "@composer/core";
 import { useUi } from "../../store/ui";
+import { Tabs } from "../primitives";
 import { DefineWorkspace } from "./DefineWorkspace";
 import { ValidateWorkspace } from "./ValidateWorkspace";
 import styles from "./Workspace.module.css";
@@ -21,13 +22,17 @@ export function SurfaceToggle({ phase }: { phase: Phase }) {
   if (PHASE_SURFACE[phase] === "canvas") return null;
   const name = PHASE_SURFACE[phase] === "writing" ? "Writing" : "Scorecard";
   return (
-    <div className={styles.toggle} role="tablist" aria-label="View">
-      <button type="button" role="tab" aria-selected={!show} className={!show ? styles.toggleOn : undefined} onClick={() => set(false)}>
-        {name}
-      </button>
-      <button type="button" role="tab" aria-selected={show} className={show ? styles.toggleOn : undefined} onClick={() => set(true)}>
-        Graph
-      </button>
-    </div>
+    <Tabs
+      variant="segmented"
+      size="sm"
+      label="View"
+      className={styles.toggle}
+      value={show ? "graph" : "surface"}
+      onChange={(v) => set(v === "graph")}
+      items={[
+        { value: "surface", label: name },
+        { value: "graph", label: "Graph" },
+      ]}
+    />
   );
 }

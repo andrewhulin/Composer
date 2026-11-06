@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { PHASE_INFO, type Graph, type TextArtifact } from "@composer/core";
 import { describeChanges, incoming, type ChangeLine } from "@composer/engine";
 import type { SnapshotRow } from "@composer/data";
+import { ArrowLeftRight, ArrowRight, Minus, Pencil, Plus, RotateCw, Scale, type LucideIcon } from "lucide-react";
 import { ensureBlobs, useProject } from "../../store/project";
 import { branchLine, graphAt } from "../../store/playback";
 import { useUi } from "../../store/ui";
+import { Button, Icon, Select } from "../primitives";
 import styles from "./CompareView.module.css";
 
-const ICON: Record<ChangeLine["icon"], string> = { swap: "⇄", add: "+", remove: "−", weight: "~", run: "↻", edit: "✎" };
+const ICON: Record<ChangeLine["icon"], LucideIcon> = { swap: ArrowLeftRight, add: Plus, remove: Minus, weight: Scale, run: RotateCw, edit: Pencil };
 const hhmm = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 
 /** What a snapshot shipped: the newest output in its phase, its hypothesis, its context. */
@@ -80,13 +82,13 @@ export function CompareView() {
   if (!open) return null;
   const changes = graphs ? describeChanges(graphs[0], graphs[1], hypotheses) : [];
   const pick = (value: string | undefined, onChange: (v: string) => void) => (
-    <select className={styles.select} value={value} onChange={(e) => onChange(e.target.value)}>
+    <Select size="sm" value={value} onChange={(e) => onChange(e.target.value)}>
       {line.map((s) => (
         <option key={s.id} value={s.id}>
           #{s.seq} · {hhmm(s.createdAt)} {s.label ?? s.kind}
         </option>
       ))}
-    </select>
+    </Select>
   );
 
   return (
@@ -96,12 +98,10 @@ export function CompareView() {
           <span className="caps">Compare two snapshots</span>
           <span className={styles.pickers}>
             {pick(a?.id, setA)}
-            <span>→</span>
+            <Icon icon={ArrowRight} size="sm" />
             {pick(b?.id, setB)}
           </span>
-          <button type="button" className={styles.close} onClick={() => setOpen(false)}>
-            esc
-          </button>
+          <Button variant="ghost" size="sm" shortcut="esc" onClick={() => setOpen(false)} />
         </header>
         {graphs && a && b ? (
           <div className={styles.columns}>
@@ -111,7 +111,7 @@ export function CompareView() {
               {changes.length === 0 && <p className={styles.none}>Nothing on the canvas changed between these two.</p>}
               {changes.map((c, i) => (
                 <p key={i} className={styles.change} data-icon={c.icon}>
-                  <span>{ICON[c.icon]}</span>
+                  <Icon icon={ICON[c.icon]} size="sm" className={styles.changeIcon} />
                   {c.text}
                 </p>
               ))}

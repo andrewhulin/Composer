@@ -9,7 +9,9 @@ import { ago, useNow } from "../../hooks/useNow";
 import { formatTokens } from "../primitives/format";
 import { cx } from "../primitives/cx";
 import { Port } from "./Port";
-import glyph from "../../assets/icons/claude-glyph.svg";
+import { Icon } from "../primitives/Icon";
+import { ClaudeGlyph } from "../primitives/glyphs";
+import { Kbd } from "../primitives/Kbd";
 import styles from "./Node.module.css";
 import own from "./ClaudeNodeView.module.css";
 
@@ -85,8 +87,8 @@ export const ClaudeNodeView = memo(function ClaudeNodeView({ id, selected }: Nod
   return (
     <div className={cx(styles.node, own.claude, own[tone], selected && styles.selected, shake && styles.shake)} key={shake}>
       <div className={styles.header}>
-        <span className={styles.glyph} style={{ background: "rgba(237, 235, 227, 0.12)" }}>
-          <img src={glyph} alt="" width={12} height={12} />
+        <span className={cx(styles.glyph, own.glyph)}>
+          <Icon icon={ClaudeGlyph} size="sm" />
         </span>
         <span className={styles.title}>{node.title}</span>
         <span className={styles.tag}>Claude</span>
@@ -115,7 +117,7 @@ export const ClaudeNodeView = memo(function ClaudeNodeView({ id, selected }: Nod
       <div className={styles.runbar}>
         <div className={styles.runline}>
           <span className={own.line}>{line}</span>
-          <span>⌘↵</span>
+          <Kbd>⌘↵</Kbd>
         </div>
         <div className={styles.progress}>
           {tone === "running" ? (
@@ -125,9 +127,9 @@ export const ClaudeNodeView = memo(function ClaudeNodeView({ id, selected }: Nod
           )}
         </div>
       </div>
-      <Port nodeId={id} port="context" type="context" side="in" top={62} />
-      <Port nodeId={id} port="hypothesis" type="hypothesis" side="in" top={82} />
-      <Port nodeId={id} port="out" type="text" side="out" top={14} />
+      <Port nodeId={id} port="context" type="context" side="in" top={64} />
+      <Port nodeId={id} port="hypothesis" type="hypothesis" side="in" top={89} />
+      <Port nodeId={id} port="out" type="text" side="out" top={18} />
     </div>
   );
 });

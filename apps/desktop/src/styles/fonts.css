@@ -13,3 +13,19 @@
   font-style: normal;
   font-display: block;
 }
+/* Accent faces from the same package, used sparingly (DESIGN_SYSTEM.md). Each has one weight and an
+   ELSH axis for its alternate shapes; 0 is the regular cut. */
+@font-face {
+  font-family: "Geist Serif";
+  src: url("../assets/fonts/GeistSerif-Variable.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "Geist Pixel";
+  src: url("../assets/fonts/GeistPixel-Variable.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: block;
+}

@@ -2,10 +2,10 @@
 .editor:focus-within { border-color: var(--border-strong); }
 .mirror, .input {
   margin: 0;
-  padding: 10px;
+  padding: var(--sp-12);
   font-family: var(--font-mono);
-  font-size: var(--fs-chip);
-  line-height: 17px;
+  font-size: var(--fs-small);
+  line-height: 21px;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -24,7 +24,7 @@
   overflow: hidden;
   user-select: text;
 }
-.input::selection { background: rgba(238, 237, 234, 0.2); color: transparent; }
+.input::selection { background: rgba(var(--rgb-ink), 0.2); color: transparent; }
 .inlet { color: var(--phase-understand); }
 .hypothesis { color: var(--signal-hypothesis); }
 .option { color: var(--phase-define); }

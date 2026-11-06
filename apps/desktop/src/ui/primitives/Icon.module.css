@@ -1,0 +1,5 @@
+/* The line stays --icon-stroke screen pixels at every size (non-scaling stroke). */
+.icon { flex: none; display: inline-block; vertical-align: middle; stroke-width: var(--icon-stroke); }
+.sm { width: var(--icon-sm); height: var(--icon-sm); }
+.md { width: var(--icon-md); height: var(--icon-md); }
+.lg { width: var(--icon-lg); height: var(--icon-lg); }

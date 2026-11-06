@@ -19,6 +19,7 @@ import { useTutorial } from "../../tutorial/store";
 import { KeyBanner, Toasts } from "../feedback/Toasts";
 import { CompareView } from "../history/CompareView";
 import { playback, usePlayback } from "../../store/playback";
+import { Button } from "../primitives/Button";
 import styles from "./AppShell.module.css";
 
 const typing = (t: EventTarget | null) => {
@@ -196,9 +197,9 @@ function BootError({ message }: { message: string }) {
         <span>Composer couldn't open its project database</span>
         <p>{message}</p>
         <p>Nothing was changed. Your projects live in ~/Library/Application Support/com.andrewhulin.composer/composer.db.</p>
-        <button type="button" onClick={() => location.reload()}>
+        <Button variant="primary" size="sm" className={styles.retry} onClick={() => location.reload()}>
           Try again
-        </button>
+        </Button>
       </div>
     </main>
   );

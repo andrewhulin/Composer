@@ -326,23 +326,25 @@ user      Instruction (rendered template) + output format
 
 ## 10. UI build-out (match Figma closely)
 
+Since DC-1 the UI runs on its own design system: 15px body type, a spacing scale, shared components and Lucide icons, all described in [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md). The sizes below are the current ones. They're about 1.25× the Figma frames, which were drawn at 12px, so check layout and hierarchy against Figma, not pixel sizes.
+
 - **Window (01 Workspace):**
-  - **Title bar, 44px:** overlay traffic lights, then project / phase, then "Saved · snapshot N".
-  - **Phase rail, 56px:** five phases with status and output, the loop indicator, and the Focus toggle.
-  - **Sidebar, 248px:** ⌘K search, Sources, Memory, Foundations and Memory health.
+  - **Title bar, 48px:** overlay traffic lights, then project / phase, then "Saved · snapshot N".
+  - **Phase rail, 64px:** five phases with status and output, the loop indicator, and the Focus toggle.
+  - **Sidebar, 272px:** ⌘K search, Sources, Memory, Foundations and Memory health.
   - **Canvas:**
-    - 28px grid with 8px snap.
+    - 35px grid with 10px snap. Stored positions are drawn 1.25× apart (`CANVAS_SCALE`).
     - Technical overlay with rulers, coordinate readout and corner brackets.
-    - 28px inlet and outlet rails.
+    - 35px inlet and outlet rails.
     - Floating toolbar: Select V, Pan H, Add node N, Comment C, zoom.
     - Minimap.
-  - **Inspector, 344px:**
+  - **Inspector, 368px:**
     - Tabs: Preview, Prompt, Node.
     - Live output preview.
     - Context section with a budget bar, "Always on" foundations, and context chips with toggles.
     - Instruction editor.
     - Run node ⌘↵ and Snapshot ⌘B.
-  - **History bar, 150px:**
+  - **History bar, 176px:**
     - Transport: play, step, speed.
     - Snapshot N of M.
     - Bookmarks, Branches and Compare.

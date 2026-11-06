@@ -31,4 +31,17 @@ export default tseslint.config(
       "@typescript-eslint/consistent-type-imports": "error",
     },
   },
+  {
+    // Composer's UI takes colors from tokens and icons from <Icon> (DESIGN_SYSTEM.md).
+    files: ["apps/desktop/src/ui/**/*.{ts,tsx}"],
+    ignores: ["apps/desktop/src/ui/primitives/**", "apps/desktop/src/ui/gallery/**"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        { selector: "Literal[value=/^#[0-9a-fA-F]{3,8}$/]", message: "Use a color token, var(--…), from styles/tokens.css." },
+        { selector: "Literal[value=/rgba?\\(\\s*[0-9]/]", message: "Use rgba(var(--rgb-…), alpha) with a token channel." },
+        { selector: "JSXOpeningElement[name.name='svg']", message: "Icons go through <Icon>. A data graphic needs a disable comment that says so." },
+      ],
+    },
+  },
 );

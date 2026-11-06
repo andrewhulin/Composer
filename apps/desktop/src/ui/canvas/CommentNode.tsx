@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "react";
 import type { NodeProps } from "@xyflow/react";
+import { X } from "lucide-react";
 import { comments, useComments } from "../../store/comments";
 import { ago, useNow } from "../../hooks/useNow";
+import { IconButton } from "../primitives/Button";
 import styles from "./CommentNode.module.css";
 
 /** A sticky note on the canvas. Double-click to edit; an empty note disappears when you leave it. */
@@ -19,9 +21,7 @@ export function CommentNode({ id, selected }: NodeProps) {
     <div className={styles.note} data-selected={selected || undefined} onDoubleClick={() => comments.edit(cid)}>
       <div className={styles.head}>
         <span className={styles.meta}>Note · {ago(c.createdAt, now)}</span>
-        <button type="button" className={`${styles.remove} nodrag`} aria-label="Delete note" onClick={() => comments.remove(cid)}>
-          ×
-        </button>
+        <IconButton icon={X} label="Delete note" size="sm" className={`${styles.remove} nodrag`} onClick={() => comments.remove(cid)} />
       </div>
       {editing ? (
         <textarea

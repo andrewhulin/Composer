@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax -- drawn as a data graphic in SVG, not icons */
 import styles from "./Rulers.module.css";
 
 const START = 40;

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { X } from "lucide-react";
 import type { ClaudeNode, TextArtifact } from "@composer/core";
 import type { PrototypeData } from "@composer/engine";
 import { actions, toast, useProject } from "../../store/project";
 import { useUi } from "../../store/ui";
 import { applyTweak, exportHtml, onFrameEvent, prototypeUrl, setMode, type FrameEvent } from "../../prototype/runtime";
-import { cx } from "../primitives/cx";
+import { Button, IconButton, Input, Popover, Tabs, Textarea } from "../primitives";
+import { useSize } from "../primitives/useSize";
 import styles from "./Build.module.css";
 
 type Mode = "interact" | "tweak" | "note";
@@ -28,6 +30,7 @@ const PROPS: { prop: string; label: string; from: keyof Picked["styles"]; kind: 
 /** rgb(1, 2, 3) → #010203, for the color input. */
 function toHex(c: string): string {
   const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c);
+  // eslint-disable-next-line no-restricted-syntax -- a value for the prototype's color input, not a UI color
   if (!m) return /^#[0-9a-f]{6}$/i.test(c) ? c : "#000000";
   return `#${[m[1], m[2], m[3]].map((x) => Number(x).toString(16).padStart(2, "0")).join("")}`;
 }
@@ -52,7 +55,9 @@ export function PrototypeStudio({ nodeId }: { nodeId: string }) {
   const [point, setPoint] = useState<Point | null>(null);
   const [noteText, setNoteText] = useState("");
   const [reload, setReload] = useState(0);
-  const scale = Math.min(1, (window.innerHeight - 180) / H);
+  // Fit the phone to the studio's own height (below its header), never larger than 1:1.
+  const [root, room] = useSize<HTMLDivElement>();
+  const scale = room.height ? Math.min(1, (room.height - 60) / H) : 0.75;
 
   useEffect(() => {
     if (!data || !out) return;
@@ -127,21 +132,23 @@ export function PrototypeStudio({ nodeId }: { nodeId: string }) {
   };
 
   return (
-    <div className={styles.studio} data-phase="build" role="dialog" aria-label={`${node.title} studio`}>
+    <div ref={root} className={styles.studio} data-phase="build" role="dialog" aria-label={`${node.title} studio`}>
       <header className={styles.studioHead}>
         <span className={styles.studioTitle}>{node.title}</span>
         <span className={styles.meta}>{data.title}</span>
-        <div className={styles.modes} role="tablist" aria-label="Mode">
-          {(["interact", "tweak", "note"] as Mode[]).map((m) => (
-            <button key={m} type="button" role="tab" aria-selected={mode === m} className={cx(styles.mode, mode === m && styles.modeOn)} onClick={() => switchMode(m)}>
-              {m === "interact" ? "Interact" : m === "tweak" ? "Tweak" : "Note"}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          variant="segmented"
+          size="sm"
+          label="Mode"
+          className={styles.modes}
+          value={mode}
+          onChange={switchMode}
+          items={(["interact", "tweak", "note"] as Mode[]).map((m) => ({ value: m, label: m === "interact" ? "Interact" : m === "tweak" ? "Tweak" : "Note" }))}
+        />
         <span className={styles.fill} />
-        <button type="button" className={styles.ghost} onClick={close}>
+        <Button variant="secondary" size="sm" onClick={close}>
           Close
-        </button>
+        </Button>
       </header>
       <div className={styles.studioBody}>
         <div className={styles.stage} style={{ width: W * scale, height: H * scale }}>
@@ -166,27 +173,28 @@ export function PrototypeStudio({ nodeId }: { nodeId: string }) {
               ) : null,
             )}
           {point && (
-            <form
-              className={styles.pinForm}
-              style={{ left: Math.min(point.x * scale, W * scale - 220), top: point.y * scale + 14 }}
-              onSubmit={(e) => {
-                e.preventDefault();
-                actions.addNote(nodeId, { kind: "point", x: point.x, y: point.y, ...(point.screen ? { screen: point.screen } : {}), element: point.element }, noteText);
-                setNoteText("");
-                setPoint(null);
-              }}
-            >
-              <span className={styles.meta}>{point.element}</span>
-              <input autoFocus value={noteText} onChange={(e) => setNoteText(e.target.value)} onKeyDown={(e) => e.stopPropagation()} placeholder="Note for the next run" />
-              <div className={styles.row}>
-                <button type="button" className={styles.ghost} onClick={() => setPoint(null)}>
-                  Cancel
-                </button>
-                <button type="submit" className={styles.primary} disabled={!noteText.trim()}>
-                  Pin note
-                </button>
-              </div>
-            </form>
+            <Popover className={styles.pinForm} style={{ left: Math.min(point.x * scale, W * scale - 275), top: point.y * scale + 18 }}>
+              <form
+                className={styles.pinFields}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  actions.addNote(nodeId, { kind: "point", x: point.x, y: point.y, ...(point.screen ? { screen: point.screen } : {}), element: point.element }, noteText);
+                  setNoteText("");
+                  setPoint(null);
+                }}
+              >
+                <span className={styles.meta}>{point.element}</span>
+                <Input size="sm" autoFocus value={noteText} onChange={(e) => setNoteText(e.target.value)} onKeyDown={(e) => e.stopPropagation()} placeholder="Note for the next run" />
+                <div className={styles.row}>
+                  <Button variant="secondary" size="sm" onClick={() => setPoint(null)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="phase" size="sm" disabled={!noteText.trim()}>
+                    Pin note
+                  </Button>
+                </div>
+              </form>
+            </Popover>
           )}
         </div>
 
@@ -216,16 +224,16 @@ export function PrototypeStudio({ nodeId }: { nodeId: string }) {
                   {picked.leaf && (
                     <label>
                       <span>Copy</span>
-                      <textarea rows={2} value={values.text ?? ""} onChange={(e) => void change("text", "Copy", e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
+                      <Textarea size="sm" rows={2} value={values.text ?? ""} onChange={(e) => void change("text", "Copy", e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
                     </label>
                   )}
                   {PROPS.map((p) => (
                     <label key={p.prop}>
                       <span>{p.label}</span>
                       {p.kind === "color" ? (
-                        <input type="color" value={toHex(values[p.prop] ?? "")} onChange={(e) => void change(p.prop, p.label, e.target.value)} />
+                        <input type="color" className={styles.colorInput} value={toHex(values[p.prop] ?? "")} onChange={(e) => void change(p.prop, p.label, e.target.value)} />
                       ) : (
-                        <input value={values[p.prop] ?? ""} onChange={(e) => setValues((v) => ({ ...v, [p.prop]: e.target.value }))} onBlur={(e) => void change(p.prop, p.label, e.target.value)} onKeyDown={(e) => {
+                        <Input size="sm" value={values[p.prop] ?? ""} onChange={(e) => setValues((v) => ({ ...v, [p.prop]: e.target.value }))} onBlur={(e) => void change(p.prop, p.label, e.target.value)} onKeyDown={(e) => {
                           e.stopPropagation();
                           if (e.key === "Enter") void change(p.prop, p.label, (e.target as HTMLInputElement).value);
                         }} />
@@ -245,13 +253,13 @@ export function PrototypeStudio({ nodeId }: { nodeId: string }) {
                 </>
               )}
               <div className={styles.row}>
-                <button type="button" className={styles.ghost} disabled={!changes.length} onClick={discard}>
+                <Button variant="secondary" size="sm" disabled={!changes.length} onClick={discard}>
                   Discard
-                </button>
+                </Button>
                 <span className={styles.fill} />
-                <button type="button" className={styles.primary} disabled={!changes.length} onClick={() => void save()}>
+                <Button variant="phase" size="sm" disabled={!changes.length} onClick={() => void save()}>
                   Save tweaks
-                </button>
+                </Button>
               </div>
             </>
           )}
@@ -266,16 +274,14 @@ export function PrototypeStudio({ nodeId }: { nodeId: string }) {
                       {n.text}
                       {n.anchor.kind === "point" && <em>{[n.anchor.screen, n.anchor.element].filter(Boolean).join(" · ")}</em>}
                     </span>
-                    <button type="button" onClick={() => actions.removeNote(nodeId, n.id)} aria-label="Remove note">
-                      ×
-                    </button>
+                    <IconButton icon={X} label="Remove note" size="sm" onClick={() => actions.removeNote(nodeId, n.id)} />
                   </li>
                 ))}
               </ol>
               {notes.length > 0 && (
-                <button type="button" className={styles.primary} onClick={() => actions.run(nodeId)}>
+                <Button variant="phase" size="sm" onClick={() => actions.run(nodeId)}>
                   Rerun with {notes.length} note{notes.length === 1 ? "" : "s"}
-                </button>
+                </Button>
               )}
             </>
           )}

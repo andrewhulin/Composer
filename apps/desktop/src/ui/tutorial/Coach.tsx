@@ -7,10 +7,14 @@ import { ingestText } from "../../app/ingest";
 import { STEPS, progress, stepDef, type StepId, type TutorialContext } from "../../tutorial/steps";
 import { tutorial, useTutorial } from "../../tutorial/store";
 import { SAMPLE_INTERVIEW, SAMPLE_TITLE } from "../../tutorial/sample";
+import { Check } from "lucide-react";
 import { cx } from "../primitives/cx";
+import { Button } from "../primitives/Button";
+import { Badge } from "../primitives/Chip";
+import { Input } from "../primitives/Field";
+import { Icon } from "../primitives/Icon";
 import { place, type Rect } from "./place";
 import styles from "./Coach.module.css";
-
 
 const nodeSel = (n: GraphNode | undefined) => (n ? `.react-flow__node[data-id="${n.id}"]` : null);
 
@@ -131,11 +135,15 @@ export function Coach() {
         <div className={styles.head}>
           <span className={styles.part}>
             {prog.part} · {prog.index} of {prog.total}
-            {def.optional && <em>optional</em>}
+            {def.optional && (
+              <Badge tone="neutral" className={styles.optional}>
+                optional
+              </Badge>
+            )}
           </span>
-          <button type="button" className={styles.exit} onClick={tutorial.pause} title="Leave the guide. Resume it from the title bar or ⌘K.">
+          <Button variant="ghost" size="sm" onClick={tutorial.pause} title="Leave the guide. Resume it from the title bar or ⌘K.">
             Exit guide
-          </button>
+          </Button>
         </div>
         <div className={styles.bar} aria-hidden>
           {STEPS.map((s) => (
@@ -143,7 +151,11 @@ export function Coach() {
           ))}
         </div>
         <h2 className={styles.title}>
-          {complete && <span className={styles.check}>✓</span>}
+          {complete && (
+            <span className={styles.check}>
+              <Icon icon={Check} size="sm" />
+            </span>
+          )}
           {def.title}
         </h2>
         {def.body.split("\n\n").map((para, i) => (
@@ -154,32 +166,32 @@ export function Coach() {
         <StepActions step={step} ctx={ctx} />
         <div className={styles.foot}>
           {prog.overall > 1 && (
-            <button type="button" className={styles.ghost} onClick={tutorial.back}>
+            <Button variant="ghost" size="sm" onClick={tutorial.back}>
               Back
-            </button>
+            </Button>
           )}
           <span className={styles.fill} />
           {step === "welcome" ? (
             <>
-              <button type="button" className={styles.ghost} onClick={tutorial.pause}>
+              <Button variant="ghost" size="sm" onClick={tutorial.pause}>
                 Not now
-              </button>
-              <button type="button" className={styles.primary} onClick={tutorial.next}>
+              </Button>
+              <Button variant="primary" size="sm" onClick={tutorial.next}>
                 Start
-              </button>
+              </Button>
             </>
           ) : step === "done" ? (
-            <button type="button" className={styles.primary} onClick={tutorial.next}>
+            <Button variant="primary" size="sm" onClick={tutorial.next}>
               Finish
-            </button>
+            </Button>
           ) : def.done && !complete ? (
-            <button type="button" className={styles.ghost} onClick={tutorial.skip}>
+            <Button variant="ghost" size="sm" onClick={tutorial.skip}>
               {def.optional ? "Skip for now" : "Skip"}
-            </button>
+            </Button>
           ) : (
-            <button type="button" className={styles.primary} onClick={tutorial.next}>
+            <Button variant="primary" size="sm" onClick={tutorial.next}>
               Next
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -187,11 +199,11 @@ export function Coach() {
   );
 }
 
-function Action({ children, onClick, primary }: { children: ReactNode; onClick: () => void; primary?: boolean }) {
+function Action({ children, onClick, primary, shortcut }: { children: ReactNode; onClick: () => void; primary?: boolean; shortcut?: string }) {
   return (
-    <button type="button" className={primary ? styles.act : styles.actSecondary} onClick={onClick}>
+    <Button variant={primary ? "tint" : "secondary"} size="sm" shortcut={shortcut} onClick={onClick}>
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -201,14 +213,25 @@ function StepActions({ step, ctx }: { step: StepId; ctx: TutorialContext }) {
   const project = useProject((s) => s.project);
   const [name, setName] = useState("");
   const x = pieces();
-  const status = (ok: boolean, yes: string, no: string) => <span className={cx(styles.status, ok && styles.statusOk)}>{ok ? `✓ ${yes}` : no}</span>;
+  const status = (ok: boolean, yes: string, no: string) => (
+    <span className={cx(styles.status, ok && styles.statusOk)}>
+      {ok ? (
+        <>
+          <Icon icon={Check} size="sm" />
+          {yes}
+        </>
+      ) : (
+        no
+      )}
+    </span>
+  );
   switch (step) {
     case "key":
       return (
         <div className={styles.acts}>
           {!ui.settingsOpen && (
-            <Action primary onClick={() => ui.setSettingsOpen(true)}>
-              Open Settings <kbd>⌘,</kbd>
+            <Action primary shortcut="⌘," onClick={() => ui.setSettingsOpen(true)}>
+              Open Settings
             </Action>
           )}
           {status(ctx.hasKey, "Key saved in Keychain", "Waiting for a key…")}
@@ -245,10 +268,10 @@ function StepActions({ step, ctx }: { step: StepId; ctx: TutorialContext }) {
             if (name.trim()) void actions.renameProject(name.trim());
           }}
         >
-          <input value={name} placeholder={project?.name ?? "Name"} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.stopPropagation()} aria-label="Problem name" />
-          <button type="submit" className={styles.act} disabled={!name.trim()}>
+          <Input value={name} placeholder={project?.name ?? "Name"} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.stopPropagation()} aria-label="Problem name" />
+          <Button type="submit" variant="tint" size="sm" disabled={!name.trim()}>
             Name it
-          </button>
+          </Button>
         </form>
       );
     case "context":
@@ -270,12 +293,13 @@ function StepActions({ step, ctx }: { step: StepId; ctx: TutorialContext }) {
         <div className={styles.acts}>
           <Action
             primary
+            shortcut="W"
             onClick={() => {
               actions.select(x.source!.id);
               actions.setWeight(x.source!.id, "heavy");
             }}
           >
-            Make “{x.source.title.length > 22 ? `${x.source.title.slice(0, 20)}…` : x.source.title}” heavy <kbd>W</kbd>
+            Make “{x.source.title.length > 22 ? `${x.source.title.slice(0, 20)}…` : x.source.title}” heavy
           </Action>
         </div>
       ) : null;
@@ -284,12 +308,13 @@ function StepActions({ step, ctx }: { step: StepId; ctx: TutorialContext }) {
         <div className={styles.acts}>
           <Action
             primary
+            shortcut="⌘↵"
             onClick={() => {
               actions.select(x.synth!.id);
               actions.run(x.synth!.id);
             }}
           >
-            Run Synthesize insights <kbd>⌘↵</kbd>
+            Run Synthesize insights
           </Action>
         </div>
       ) : null;
@@ -306,12 +331,13 @@ function StepActions({ step, ctx }: { step: StepId; ctx: TutorialContext }) {
         <div className={styles.acts}>
           <Action
             primary
+            shortcut="⌘L"
             onClick={() => {
               actions.select(x.understandOut!.id);
               void actions.lock(x.understandOut!.id);
             }}
           >
-            Lock weighted context <kbd>⌘L</kbd>
+            Lock weighted context
           </Action>
         </div>
       ) : null;
@@ -326,12 +352,13 @@ function StepActions({ step, ctx }: { step: StepId; ctx: TutorialContext }) {
             x.draft && (
               <Action
                 primary
+                shortcut="⌘↵"
                 onClick={() => {
                   actions.select(x.draft!.id);
                   actions.run(x.draft!.id);
                 }}
               >
-                Run Draft statement <kbd>⌘↵</kbd>
+                Run Draft statement
               </Action>
             )
           ) : (

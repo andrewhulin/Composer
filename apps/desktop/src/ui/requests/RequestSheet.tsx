@@ -3,7 +3,9 @@ import { useUi } from "../../store/ui";
 import { toast, useProject } from "../../store/project";
 import { AREAS, AREA_FOR_PHASE, type Area } from "../../requests/queue";
 import { describeContext, refreshRequests, submitRequest, useRequests } from "../../requests/store";
-import { cx } from "../primitives/cx";
+import { Button } from "../primitives/Button";
+import { Chip } from "../primitives/Chip";
+import { Input, Textarea } from "../primitives/Field";
 import styles from "./RequestSheet.module.css";
 
 /** ⌘K → Request a feature: a short form that lands as a Proposed row in the Dev queue in Notion. */
@@ -61,26 +63,30 @@ function RequestForm() {
       >
         <header className={styles.header}>
           <span className={styles.title}>Request a feature</span>
-          <button type="button" className={styles.close} onClick={close}>
-            esc
-          </button>
+          <Button variant="ghost" size="sm" shortcut="esc" onClick={close} />
         </header>
         <div className={styles.body}>
           <label className={styles.field}>
             <span className="caps">What should Composer do?</span>
-            <input className={styles.input} autoFocus maxLength={160} placeholder="Let me drag variants to reorder a round" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Input autoFocus maxLength={160} placeholder="Let me drag variants to reorder a round" value={title} onChange={(e) => setTitle(e.target.value)} />
           </label>
           <label className={styles.field}>
             <span className="caps">Why, and how you'd use it</span>
-            <textarea className={styles.textarea} rows={4} placeholder="What you were trying to do, what got in the way, what done looks like." value={why} onChange={(e) => setWhy(e.target.value)} />
+            <Textarea
+              className={styles.textarea}
+              rows={4}
+              placeholder="What you were trying to do, what got in the way, what done looks like."
+              value={why}
+              onChange={(e) => setWhy(e.target.value)}
+            />
           </label>
           <div className={styles.field}>
             <span className="caps">Area</span>
             <div className={styles.areas}>
               {AREAS.map((a) => (
-                <button key={a} type="button" aria-pressed={areas.includes(a)} className={cx(styles.area, areas.includes(a) && styles.areaOn)} onClick={() => toggle(a)}>
+                <Chip key={a} selected={areas.includes(a)} onClick={() => toggle(a)}>
                   {a}
-                </button>
+                </Chip>
               ))}
             </div>
           </div>
@@ -107,12 +113,12 @@ function RequestForm() {
               "Goes to the Dev queue in Notion as Proposed."
             )}
           </span>
-          <button type="button" className={styles.secondary} onClick={close}>
+          <Button variant="secondary" size="md" onClick={close}>
             Cancel
-          </button>
-          <button type="button" className={styles.primary} disabled={!title.trim() || sending} onClick={() => void send()}>
-            {sending ? "Sending…" : "Send"} <kbd>⌘↵</kbd>
-          </button>
+          </Button>
+          <Button variant="primary" size="md" shortcut="⌘↵" disabled={!title.trim() || sending} onClick={() => void send()}>
+            {sending ? "Sending…" : "Send"}
+          </Button>
         </footer>
       </div>
     </div>

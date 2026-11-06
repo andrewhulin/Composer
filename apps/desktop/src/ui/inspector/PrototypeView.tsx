@@ -4,6 +4,7 @@ import { FIDELITIES, lintAgainstTokens, type Fidelity, type PrototypeData } from
 import { actions, toast } from "../../store/project";
 import { figmaPayload, prototypeUrl, serialize } from "../../prototype/runtime";
 import { currentTokens, recordLint } from "../../store/craft";
+import { Button, Kbd } from "../primitives";
 import { cx } from "../primitives/cx";
 import styles from "./PrototypeView.module.css";
 
@@ -98,21 +99,23 @@ export function PrototypeView({ data, hash, claudeId }: { data: PrototypeData; h
       </div>
       <span className="caps">Build in</span>
       <div className={styles.targets}>
-        <button type="button" onClick={() => setLarge(true)}>
+        <Button variant="secondary" block className={styles.target} onClick={() => setLarge(true)}>
           Code prototype <em>open large</em>
-        </button>
-        <button type="button" onClick={() => void sendToFigma()}>
+        </Button>
+        <Button variant="secondary" block className={styles.target} onClick={() => void sendToFigma()}>
           Figma <em>send frames</em>
-        </button>
-        <button type="button" onClick={() => void check()}>
+        </Button>
+        <Button variant="secondary" block className={styles.target} onClick={() => void check()}>
           On-system <em>{onSystem === undefined ? "check" : onSystem === null ? "slot a design system" : `${onSystem}%`}</em>
-        </button>
+        </Button>
       </div>
       {large && (
         <div className={styles.overlay} onPointerDown={() => setLarge(false)}>
           <div onPointerDown={(e) => e.stopPropagation()}>
             <PrototypeFrame hash={hash} html={data.html} width={Math.min(390, Math.round((window.innerHeight - 120) * (W / H)))} />
-            <p className={styles.overlayHint}>{data.title} · esc or click outside to close</p>
+            <p className={styles.overlayHint}>
+              {data.title} · <Kbd>esc</Kbd> or click outside to close
+            </p>
           </div>
         </div>
       )}

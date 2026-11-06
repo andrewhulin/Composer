@@ -4,10 +4,10 @@
 .flow :global(.react-flow__node.dragging) { cursor: grabbing; }
 .flow :global(.react-flow__edge-path) { fill: none; }
 .flow :global(.react-flow__connection-path) { stroke: var(--text-primary); stroke-width: 1.5; stroke-dasharray: 4 4; fill: none; }
-.flow :global(.react-flow__selection) { background: rgba(238, 237, 234, 0.04); border: 1px dashed var(--text-muted); }
+.flow :global(.react-flow__selection) { background: rgba(var(--rgb-ink), 0.04); border: 1px dashed var(--text-muted); }
 .minimap {
-  right: 44px !important;
-  bottom: 16px !important;
+  right: 55px !important;
+  bottom: 20px !important;
   margin: 0 !important;
   border-radius: var(--r-lg);
   background: var(--bg-panel) !important;
@@ -16,16 +16,14 @@
 }
 
 /* React Flow's attribution, kept as its authors ask, made quiet to fit the canvas. */
-.flow :global(.react-flow__attribution) { background: transparent; padding: 0 6px; font-family: var(--font-mono); font-size: 8px; }
+.flow :global(.react-flow__attribution) { background: transparent; padding: 0 var(--sp-8); font-family: var(--font-mono); font-size: var(--fs-micro); }
 .flow :global(.react-flow__attribution a) { color: var(--text-muted); text-decoration: none; }
 
 /* Playback rebuild: things made in this frame fade in, node by node. */
 .pending { opacity: 0 !important; transform: scale(0.96); }
 .flow :global(.react-flow__node), .flow :global(.react-flow__edge) { transition: opacity 220ms var(--ease-out); }
 
-.empty { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); width: 380px; display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; border-radius: var(--r-lg); background: var(--bg-panel); border: 1px dashed var(--border-strong); pointer-events: auto; z-index: 5; }
-.emptyKicker { font-family: var(--font-mono); font-size: var(--fs-meta); letter-spacing: 0.04em; text-transform: uppercase; color: var(--phase); }
-.empty p { font-size: var(--fs-note); line-height: 18px; color: var(--text-secondary); }
-.emptyActions { display: flex; gap: 8px; }
-.emptyActions button { padding: 6px 11px; border-radius: var(--r-md); border: 1px solid var(--border-strong); font-size: var(--fs-chip); color: var(--text-primary); }
-.emptyActions button:first-child { background: var(--text-primary); color: var(--text-inverse); border-color: transparent; }
+.empty { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); width: 475px; display: flex; flex-direction: column; gap: var(--sp-12); padding: var(--sp-24) var(--sp-24); border-radius: var(--r-lg); background: var(--bg-panel); border: 1px dashed var(--border-strong); pointer-events: auto; z-index: 5; }
+.emptyKicker { font-family: var(--font-pixel); font-size: var(--fs-meta); letter-spacing: var(--tracking-micro); text-transform: uppercase; color: var(--phase); }
+.empty p { font-size: var(--fs-small); line-height: 23px; color: var(--text-secondary); }
+.emptyActions { display: flex; gap: var(--sp-10); }

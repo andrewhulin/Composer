@@ -12,7 +12,7 @@
 }
 .loading { grid-area: canvas; position: relative; background: var(--bg-canvas); }
 
-.bootError { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); width: 440px; display: flex; flex-direction: column; gap: 10px; padding: 20px 22px; border-radius: var(--r-lg); background: var(--bg-panel); border: 1px solid rgba(224, 90, 78, 0.4); }
+.bootError { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); width: 550px; display: flex; flex-direction: column; gap: var(--sp-12); padding: var(--sp-24) var(--sp-28); border-radius: var(--r-lg); background: var(--bg-panel); border: 1px solid rgba(var(--rgb-define), 0.4); }
 .bootError span { font-size: var(--fs-phase); font-weight: 600; color: var(--text-primary); }
-.bootError p { font-size: var(--fs-note); line-height: 18px; color: var(--text-secondary); user-select: text; }
-.bootError button { align-self: flex-start; padding: 6px 12px; border-radius: var(--r-md); background: var(--text-primary); color: var(--text-inverse); font-size: var(--fs-chip); font-weight: 500; }
+.bootError p { font-size: var(--fs-small); line-height: 23px; color: var(--text-secondary); user-select: text; }
+.retry { align-self: flex-start; }

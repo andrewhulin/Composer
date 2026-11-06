@@ -6,18 +6,13 @@
   z-index: 8;
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 46px;
-  padding: 0 14px;
-  background: rgba(14, 26, 34, 0.94);
-  border-bottom: 1px solid rgba(82, 172, 217, 0.35);
+  gap: var(--sp-12);
+  height: 58px;
+  padding: 0 var(--sp-18);
+  background: var(--bg-playback);
+  border-bottom: 1px solid rgba(var(--rgb-validate), 0.35);
   backdrop-filter: blur(6px);
 }
-.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--phase-validate); }
 .label { font-family: var(--font-mono); font-size: var(--fs-meta); letter-spacing: var(--tracking-caps); color: var(--phase-validate); }
 .where { font-size: var(--fs-body); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fill { flex: 1; }
-.primary, .secondary { display: flex; gap: 8px; align-items: center; padding: 6px 12px; border-radius: var(--r-md); font-size: var(--fs-body); font-weight: 500; white-space: nowrap; }
-.primary { background: var(--text-primary); color: var(--text-inverse); }
-.secondary { border: 1px solid var(--border-strong); color: var(--text-primary); }
-.secondary span { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); font-weight: 400; }

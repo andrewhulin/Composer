@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { AssembledPrompt } from "@composer/engine";
+import { Diamond } from "lucide-react";
+import { Icon } from "../primitives";
 import { formatTokens } from "../primitives/format";
 import styles from "./PromptTab.module.css";
 
@@ -30,7 +32,12 @@ export function PromptTab({ prompt }: { prompt: AssembledPrompt }) {
         <div key={b.label} className={styles.block}>
           <div className={styles.head}>
             <span className="caps">{b.label}</span>
-            {b.cached && <span className={styles.cache}>◆ {b.cached}</span>}
+            {b.cached && (
+              <span className={styles.cache}>
+                <Icon icon={Diamond} size="sm" fill="currentColor" />
+                {b.cached}
+              </span>
+            )}
           </div>
           <pre className={styles.text}>{b.text}</pre>
         </div>

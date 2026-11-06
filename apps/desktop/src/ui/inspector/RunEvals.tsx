@@ -3,7 +3,8 @@ import type { ClaudeNode, Id } from "@composer/core";
 import type { RunRow } from "@composer/data";
 import { actions, toast, useProject } from "../../store/project";
 import { useUi } from "../../store/ui";
-import { cx } from "../primitives/cx";
+import { Check } from "lucide-react";
+import { Button } from "../primitives";
 import styles from "./Inspector.module.css";
 
 /**
@@ -57,20 +58,27 @@ export function RunEvals({ claude, runId }: { claude: ClaudeNode; runId: Id }) {
         <div className={styles.evalRow}>
           <span className={styles.scoreLabel}>Vs last run</span>
           {(["better", "same", "worse"] as const).map((p) => (
-            <button key={p} type="button" className={cx(styles.evalBtn, picked === p && styles.evalOn)} onClick={() => void pick(p)} disabled={!!picked}>
+            <Button key={p} variant={picked === p ? "tint" : "secondary"} size="sm" className={picked === p ? styles.chosen : undefined} onClick={() => void pick(p)} disabled={!!picked}>
               {p === "better" ? "Better" : p === "same" ? "Same" : "Worse"}
-            </button>
+            </Button>
           ))}
         </div>
       )}
       <div className={styles.evalRow}>
-        <button type="button" className={cx(styles.evalBtn, kept && styles.evalOn)} disabled={kept || !run?.promptHash} onClick={() => void keep()}>
-          {kept ? "Replay brief ✓" : "Keep as replay brief"}
-        </button>
+        <Button
+          variant={kept ? "tint" : "secondary"}
+          size="sm"
+          className={kept ? styles.chosen : undefined}
+          iconAfter={kept ? Check : undefined}
+          disabled={kept || !run?.promptHash}
+          onClick={() => void keep()}
+        >
+          {kept ? "Replay brief" : "Keep as replay brief"}
+        </Button>
         {claude.recipe === "prototype" && (
-          <button type="button" className={styles.evalBtn} onClick={() => useUi.getState().setStudio({ nodeId: claude.id })}>
+          <Button variant="secondary" size="sm" onClick={() => useUi.getState().setStudio({ nodeId: claude.id })}>
             Open studio
-          </button>
+          </Button>
         )}
       </div>
     </div>

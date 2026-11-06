@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { PHASE_INFO, type Phase } from "@composer/core";
+import { ArrowRight, ChevronDown, ChevronRight, Minus, Plus, RotateCcw } from "lucide-react";
 import { actions, useProject } from "../../store/project";
 import { useUi } from "../../store/ui";
-import { cx } from "../primitives/cx";
+import { Button, IconButton, Icon, Textarea, cx } from "../primitives";
 import { useKey, type KeyStatus } from "../workspace/useKey";
 import styles from "./KeyNode.module.css";
 
@@ -37,9 +38,7 @@ export function KeyNode({ phase }: { phase: Phase }) {
         <span className={styles.kicker}>KEY</span>
         <span className={styles.title}>{handoff.title}</span>
         <span className={cx(styles.status, styles[`s_${status}`])}>{status === "locked" || status === "newer" ? `v${latest?.version ?? ""} · ${STATUS[status]}` : STATUS[status]}</span>
-        <button type="button" className={styles.fold} onClick={() => setOpen(!open)} aria-label={open ? "Fold key node" : "Open key node"}>
-          {open ? "–" : "+"}
-        </button>
+        <IconButton icon={open ? Minus : Plus} label={open ? "Fold key node" : "Open key node"} variant="secondary" size="sm" onClick={() => setOpen(!open)} />
       </header>
       {open && (
         <>
@@ -55,13 +54,14 @@ export function KeyNode({ phase }: { phase: Phase }) {
             ))}
           </dl>
           <div className={styles.target}>
-            <span>→</span>
+            <Icon icon={ArrowRight} size="sm" />
             {key.target}
           </div>
 
           <div className={styles.previewHead}>
             <button type="button" className={styles.previewToggle} onClick={() => setShowDoc(!showDoc)}>
-              {showDoc ? "▾" : "▸"} Prompt preview
+              <Icon icon={showDoc ? ChevronDown : ChevronRight} size="sm" />
+              Prompt preview
             </button>
             <span className={styles.previewMeta}>{key.live ? "live from the next prompt" : "as the next prompt will read it"}</span>
           </div>
@@ -72,14 +72,14 @@ export function KeyNode({ phase }: { phase: Phase }) {
               </pre>
               <div className={styles.row}>
                 {!readOnly && (
-                  <button type="button" className={styles.ghost} onClick={() => setEditing(handoff.text)}>
+                  <Button variant="secondary" size="sm" onClick={() => setEditing(handoff.text)}>
                     Edit handoff
-                  </button>
+                  </Button>
                 )}
                 {key.handEdit && (
-                  <button type="button" className={styles.ghost} onClick={() => actions.setDraft(output.id, { text: undefined })}>
+                  <Button variant="secondary" size="sm" onClick={() => actions.setDraft(output.id, { text: undefined })}>
                     Reset to Claude's
-                  </button>
+                  </Button>
                 )}
                 <span className={styles.fill} />
                 <span className={styles.tokens}>~{Math.ceil(key.doc.length / 4)} tok</span>
@@ -88,23 +88,23 @@ export function KeyNode({ phase }: { phase: Phase }) {
           )}
           {editing !== null && (
             <div className={styles.edit}>
-              <textarea value={editing} onChange={(e) => setEditing(e.target.value)} onKeyDown={(e) => e.stopPropagation()} rows={10} aria-label="Handoff text" />
+              <Textarea mono size="sm" value={editing} onChange={(e) => setEditing(e.target.value)} onKeyDown={(e) => e.stopPropagation()} rows={10} aria-label="Handoff text" />
               <p className={styles.hint}>{status === "locked" ? "Saving makes a new version; the next phase moves to it." : "Your edit ships with the lock."}</p>
               <div className={styles.row}>
-                <button type="button" className={styles.ghost} onClick={() => setEditing(null)}>
+                <Button variant="secondary" size="sm" onClick={() => setEditing(null)}>
                   Cancel
-                </button>
+                </Button>
                 <span className={styles.fill} />
-                <button
-                  type="button"
-                  className={styles.primary}
+                <Button
+                  variant="phase"
+                  size="sm"
                   onClick={() => {
                     void actions.reviseHandoff(output.id, editing, status === "locked" ? latest?.id : undefined);
                     setEditing(null);
                   }}
                 >
                   Save handoff
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -119,13 +119,14 @@ export function KeyNode({ phase }: { phase: Phase }) {
                     Holds → Share
                   </button>
                   <button type="button" className={styles.misses} disabled={blocked} onClick={() => void actions.lock(output.id, "misses")}>
-                    ↺ Misses
+                    <Icon icon={RotateCcw} size="sm" />
+                    Misses
                   </button>
                 </>
               ) : (
-                <button type="button" className={styles.primary} disabled={blocked || status === "locked" || status === "empty"} onClick={lock}>
+                <Button variant="phase" size="sm" disabled={blocked || status === "locked" || status === "empty"} onClick={lock}>
                   {status === "locked" ? "Locked" : status === "newer" ? `Lock v${(latest?.version ?? 0) + 1}` : `Lock ${handoff.title.toLowerCase()}`}
-                </button>
+                </Button>
               )}
             </footer>
           )}

@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
+import { RotateCcw } from "lucide-react";
 import type { ClaudeNode, SourceContent, SourceNode, SourcePlatform, TextArtifact } from "@composer/core";
 import { METHOD_ORDER, METHODS, statementForm, type Method, type StatementData, type StrategyData, type VerdictData } from "@composer/engine";
 import { actions, postToSlack, toast, useProject } from "../../store/project";
 import { useUi } from "../../store/ui";
 import { ingestUrl } from "../../app/ingest";
-import { cx } from "../primitives/cx";
+import { Badge, Button, Icon, Input, cx, type BadgeTone } from "../primitives";
 import { StatementForm } from "./StatementForm";
 import { useKey } from "./useKey";
 import styles from "./Workspace.module.css";
@@ -18,6 +19,8 @@ const LANE_PLATFORMS: Record<Method, SourcePlatform[]> = {
 };
 
 const MET = { yes: "met", no: "not met", unknown: "unknown" } as const;
+/** Success reads green, guardrail in Validate's own color, kill red. */
+const KIND_TONE: Record<string, BadgeTone> = { success: "live", guardrail: "phase", kill: "error" };
 
 /**
  * Validate as a scorecard: the locked statement pinned on top, the metrics with their targets,
@@ -79,9 +82,9 @@ export function ValidateWorkspace() {
           <span className="caps">Metrics</span>
           <span className={styles.fill} />
           {strategyNode && !readOnly && (
-            <button type="button" className={styles.secondary} disabled={running(strategyNode)} onClick={() => actions.run(strategyNode.id)}>
+            <Button variant="secondary" disabled={running(strategyNode)} onClick={() => actions.run(strategyNode.id)}>
               {running(strategyNode) ? "Writing…" : strategy ? "Rewrite strategy" : "Write the strategy"}
-            </button>
+            </Button>
           )}
         </div>
         {strategy ? (
@@ -101,7 +104,9 @@ export function ValidateWorkspace() {
                 return (
                   <tr key={i}>
                     <td>
-                      <span className={cx(styles.kind, styles[`k_${m.kind}`])}>{m.kind}</span>
+                      <Badge tone={KIND_TONE[m.kind] ?? "neutral"} mono>
+                        {m.kind}
+                      </Badge>
                     </td>
                     <td>{m.text}</td>
                     <td className={styles.mono}>{m.target ?? "–"}</td>
@@ -140,19 +145,20 @@ export function ValidateWorkspace() {
                 </ol>
               )}
               {!readOnly && m?.use && method === "slack" && (
-                <button
-                  type="button"
+                <Button
+                  variant="tint"
+                  size="sm"
                   className={styles.laneAction}
                   disabled={busy === "slack"}
                   onClick={() => void run("slack", () => postToSlack([`*Feedback wanted:* ${strategy?.metrics.find((x) => x.kind === "success")?.text ?? ""}`, ...m.questions.map((q, i) => `${i + 1}. ${q}`)].join("\n")))}
                 >
                   {busy === "slack" ? "Posting…" : `Post ${m.questions.length} questions to Slack`}
-                </button>
+                </Button>
               )}
               {!readOnly && m?.use && (method === "360" || method === "survey") && (
-                <button type="button" className={styles.laneAction} onClick={() => useUi.getState().setAddMenuOpen(true)}>
+                <Button variant="tint" size="sm" className={styles.laneAction} onClick={() => useUi.getState().setAddMenuOpen(true)}>
                   Add {method === "360" ? "session notes or transcripts" : "survey results"}
-                </button>
+                </Button>
               )}
               {!readOnly && m?.use && method === "statsig" && (
                 <form
@@ -162,10 +168,10 @@ export function ValidateWorkspace() {
                     if (experiment.trim()) void run("statsig", async () => actions.addSource(await ingestUrl(experiment.trim())));
                   }}
                 >
-                  <input placeholder="Statsig experiment link" value={experiment} onChange={(e) => setExperiment(e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
-                  <button type="submit" className={styles.laneAction} disabled={busy === "statsig"}>
+                  <Input size="sm" className={styles.inlineField} placeholder="Statsig experiment link" value={experiment} onChange={(e) => setExperiment(e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
+                  <Button type="submit" variant="tint" size="sm" disabled={busy === "statsig"}>
                     Pull
-                  </button>
+                  </Button>
                 </form>
               )}
               {evidence.map((s) => {
@@ -195,9 +201,9 @@ export function ValidateWorkspace() {
           )}
         </div>
         {!readOnly && verdictNode && (
-          <button type="button" className={styles.secondary} disabled={running(verdictNode)} onClick={() => actions.run(verdictNode.id)}>
+          <Button variant="secondary" disabled={running(verdictNode)} onClick={() => actions.run(verdictNode.id)}>
             {running(verdictNode) ? "Reading…" : verdict ? "Read again" : "Read the evidence"}
-          </button>
+          </Button>
         )}
         {!readOnly && output && verdict && (
           <>
@@ -205,7 +211,8 @@ export function ValidateWorkspace() {
               Holds → Share
             </button>
             <button type="button" className={styles.misses} onClick={() => void actions.lock(output.id, "misses")}>
-              ↺ Misses → Understand
+              <Icon icon={RotateCcw} size="sm" />
+              Misses → Understand
             </button>
           </>
         )}

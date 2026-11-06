@@ -6,7 +6,7 @@ import { useUi } from "../../store/ui";
 import { keySource, roundOf, variantsOf } from "../../app/scaffold";
 import { PrototypeFrame } from "../inspector/PrototypeView";
 import { keyOutput } from "../workspace/useKey";
-import { cx } from "../primitives/cx";
+import { Badge, Button, Select, cx } from "../primitives";
 import styles from "./Build.module.css";
 
 const STATUS = { never_run: "not run", fresh: "fresh", stale: "stale", stale_env: "rules changed" } as const;
@@ -65,25 +65,25 @@ export function VariantsBoard() {
           {variants.length} across {rounds.length} round{rounds.length === 1 ? "" : "s"} · the key node ships one
         </span>
         <span className={styles.fill} />
-        <button type="button" className={styles.ghost} onClick={() => variants.filter((n) => roundOf(n) === latest).forEach((n) => actions.run(n.id))}>
+        <Button variant="secondary" size="sm" onClick={() => variants.filter((n) => roundOf(n) === latest).forEach((n) => actions.run(n.id))}>
           Run round {latest}
-        </button>
-        <select className={styles.select} value={adding} onChange={(e) => setAdding(e.target.value as Direction)} aria-label="Direction to add">
+        </Button>
+        <Select size="sm" value={adding} onChange={(e) => setAdding(e.target.value as Direction)} aria-label="Direction to add">
           {(Object.keys(DIRECTIONS) as Direction[]).map((d) => (
             <option key={d} value={d}>
               {DIRECTIONS[d].split(":")[0]}
             </option>
           ))}
-        </select>
-        <button type="button" className={styles.ghost} onClick={() => actions.addDirection(adding)}>
+        </Select>
+        <Button variant="secondary" size="sm" onClick={() => actions.addDirection(adding)}>
           Add direction
-        </button>
-        <button type="button" className={cx(styles.ghost, pairing && styles.ghostOn)} disabled={!pairs.length} onClick={() => (setPairing(!pairing), setPairIndex(0))} title={pairs.length ? undefined : "Run at least two variants in the latest round"}>
+        </Button>
+        <Button variant={pairing ? "tint" : "secondary"} size="sm" disabled={!pairs.length} onClick={() => (setPairing(!pairing), setPairIndex(0))} title={pairs.length ? undefined : "Run at least two variants in the latest round"}>
           Compare in pairs{pairs.length ? ` · ${pairs.length}` : ""}
-        </button>
-        <button type="button" className={styles.ghost} onClick={close}>
+        </Button>
+        <Button variant="secondary" size="sm" onClick={close}>
           Close
-        </button>
+        </Button>
       </header>
 
       {pairing && pair ? (
@@ -98,16 +98,16 @@ export function VariantsBoard() {
                 <div key={n.id} className={styles.pairSide}>
                   <span className={styles.cardTitle}>{n.title}</span>
                   {d?.data && <PrototypeFrame hash={d.hash} html={d.data.html} width={300} />}
-                  <button type="button" className={styles.primary} onClick={() => void choose(n, pair[0], pair[1])}>
+                  <Button variant="phase" size="sm" onClick={() => void choose(n, pair[0], pair[1])}>
                     This one
-                  </button>
+                  </Button>
                 </div>
               );
             })}
           </div>
-          <button type="button" className={styles.ghost} onClick={() => void choose(null, pair[0], pair[1])}>
+          <Button variant="secondary" size="sm" onClick={() => void choose(null, pair[0], pair[1])}>
             About the same
-          </button>
+          </Button>
         </div>
       ) : (
         <div className={styles.rounds}>
@@ -126,7 +126,11 @@ export function VariantsBoard() {
                       <article key={n.id} className={cx(styles.card, isKey && styles.cardKey)}>
                         <div className={styles.cardHead}>
                           <span className={styles.cardTitle}>{n.title}</span>
-                          {isKey && <span className={styles.keyBadge}>KEY</span>}
+                          {isKey && (
+                            <Badge tone="phase" mono>
+                              KEY
+                            </Badge>
+                          )}
                           <span className={styles.meta}>{running ? "running" : STATUS[status ?? "never_run"]}</span>
                         </div>
                         <p className={styles.direction}>{DIRECTIONS[directionOf(n)].split(": ")[1]}</p>
@@ -135,20 +139,20 @@ export function VariantsBoard() {
                         </div>
                         {(n.notes?.length ?? 0) > 0 && <span className={styles.meta}>{n.notes!.filter((x) => x.runId === d?.runId).length} note(s) for the next run</span>}
                         <div className={styles.cardActions}>
-                          <button type="button" className={styles.ghost} disabled={running} onClick={() => actions.run(n.id)}>
+                          <Button variant="secondary" size="sm" disabled={running} onClick={() => actions.run(n.id)}>
                             {d ? "Rerun" : "Run"}
-                          </button>
-                          <button type="button" className={styles.ghost} disabled={!d} onClick={() => useUi.getState().setStudio({ nodeId: n.id })}>
+                          </Button>
+                          <Button variant="secondary" size="sm" disabled={!d} onClick={() => useUi.getState().setStudio({ nodeId: n.id })}>
                             Open
-                          </button>
+                          </Button>
                           {!isKey && (
-                            <button type="button" className={styles.ghost} onClick={() => actions.useVariant(n.id)}>
+                            <Button variant="secondary" size="sm" onClick={() => actions.useVariant(n.id)}>
                               Use
-                            </button>
+                            </Button>
                           )}
-                          <button type="button" className={styles.ghost} disabled={!d} onClick={() => void actions.forkVariant(n.id)} title="Three new directions that start from this one">
+                          <Button variant="secondary" size="sm" disabled={!d} onClick={() => void actions.forkVariant(n.id)} title="Three new directions that start from this one">
                             Fork
-                          </button>
+                          </Button>
                         </div>
                       </article>
                     );

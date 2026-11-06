@@ -3,6 +3,8 @@ import { deleteSecret, getSecret, setSecret, SECRET } from "../../platform/secre
 import { toast, useProject } from "../../store/project";
 import { parseNotionId } from "../../requests/queue";
 import { flushRequests, QUEUE_LINK, refreshRequests, useRequests } from "../../requests/store";
+import { Button } from "../primitives/Button";
+import { Input } from "../primitives/Field";
 import styles from "./SettingsDialog.module.css";
 
 /** Where ⌘K → Request a feature sends to: a Notion database, through an integration token in Keychain. */
@@ -60,8 +62,10 @@ export function RequestsSection() {
           <span className={styles.connectorState}>{connected ? "connected" : hasToken ? "needs the database link" : "needs a token"}</span>
         </div>
         <div className={styles.row}>
-          <input
+          <Input
             className={styles.input}
+            size="sm"
+            mono
             type="password"
             placeholder={hasToken ? "•••••••• saved" : "Integration token (ntn_…)"}
             value={token}
@@ -71,13 +75,12 @@ export function RequestsSection() {
               if (e.key !== "Escape") e.stopPropagation();
             }}
           />
-          <button type="button" className={styles.secondary} onClick={() => void saveToken()} disabled={!token.trim()}>
+          <Button variant="secondary" onClick={() => void saveToken()} disabled={!token.trim()}>
             Save
-          </button>
+          </Button>
           {hasToken && (
-            <button
-              type="button"
-              className={styles.secondary}
+            <Button
+              variant="secondary"
               onClick={async () => {
                 await deleteSecret(SECRET.notion);
                 setHasToken(false);
@@ -85,14 +88,16 @@ export function RequestsSection() {
               }}
             >
               Remove
-            </button>
+            </Button>
           )}
         </div>
         {link !== null && (
           <label className={styles.pathRow}>
             <span>Database link</span>
-            <input
+            <Input
               className={styles.input}
+              size="sm"
+              mono
               placeholder="https://www.notion.so/…/Dev-queue-…"
               defaultValue={link}
               onBlur={(e) => {
@@ -107,9 +112,9 @@ export function RequestsSection() {
         <div className={styles.updateStatus}>
           <span className={styles.updateText}>{pending ? `${pending} ${pending === 1 ? "request" : "requests"} waiting to send` : "Nothing waiting to send"}</span>
           {pending > 0 && connected && (
-            <button type="button" className={styles.secondary} disabled={sending} onClick={() => void sendWaiting()}>
+            <Button variant="secondary" disabled={sending} onClick={() => void sendWaiting()}>
               {sending ? "Sending…" : "Send now"}
-            </button>
+            </Button>
           )}
         </div>
       </div>

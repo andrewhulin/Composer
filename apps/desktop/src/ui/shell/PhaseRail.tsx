@@ -6,7 +6,8 @@ import { PhaseHex } from "../primitives/PhaseHex";
 import { Toggle } from "../primitives/Toggle";
 import { cx } from "../primitives/cx";
 import { useOutputLabel } from "../canvas/Canvas";
-import loopIcon from "../../assets/icons/loop.svg";
+import { ArrowRight, Check, RotateCw } from "lucide-react";
+import { Icon } from "../primitives/Icon";
 import styles from "./PhaseRail.module.css";
 
 type Status = "done" | "active" | "pending";
@@ -14,7 +15,6 @@ type Status = "done" | "active" | "pending";
 function PhaseButton({ phase, status }: { phase: Phase; status: Status }) {
   const info = PHASE_INFO[phase];
   const output = useOutputLabel(phase);
-  const label = status === "done" ? `✓ ${output}` : status === "active" ? `→ ${output}` : output;
   return (
     <button
       type="button"
@@ -26,7 +26,11 @@ function PhaseButton({ phase, status }: { phase: Phase; status: Status }) {
       <PhaseHex phase={phase} />
       <span className={styles.index}>{info.index}</span>
       <span className={styles.name}>{info.name}</span>
-      <span className={styles.output}>{label}</span>
+      <span className={styles.output}>
+        {status === "done" && <Icon icon={Check} size="sm" />}
+        {status === "active" && <Icon icon={ArrowRight} size="sm" />}
+        {output}
+      </span>
     </button>
   );
 }
@@ -52,9 +56,10 @@ export function PhaseRail() {
           <PhaseButton phase={phase} status={phase === active ? "active" : locked.has(phase) ? "done" : "pending"} />
         </Fragment>
       ))}
-      <span className={styles.loop}>
-        <img src={loopIcon} alt="" width={12} height={12} />
-        Loop {loop} · Validate loops back · Share exits
+      <span className={styles.loop} title="Validate loops back to Understand · Share exits">
+        <Icon icon={RotateCw} size="sm" />
+        Loop {loop}
+        <span className={styles.loopHint}>· Validate loops back · Share exits</span>
       </span>
       <span className={styles.spacer} />
       <label className={styles.focus} data-phase={active}>

@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { MessageSquare, X } from "lucide-react";
 import type { ClaudeNode, OutputNote } from "@composer/core";
 import type { StatementForm as Form } from "@composer/engine";
 import { actions } from "../../store/project";
-import { cx } from "../primitives/cx";
+import { Icon, IconButton, cx } from "../primitives";
 import styles from "./Workspace.module.css";
 
 export const LINES: { key: keyof Form; label: string; hint: string }[] = [
@@ -41,7 +42,8 @@ export function StatementForm({ form, onChange, claude, readOnly, size = "hero" 
           )}
           {!readOnly && claude && (
             <button type="button" className={styles.noteBtn} title="Note for Claude's next draft" aria-label={`Note on ${l.label}`} onClick={() => setNoting(noting === l.key ? null : l.key)}>
-              ◎{notesFor(l.key).length ? <i>{notesFor(l.key).length}</i> : null}
+              <Icon icon={MessageSquare} size="sm" />
+              {notesFor(l.key).length ? <i>{notesFor(l.key).length}</i> : null}
             </button>
           )}
           {!readOnly && notesFor(l.key).length > 0 && (
@@ -49,9 +51,7 @@ export function StatementForm({ form, onChange, claude, readOnly, size = "hero" 
               {notesFor(l.key).map((n) => (
                 <li key={n.id}>
                   {n.text}
-                  <button type="button" onClick={() => claude && actions.removeNote(claude.id, n.id)} aria-label="Remove note">
-                    ×
-                  </button>
+                  <IconButton icon={X} label="Remove note" size="sm" className={styles.noteRemove} onClick={() => claude && actions.removeNote(claude.id, n.id)} />
                 </li>
               ))}
             </ul>

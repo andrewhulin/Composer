@@ -23,9 +23,11 @@
     "@tauri-apps/plugin-process": "^2.4.0",
     "@tauri-apps/plugin-updater": "^2.14.1",
     "@xyflow/react": "^12.12.1",
+    "lucide-react": "^1.70.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "remotion": "4.0.540",
+    "simple-icons": "^16.36.0",
     "sql.js": "^1.15.2",
     "zustand": "^5.0.16"
   },

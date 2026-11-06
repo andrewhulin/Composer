@@ -2,9 +2,9 @@
   text-align: left;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-12);
   width: 100%;
-  padding: 7px 10px;
+  padding: var(--sp-8) var(--sp-12);
   border-radius: var(--r-md);
   transition: background var(--t-fast) var(--ease-out);
 }
@@ -14,15 +14,15 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--r-sm);
   background: var(--bg-wash-3);
   border: 1px solid var(--border-wash);
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
   font-weight: 500;
-  color: #a19e94;
+  color: var(--text-secondary);
 }
 .wired {
   background: rgba(var(--phase-rgb), 0.14);
@@ -40,4 +40,3 @@
 }
 .count { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
 .countWired { color: var(--text-primary); }
-.countDragging { color: var(--phase); }

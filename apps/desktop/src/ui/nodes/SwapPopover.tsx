@@ -3,6 +3,9 @@ import type { HypothesisBlock, Id, SourceContent } from "@composer/core";
 import { swapCandidates } from "@composer/engine";
 import { actions, useProject } from "../../store/project";
 import { cx } from "../primitives/cx";
+import { Button } from "../primitives/Button";
+import { Input } from "../primitives/Field";
+import { Popover } from "../primitives/Popover";
 import styles from "./SwapPopover.module.css";
 
 /**
@@ -35,7 +38,7 @@ export function SwapPopover({ nodeId, block, varKey, onClose }: { nodeId: Id; bl
   const current = block.vars.find((v) => v.key === varKey)?.value;
 
   return (
-    <div className={cx(styles.popover, "nodrag", "nopan", "nowheel")} onPointerDown={(e) => e.stopPropagation()}>
+    <Popover onCanvas className={cx(styles.popover, "nowheel")} onPointerDown={(e) => e.stopPropagation()}>
       <div className={styles.head}>
         <span className={styles.key}>{varKey}</span>
         <span className={styles.current}>{current}</span>
@@ -49,7 +52,7 @@ export function SwapPopover({ nodeId, block, varKey, onClose }: { nodeId: Id; bl
           </span>
         </button>
       ))}
-      <input
+      <Input
         className={styles.input}
         autoFocus
         placeholder={`Another ${varKey}…`}
@@ -71,14 +74,14 @@ export function SwapPopover({ nodeId, block, varKey, onClose }: { nodeId: Id; bl
         </p>
       )}
       <div className={styles.actions}>
-        <button type="button" className={styles.secondary} onClick={onClose}>
+        <Button variant="secondary" size="sm" onClick={onClose}>
           Cancel
-        </button>
-        <button type="button" className={styles.primary} disabled={!picked} onClick={() => picked && commit(picked)}>
-          Fork and rerun <span>⌘↵</span>
-        </button>
+        </Button>
+        <Button variant="primary" size="sm" shortcut="⌘↵" disabled={!picked} onClick={() => picked && commit(picked)}>
+          Fork and rerun
+        </Button>
       </div>
       <p className={styles.note}>{block.label} is retired, not deleted. The timeline gets a branch; ⌘Z merges it back.</p>
-    </div>
+    </Popover>
   );
 }

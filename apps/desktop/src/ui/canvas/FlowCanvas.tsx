@@ -26,6 +26,7 @@ import { WireEdge } from "./WireEdge";
 import { DropHint, RegionNode } from "./RegionNode";
 import { CommentNode } from "./CommentNode";
 import { comments, useComments } from "../../store/comments";
+import { Button } from "../primitives/Button";
 import styles from "./FlowCanvas.module.css";
 
 const nodeTypes = {
@@ -42,11 +43,19 @@ const edgeTypes = { wire: WireEdge };
 /** Horizontal offset of each phase when every phase is on one canvas (Focus off). */
 const REGION_W = 1400;
 
+/**
+ * Stored positions predate the 15px type scale. The canvas draws them 1.25x apart so the larger
+ * nodes keep the same gaps, and divides on the way back, so stored graphs never change.
+ */
+export const CANVAS_SCALE = 1.25;
+const toView = (v: number) => v * CANVAS_SCALE;
+const toStore = (v: number) => Math.round(v / CANVAS_SCALE);
+
 const MINIMAP_COLOR: Record<string, string> = {
-  source: "#a29e94",
-  claude: "#eeedea",
-  hypothesis: "#e3c25a",
-  output: "#e05a4e",
+  source: "var(--text-secondary)",
+  claude: "var(--text-primary)",
+  hypothesis: "var(--signal-hypothesis)",
+  output: "var(--phase-define)",
 };
 
 export function FlowCanvas() {
@@ -70,19 +79,19 @@ export function FlowCanvas() {
     const out: FlowNode[] = [];
     if (!focus) {
       PHASES.forEach((p, i) =>
-        out.push({ id: `region:${p}`, type: "region", position: { x: i * REGION_W - 40, y: -80 }, data: { phase: p }, draggable: false, selectable: false, zIndex: -1 }),
+        out.push({ id: `region:${p}`, type: "region", position: { x: toView(i * REGION_W - 40), y: toView(-80) }, data: { phase: p }, draggable: false, selectable: false, zIndex: -1 }),
       );
     }
     const hasSources = Object.values(graph.nodes).some((n) => n.kind === "source" && n.phase === activePhase && n.loop === loop);
     if (focus && activePhase === "understand" && !hasSources) {
-      out.push({ id: "drop-hint", type: "drop", position: { x: 72, y: 96 }, data: {}, draggable: false, selectable: false });
+      out.push({ id: "drop-hint", type: "drop", position: { x: toView(72), y: toView(96) }, data: {}, draggable: false, selectable: false });
     }
     for (const n of Object.values(graph.nodes)) {
       if (!visible(n)) continue;
       out.push({
         id: n.id,
         type: n.kind,
-        position: { x: n.position.x + offset(n), y: n.position.y },
+        position: { x: toView(n.position.x + offset(n)), y: toView(n.position.y) },
         data: {},
         selected: n.id === selection,
         zIndex: n.id === selection ? 10 : 1,
@@ -93,7 +102,7 @@ export function FlowCanvas() {
     for (const c of notes) {
       if (c.loop !== loop || (focus && c.phase !== activePhase)) continue;
       const dx = focus ? 0 : PHASES.indexOf(c.phase) * REGION_W;
-      out.push({ id: `comment:${c.id}`, type: "comment", position: { x: c.x + dx, y: c.y }, data: {}, zIndex: 20, draggable: !playing, selectable: false });
+      out.push({ id: `comment:${c.id}`, type: "comment", position: { x: toView(c.x + dx), y: toView(c.y) }, data: {}, zIndex: 20, draggable: !playing, selectable: false });
     }
     return out;
   }, [graph.nodes, selection, focus, activePhase, loop, offset, visible, pending, playing, notes]);
@@ -121,13 +130,13 @@ export function FlowCanvas() {
         if ("id" in c && c.id.startsWith("comment:")) {
           if (c.type === "position" && c.position) {
             const note = useComments.getState().list.find((x) => `comment:${x.id}` === c.id);
-            if (note) comments.update(note.id, { x: Math.round(c.position.x - (focus ? 0 : PHASES.indexOf(note.phase) * REGION_W)), y: Math.round(c.position.y) });
+            if (note) comments.update(note.id, { x: toStore(c.position.x) - (focus ? 0 : PHASES.indexOf(note.phase) * REGION_W), y: toStore(c.position.y) });
           }
           continue;
         }
         if (c.type === "position" && c.position) {
           const n = useProject.getState().graph.nodes[c.id];
-          if (n) actions.move(c.id, { x: Math.round(c.position.x - offset(n)), y: Math.round(c.position.y) });
+          if (n) actions.move(c.id, { x: toStore(c.position.x) - offset(n), y: toStore(c.position.y) });
         } else if (c.type === "select") {
           if (c.selected && !c.id.startsWith("region:") && c.id !== "drop-hint") actions.select(c.id);
           else if (!c.selected && useProject.getState().selection === c.id) actions.select(null);
@@ -166,7 +175,7 @@ export function FlowCanvas() {
   const dropPoint = (e: { clientX: number; clientY: number }) => {
     const p = flow.screenToFlowPosition({ x: e.clientX, y: e.clientY });
     const phaseOffset = focus ? 0 : PHASES.indexOf(useProject.getState().activePhase) * REGION_W;
-    return { x: Math.round(p.x - phaseOffset), y: Math.round(p.y) };
+    return { x: toStore(p.x) - phaseOffset, y: toStore(p.y) };
   };
 
   const onDragOver = (e: DragEvent) => {
@@ -249,7 +258,7 @@ export function FlowCanvas() {
         nodesConnectable={!playing}
         connectionRadius={24}
         snapToGrid
-        snapGrid={[8, 8]}
+        snapGrid={[toView(8), toView(8)]}
         panOnDrag={tool === "pan" ? true : [1, 2]}
         selectionOnDrag={tool === "select"}
         panOnScroll
@@ -268,8 +277,8 @@ export function FlowCanvas() {
           zoomable
           nodeColor={(n) => MINIMAP_COLOR[n.type ?? ""] ?? "transparent"}
           nodeBorderRadius={2}
-          maskColor="rgba(10, 10, 11, 0.55)"
-          style={{ width: 150, height: 96 }}
+          maskColor="rgba(var(--rgb-app), 0.55)"
+          style={{ width: 188, height: 120 }}
         />
       </ReactFlow>
       {!playing && <PhaseEmpty />}
@@ -310,12 +319,12 @@ function PhaseEmpty() {
         {PHASE_INFO[phase].name} starts from a locked {PHASE_INFO[prev].output.toLowerCase()}. Lock it in {PHASE_INFO[prev].name} and this phase lays itself out, or add a node to start by hand.
       </p>
       <div className={styles.emptyActions}>
-        <button type="button" onClick={() => void actions.setActivePhase(prev)}>
+        <Button variant="primary" size="sm" onClick={() => void actions.setActivePhase(prev)}>
           Go to {PHASE_INFO[prev].name}
-        </button>
-        <button type="button" onClick={() => useUi.getState().setAddMenuOpen(true)}>
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => useUi.getState().setAddMenuOpen(true)}>
           Add node
-        </button>
+        </Button>
       </div>
     </div>
   );

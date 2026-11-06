@@ -1,13 +1,8 @@
 import type { Phase } from "@composer/core";
-import understand from "../../assets/icons/hex-understand.svg";
-import define from "../../assets/icons/hex-define.svg";
-import build from "../../assets/icons/hex-build.svg";
-import validate from "../../assets/icons/hex-validate.svg";
-import share from "../../assets/icons/hex-share.svg";
+import { Icon, type IconSize } from "./Icon";
+import { PhaseHexGlyph } from "./glyphs";
 
-const HEX: Record<Phase, string> = { understand, define, build, validate, share };
-
-/** The phase glyph from the Figma phase rail (11 × 10). */
-export function PhaseHex({ phase }: { phase: Phase }) {
-  return <img src={HEX[phase]} alt="" width={11} height={10} style={{ padding: "0 0.75px" }} />;
+/** The phase mark from the phase rail, in the phase's color. */
+export function PhaseHex({ phase, size = "sm" }: { phase: Phase; size?: IconSize }) {
+  return <Icon icon={PhaseHexGlyph} size={size} style={{ color: `var(--phase-${phase})` }} />;
 }

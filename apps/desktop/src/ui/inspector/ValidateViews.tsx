@@ -4,16 +4,18 @@ import { METHOD_ORDER, METHODS, type Method, type StrategyData, type VerdictData
 import { actions, postToSlack, toast, useProject } from "../../store/project";
 import { useUi } from "../../store/ui";
 import { ingestUrl } from "../../app/ingest";
+import { Check, CircleHelp, RotateCcw, X } from "lucide-react";
+import { Badge, Button, Icon, Input } from "../primitives";
 import { cx } from "../primitives/cx";
 import styles from "./ValidateViews.module.css";
 
-const KIND_TONE = { success: styles.success, guardrail: styles.guardrail, kill: styles.kill } as const;
+const KIND_TONE = { success: "phase", guardrail: "warn", kill: "neutral" } as const;
 const SESSION_NOTES = new Set(["transcript", "file", "paste", "data"]);
 
-type Badge = { text: string; tone: "live" | "phase" | "neutral" | "muted" };
+type MethodBadge = { text: string; tone: "live" | "phase" | "neutral" | "muted" };
 
 /** What's come back so far for each method, read from the evidence wired into Validate this loop. */
-function useMethodBadges(on: Record<Method, boolean>): Record<Method, Badge> {
+function useMethodBadges(on: Record<Method, boolean>): Record<Method, MethodBadge> {
   const graph = useProject((s) => s.graph);
   const loop = useProject((s) => s.loop);
   const blobs = useProject((s) => s.blobs);
@@ -23,7 +25,7 @@ function useMethodBadges(on: Record<Method, boolean>): Record<Method, Badge> {
     const replies = sources.filter((n) => n.platform === "slack").reduce((sum, n) => sum + items(n).reduce((k, i) => k + Math.max(0, i.units.length - 1), 0), 0);
     const sessions = sources.filter((n) => SESSION_NOTES.has(n.platform)).length;
     const results = sources.some((n) => n.platform === "statsig");
-    const off: Badge = { text: "off", tone: "muted" };
+    const off: MethodBadge = { text: "off", tone: "muted" };
     return {
       slack: !on.slack ? off : replies ? { text: `${replies} ${replies === 1 ? "reply" : "replies"}`, tone: "live" } : { text: "ready", tone: "phase" },
       "360": !on["360"] ? off : sessions ? { text: `${sessions} ${sessions === 1 ? "session" : "sessions"}`, tone: "live" } : { text: "scheduled", tone: "phase" },
@@ -53,11 +55,13 @@ export function StrategyView({ data }: { data: StrategyData }) {
   };
 
   return (
-    <div className={styles.view}>
+    <div className={styles.view} data-phase="validate">
       <div className={styles.metrics}>
         {data.metrics.map((m, i) => (
           <p key={i}>
-            <span className={cx(styles.kind, KIND_TONE[m.kind])}>{m.kind}</span>
+            <Badge tone={KIND_TONE[m.kind]} mono>
+              {m.kind}
+            </Badge>
             {m.text}
           </p>
         ))}
@@ -76,11 +80,14 @@ export function StrategyView({ data }: { data: StrategyData }) {
                 <span className={styles.methodName}>{METHODS[key]}</span>
                 <span className={styles.plan}>{m?.plan ?? "not needed for this hypothesis"}</span>
               </div>
-              <span className={cx(styles.badge, styles[badge.tone])}>{badge.text}</span>
+              <Badge tone={badge.tone} mono>
+                {badge.text}
+              </Badge>
             </div>
             {use && key === "slack" && (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
                 className={styles.action}
                 disabled={busy === "slack"}
                 onClick={() =>
@@ -90,12 +97,12 @@ export function StrategyView({ data }: { data: StrategyData }) {
                 }
               >
                 {busy === "slack" ? "Posting…" : `Post ${slack?.questions.length ?? 0} questions to Slack`}
-              </button>
+              </Button>
             )}
             {use && key === "360" && (
-              <button type="button" className={styles.action} onClick={() => useUi.getState().setAddMenuOpen(true)}>
+              <Button variant="secondary" size="sm" className={styles.action} onClick={() => useUi.getState().setAddMenuOpen(true)}>
                 Add session notes or transcripts
-              </button>
+              </Button>
             )}
             {use && key === "statsig" && (
               <form
@@ -105,10 +112,10 @@ export function StrategyView({ data }: { data: StrategyData }) {
                   if (experiment.trim()) void run("statsig", async () => actions.addSource(await ingestUrl(experiment.trim())));
                 }}
               >
-                <input placeholder="Statsig experiment link" value={experiment} onChange={(e) => setExperiment(e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
-                <button type="submit" className={styles.action} disabled={busy === "statsig"}>
+                <Input size="sm" mono className={styles.inlineInput} placeholder="Statsig experiment link" value={experiment} onChange={(e) => setExperiment(e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
+                <Button type="submit" variant="secondary" size="sm" disabled={busy === "statsig"}>
                   Pull results
-                </button>
+                </Button>
               </form>
             )}
           </div>
@@ -122,7 +129,7 @@ export function StrategyView({ data }: { data: StrategyData }) {
 /** The verdict, metric by metric, and the designer's call: holds → Share, misses → back to Understand. */
 export function VerdictView({ data, outputId }: { data: VerdictData; outputId?: Id }) {
   return (
-    <div className={styles.view}>
+    <div className={styles.view} data-phase="validate">
       <div className={cx(styles.verdict, styles[`v_${data.verdict}`])}>
         <span className={styles.verdictWord}>{data.verdict === "holds" ? "Holds" : data.verdict === "misses" ? "Misses" : "Inconclusive"}</span>
         <p>{data.summary}</p>
@@ -130,10 +137,13 @@ export function VerdictView({ data, outputId }: { data: VerdictData; outputId?: 
       <div className={styles.metrics}>
         {data.metrics.map((m, i) => (
           <p key={i}>
-            <span className={cx(styles.kind, KIND_TONE[m.kind])}>{m.kind}</span>
+            <Badge tone={KIND_TONE[m.kind]} mono>
+              {m.kind}
+            </Badge>
             <span className={styles.metricText}>{m.text}</span>
             <span className={cx(styles.met, m.met === "yes" ? styles.yes : m.met === "no" ? styles.no : styles.unknown)}>
-              {m.met === "yes" ? "✓" : m.met === "no" ? "✕" : "?"} {m.observed}
+              <Icon icon={m.met === "yes" ? Check : m.met === "no" ? X : CircleHelp} size="sm" label={m.met === "yes" ? "Met" : m.met === "no" ? "Not met" : "Unknown"} />
+              {m.observed}
             </span>
           </p>
         ))}
@@ -154,7 +164,8 @@ export function VerdictView({ data, outputId }: { data: VerdictData; outputId?: 
             Metric holds → Share
           </button>
           <button type="button" className={styles.misses} onClick={() => void actions.lock(outputId, "misses")}>
-            ↺ Misses → back to Understand
+            <Icon icon={RotateCcw} size="md" className={styles.callIcon} />
+            Misses → back to Understand
           </button>
         </div>
       )}

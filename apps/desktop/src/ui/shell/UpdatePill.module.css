@@ -3,10 +3,10 @@
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  height: 22px;
-  margin-right: 10px;
-  padding: 0 4px 0 9px;
+  gap: var(--sp-8);
+  height: 28px;
+  margin-right: var(--sp-12);
+  padding: 0 var(--sp-6) 0 var(--sp-12);
   border-radius: var(--r-pill);
   border: 1px solid var(--border-strong);
   font-family: var(--font-mono);
@@ -14,11 +14,11 @@
   color: var(--text-secondary);
   animation: rise var(--t-settle) var(--ease-out);
 }
-span.pill { padding-right: 9px; }
+span.pill { padding-right: var(--sp-12); }
 button.pill:hover { border-color: var(--border-wash); color: var(--text-primary); background: var(--bg-wash-2); }
 .action, .quiet {
-  padding: 1px 7px;
-  border-radius: 9px;
+  padding: 1px var(--sp-8);
+  border-radius: var(--r-xl);
   font-family: var(--font-sans);
   font-weight: 600;
 }
@@ -26,8 +26,8 @@ button.pill:hover { border-color: var(--border-wash); color: var(--text-primary)
 .quiet { border: 1px solid var(--border-strong); color: var(--text-secondary); font-weight: 500; }
 .meter { color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .spinner {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   border: 1.5px solid var(--border-strong);
   border-top-color: var(--text-primary);

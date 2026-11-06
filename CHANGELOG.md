@@ -2,6 +2,58 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## Composer's own design system (DC-1) · 2026-11-06
+
+### Added
+- **A codified UI system:** tokens, shared components, icons and the rules that keep them in use, written up in [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md). CLAUDE.md points every session at it. It is the app's own system, separate from the Foundations design system Composer feeds into prompts.
+- **15px body type** on a fixed scale: 11, 12, 13, 15, 16, 18, 20, 24, 28 and 40. The half-pixel steps are gone, and no UI text is under 11px.
+- **New tokens:**
+  - spacing, from `--sp-2` to `--sp-128`
+  - control heights and icon sizes
+  - four shadows and named layers
+  - focus ring and states
+  - color channels for alpha, so `rgba(var(--rgb-ink), 0.06)` replaces raw numbers
+- **Geist Serif and Geist Pixel,** bundled from the `geist` package (OFL), so they load with no network.
+  - **Serif** sets the statement on paper in Define and the verdict word in Validate.
+  - **Pixel** sets the phase numbers on the rail, the KEY marker on key nodes and the empty-canvas kicker.
+- **Shared components** in `ui/primitives`: Button, IconButton, Input, Textarea, Select, Chip, Badge, Tabs (underline and segmented), Panel, Popover, Menu, Tooltip, Kbd, Icon and Logo. Each has hover, keyboard focus, pressed and disabled states.
+- **Lucide icons** through `<Icon>`, at 14, 16 or 20px, always with a 1.5px line.
+  - Composer's phase hexagon and Claude glyph are redrawn on Lucide's grid.
+  - The 13 SVG icons exported from Figma are gone.
+  - Text characters that stood in for icons became icons: close crosses, ticks, chevrons, swap arrows, the cache diamond.
+- **Connector logos** come from Simple Icons (CC0) through `<Logo>`, for the Settings redesign (DC-3).
+- **A gallery** at `localhost:1420/?gallery`, in dev builds only. It shows every token, every Lucide icon the app imports (read from the source, so it can't drift) and every component state.
+- **Lint enforcement:**
+  - stylelint, now part of `pnpm lint`, rejects raw colors and off-scale type and spacing outside `tokens.css`.
+  - ESLint rejects color literals and inline `<svg>` icons in `ui/`.
+
+### Changed
+- **The whole UI scaled for the larger type.**
+  - Spacing grew by about 1.25× and snaps to the scale. Sizes, line heights and node cards grew by 1.25×.
+  - About 190 hand-styled buttons, plus the fields, tabs, chips, menus and kbd hints, now use the shared components, and their duplicate CSS is gone.
+  - All 47 CSS modules and the inline colors in the canvas and history now use tokens.
+- **Saved graphs are untouched.** The canvas draws stored node positions 1.25× apart (`CANVAS_SCALE`) and divides on the way back, so the larger nodes keep their gaps.
+- **Layout:**
+  - Title bar 48, phase rail 64, sidebar 272, inspector 368, history 176, key node dock 344.
+  - Under 1600px wide (14" screens), the sidebar, inspector and dock step back down to 248, 336 and 312.
+- **Positioning fixes:**
+  - The Scorecard/Graph toggle now sits at the workspace's right edge instead of the canvas center, so it can't slide under the key node dock.
+  - The phase rail shows "Loop N" and keeps the loop explanation for wide windows and its tooltip.
+  - The prototype studio fits the phone to the studio's height instead of guessing from the window.
+- **Native controls** (scrollbars, selects, the color picker) draw dark (`color-scheme: dark`).
+- **Choose files…** in the Foundations sheet is now a real button, so it takes keyboard focus.
+
+### Decisions
+- **Scale the layout with the type, then step down on small screens.** At 1728 everything is about 1.25× the Figma frames. Under 1600 the side panels go back to their old widths, so Define and Validate keep the room they had.
+- **Define stacks its evidence rail under the statement** at 1728 with both side panels open. The two columns come back with the sidebar hidden (⌥⌘←) or on a wider screen.
+- **Spacing snaps up when it ties** (4px became 6, 12 became 16), since the brief asked for room rather than crowding.
+- **Serif covers the whole statement on paper,** while editing too, not only after locking, so the hero doesn't change typeface mid-task.
+- **Keyboard symbols stay text.** ⌘ ⌥ ⇧ ↵ sit inside `<Kbd>`. Arrows between two words of copy ("Holds → Share") stay text too, and a lone arrow, tick or cross on a control became an icon.
+- **Selected segments take the phase tint** inside a phase, and a neutral lift elsewhere.
+- **The type specimens** in Foundations show at least 11px, even when a design system's caption is 10.
+- **Slack, Statsig and Are.na** show a letter tile until their official marks are added, since Simple Icons doesn't carry them.
+- **Prettier stays unenforced,** as before. Only lint, typecheck and tests gate commits.
+
 ## Share: transitions, a real proof chart, reference pacing and a delivery check · 2026-11-05
 
 ### Added

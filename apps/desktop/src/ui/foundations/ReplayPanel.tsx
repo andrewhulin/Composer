@@ -4,7 +4,7 @@ import type { PrototypeData } from "@composer/engine";
 import type { ProposalRow } from "@composer/data";
 import { judgeReplay, loadReplay, runReplay, useEvals } from "../../store/evals";
 import { PrototypeFrame } from "../inspector/PrototypeView";
-import { cx } from "../primitives/cx";
+import { Button, cx } from "../primitives";
 import styles from "./ReplayPanel.module.css";
 
 function Output({ art }: { art?: TextArtifact }) {
@@ -29,19 +29,19 @@ export function ReplayPanel({ p, onKeep }: { p: ProposalRow; onKeep: () => void 
   return (
     <div className={styles.replay}>
       <div className={styles.bar}>
-        <button type="button" className={styles.run} disabled={state?.running} onClick={() => (setOpen(true), void runReplay(p))}>
+        <Button variant="tint" size="sm" className={styles.run} disabled={state?.running} onClick={() => (setOpen(true), void runReplay(p))}>
           {state?.running ? `Replaying ${state.done}/${state.total}…` : has ? "Replay again" : "Replay on past briefs"}
-        </button>
+        </Button>
         {has && (
-          <button type="button" className={styles.link} onClick={() => setOpen(!open)}>
+          <Button variant="ghost" size="sm" onClick={() => setOpen(!open)}>
             {open ? "Hide side by side" : "Show side by side"}
-          </button>
+          </Button>
         )}
         <span className={cx(styles.tally, state?.tally.favours && styles.favours)}>{state ? state.tally.line : "Reruns up to 4 kept briefs with this change, before it goes live"}</span>
         {state?.tally.favours && (
-          <button type="button" className={styles.keep} onClick={onKeep}>
+          <Button variant="phase" size="sm" className={styles.keep} onClick={onKeep}>
             Keep it
-          </button>
+          </Button>
         )}
       </div>
       {open && has && (
@@ -62,9 +62,9 @@ export function ReplayPanel({ p, onKeep }: { p: ProposalRow; onKeep: () => void 
               {row.result?.status === "done" && (
                 <div className={styles.picks}>
                   {(["baseline", "same", "candidate"] as const).map((k) => (
-                    <button key={k} type="button" className={cx(styles.pick, row.result?.pick === k && styles.pickOn)} onClick={() => void judgeReplay(p, row.result!.id, k)}>
+                    <Button key={k} variant={row.result?.pick === k ? "tint" : "secondary"} size="sm" onClick={() => void judgeReplay(p, row.result!.id, k)}>
                       {k === "baseline" ? "Baseline better" : k === "same" ? "Same" : "Candidate better"}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               )}

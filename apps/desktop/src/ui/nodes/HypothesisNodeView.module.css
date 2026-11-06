@@ -1,14 +1,14 @@
-.hyp { width: 248px; }
+.hyp { width: 310px; }
 .retired { opacity: 0.5; }
-.glyph { background: rgba(227, 194, 90, 0.16); border: 1px solid rgba(227, 194, 90, 0.45); color: var(--signal-hypothesis); }
-.body { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 12px; }
-.statement { font-size: 16px; font-weight: 500; line-height: 21px; letter-spacing: -0.01em; color: var(--text-primary); }
-.vars { display: flex; flex-direction: column; gap: 4px; }
-.var { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: var(--r-md); background: var(--bg-hover); white-space: nowrap; }
+.glyph { background: rgba(var(--rgb-hypothesis), 0.16); border: 1px solid rgba(var(--rgb-hypothesis), 0.45); color: var(--signal-hypothesis); }
+.body { display: flex; flex-direction: column; gap: var(--sp-12); padding: var(--sp-12) var(--sp-16) var(--sp-16); }
+.statement { font-size: var(--fs-title); font-weight: 500; line-height: 26px; letter-spacing: -0.01em; color: var(--text-primary); }
+.vars { display: flex; flex-direction: column; gap: var(--sp-6); }
+.var { display: flex; align-items: center; gap: var(--sp-8); padding: var(--sp-6) var(--sp-10); border-radius: var(--r-md); background: var(--bg-hover); white-space: nowrap; }
 .varKey { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
-.varValue { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-chip); color: var(--text-primary); }
-.swap { font-family: var(--font-mono); font-size: var(--fs-chip); color: var(--signal-hypothesis); padding: 0 2px; border-radius: 3px; }
-.swap:hover:not(:disabled) { background: rgba(227, 194, 90, 0.16); }
+.varValue { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-small); color: var(--text-primary); }
+.swap { display: flex; color: var(--signal-hypothesis); padding: var(--sp-2); border-radius: var(--r-xs); }
+.swap:hover:not(:disabled) { background: rgba(var(--rgb-hypothesis), 0.16); }
 .swap:disabled { opacity: 0.4; }
 .hyp { position: relative; }
 .footer { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }

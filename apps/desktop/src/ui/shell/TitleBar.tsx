@@ -5,6 +5,7 @@ import { goHome } from "../../store/projects";
 import { useSession } from "../../store/session";
 import { GuidePill } from "../tutorial/Coach";
 import { PanelToggles } from "./PanelToggles";
+import { ConnectorHealth } from "./ConnectorHealth";
 import { UpdatePill } from "./UpdatePill";
 import { Dot } from "../primitives/Dot";
 import styles from "./TitleBar.module.css";
@@ -75,6 +76,7 @@ export function TitleBar() {
         <span className={styles.phase}>{PHASE_INFO[phase].name}</span>
       </div>
       <div className={styles.right} data-tauri-drag-region>
+        <ConnectorHealth />
         <UpdatePill />
         <GuidePill />
         <PanelToggles />

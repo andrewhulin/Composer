@@ -3,7 +3,7 @@ import { updates, useUpdates } from "../../store/updates";
 import { ago, useNow } from "../../hooks/useNow";
 import { Dot } from "../primitives/Dot";
 import { Button } from "../primitives/Button";
-import styles from "./SettingsDialog.module.css";
+import styles from "./Settings.module.css";
 
 function describe(state: UpdateState, checkedAt: number | null, now: number): { text: string; color: string } {
   switch (state.status) {

@@ -33,6 +33,7 @@ pub fn run() {
             share::pr_open,
             share::reveal_path,
             share::open_url,
+            share::gh_status,
             share::read_text_file,
         ])
         .run(tauri::generate_context!())

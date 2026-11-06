@@ -103,7 +103,7 @@ function RequestForm() {
             {!connected ? (
               <>
                 Notion isn't connected yet, so this waits here until it is.{" "}
-                <button type="button" className={styles.link} onClick={() => (close(), useUi.getState().setSettingsOpen(true))}>
+                <button type="button" className={styles.link} onClick={() => (close(), useUi.getState().openSettings("connectors", "notion"))}>
                   Set it up
                 </button>
               </>

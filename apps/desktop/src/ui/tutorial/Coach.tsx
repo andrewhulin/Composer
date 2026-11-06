@@ -230,7 +230,7 @@ function StepActions({ step, ctx }: { step: StepId; ctx: TutorialContext }) {
       return (
         <div className={styles.acts}>
           {!ui.settingsOpen && (
-            <Action primary shortcut="⌘," onClick={() => ui.setSettingsOpen(true)}>
+            <Action primary shortcut="⌘," onClick={() => ui.openSettings("connectors", "anthropic")}>
               Open Settings
             </Action>
           )}
@@ -252,7 +252,7 @@ function StepActions({ step, ctx }: { step: StepId; ctx: TutorialContext }) {
       return (
         <div className={styles.acts}>
           {!ui.settingsOpen && (
-            <Action primary onClick={() => ui.setSettingsOpen(true)}>
+            <Action primary onClick={() => ui.openSettings("connectors", "linear")}>
               Open Settings
             </Action>
           )}

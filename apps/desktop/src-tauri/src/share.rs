@@ -233,6 +233,20 @@ pub fn reveal_path(path: String) -> Result<(), String> {
 }
 
 /// Opens a web link in the default browser.
+/// The GitHub account `gh` is signed in as, for the Connectors list. Errors say what's missing.
+#[tauri::command]
+pub fn gh_status() -> Result<String, String> {
+    let mut c = cmd("gh");
+    c.args(["api", "user", "--jq", ".login"]);
+    match run(c) {
+        Ok(login) if !login.is_empty() => Ok(login),
+        Ok(_) => Err("gh is installed but not signed in. Run gh auth login.".into()),
+        Err(e) if e.contains("No such file") || e.contains("not found") => Err("The GitHub CLI (gh) isn't installed.".into()),
+        Err(e) if e.contains("auth login") || e.contains("not logged") => Err("gh is installed but not signed in. Run gh auth login.".into()),
+        Err(e) => Err(e),
+    }
+}
+
 #[tauri::command]
 pub fn open_url(url: String) -> Result<(), String> {
     if !(url.starts_with("https://") || url.starts_with("http://")) {

@@ -2,6 +2,46 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## Settings and Connectors, with setup guides (DC-3) · 2026-11-06
+
+### Added
+- **Settings is a full view** (⌘,) with a left menu: General, Model and API, Connectors, Foundations, Updates, Requests. It replaces the cramped dialog.
+- **Connectors** lists every service Composer talks to:
+  - Anthropic, at the top and always required
+  - Linear, Figma, Are.na, Pinterest, Slack and Statsig
+  - Notion, for the Dev queue
+  - GitHub, through the `gh` CLI
+- **Each connector row** shows its logo, what it gives Composer, and a live status: Not connected, Connected as …, Error, Token expired, Saved · not checked, or No token needed.
+- **A setup stepper for every connector:**
+  - numbered steps in Geist Pixel
+  - a button that opens the right page in the browser
+  - a paste field whose Test asks the service who the token belongs to
+  - a success state with Check again and Disconnect
+- **Animated guides beside each step.**
+  - **Rive:** drop `assets/connectors/<id>/guide.riv` into the folder and it plays, with its `Guide` state machine's `step` input following the stepper. Rive's runtime loads from the app bundle, never a CDN.
+  - **Fallbacks:** a GIF, image or MP4 per step works too. Until either exists, a coded mock of the provider's screen shows a cursor moving to the thing to click.
+  - **Documentation:** the step counts and contract are in `assets/connectors/README.md`.
+- **Health chip:** the title bar shows a warning chip when a connector the open project needs is missing or broken. Claude is always needed, and a source's service is needed once the project has that source. Clicking the chip opens that connector's setup.
+- **GitHub status** comes from a new `gh_status` command (`gh api user`). It explains whether gh is missing or signed out.
+- **Tests (264 in total):**
+  - every service's token test: who it belongs to, rejected, expired, and unreachable
+  - the headers each service expects
+  - status, requirement and health-chip rules
+  - dropped-in guide files
+  - the store never saving a rejected token, keeping one it couldn't check, and Disconnect
+
+### Changed
+- **The Notion token moved** from Settings → Requests to Connectors. Requests keeps the database link and the outbox. Connecting Notion still sends anything waiting.
+- **The Anthropic key's setup lives in Connectors.** Model and API shows its status and the model.
+- **The key banner, the guide's setup steps and the request sheet's setup link** now open the right connector directly.
+- **CSP:** it now allows `'wasm-unsafe-eval'`, so the bundled Rive runtime can start.
+
+### Decisions
+- **A rejected token is never saved.** A token Composer couldn't check (offline, or the service erroring) is kept and marked "Saved · not checked", so you aren't blocked on a bad connection.
+- **"Required" follows the project.** Claude is always required. Linear, Figma, Slack and Statsig become required when the open project has a source from them. Optional tokens (Are.na) and token-free services (Pinterest) never raise the chip.
+- **Connectors are checked at launch** for what the open project needs, and every connector is checked when you open Connectors. The checks use free endpoints (Anthropic counts tokens, the others ask "who am I").
+- **Every new step-number and stepper style follows DESIGN_SYSTEM.md.** Slack, Statsig and Are.na keep letter tiles until official marks are added.
+
 ## Home: pick or start a project (DC-2) · 2026-11-06
 
 ### Added

@@ -1,4 +1,7 @@
 import { create } from "zustand";
+import type { IntegrationId } from "../connections/registry";
+
+export type SettingsSection = "general" | "model" | "connectors" | "foundations" | "updates" | "requests";
 
 export type InspectorTab = "preview" | "prompt" | "node";
 export type CanvasTool = "select" | "pan" | "comment";
@@ -20,6 +23,9 @@ interface UiState {
   tool: CanvasTool;
   zoom: number;
   settingsOpen: boolean;
+  /** Which part of Settings shows, and which connector's setup is open in Connectors. */
+  settingsSection: SettingsSection;
+  settingsConnector: IntegrationId | null;
   addMenuOpen: boolean;
   bookmarkOpen: boolean;
   compareOpen: boolean;
@@ -49,6 +55,10 @@ interface UiState {
   setTool: (tool: CanvasTool) => void;
   setZoom: (zoom: number) => void;
   setSettingsOpen: (open: boolean) => void;
+  /** Opens Settings at a section, and in Connectors at one connector's setup. */
+  openSettings: (section?: SettingsSection, connector?: IntegrationId | null) => void;
+  setSettingsSection: (section: SettingsSection) => void;
+  setSettingsConnector: (connector: IntegrationId | null) => void;
   setAddMenuOpen: (open: boolean) => void;
   setBookmarkOpen: (open: boolean) => void;
   setCompareOpen: (open: boolean) => void;
@@ -64,6 +74,8 @@ export const useUi = create<UiState>((set) => ({
   tool: "select",
   zoom: 1,
   settingsOpen: false,
+  settingsSection: "connectors",
+  settingsConnector: null,
   addMenuOpen: false,
   bookmarkOpen: false,
   compareOpen: false,
@@ -91,6 +103,9 @@ export const useUi = create<UiState>((set) => ({
   setTool: (tool) => set({ tool }),
   setZoom: (zoom) => set({ zoom }),
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
+  openSettings: (section = "connectors", connector = null) => set({ settingsOpen: true, settingsSection: section, settingsConnector: connector }),
+  setSettingsSection: (settingsSection) => set({ settingsSection }),
+  setSettingsConnector: (settingsConnector) => set({ settingsConnector }),
   setAddMenuOpen: (addMenuOpen) => set({ addMenuOpen }),
   setBookmarkOpen: (bookmarkOpen) => set({ bookmarkOpen }),
   setCompareOpen: (compareOpen) => set({ compareOpen }),

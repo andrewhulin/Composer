@@ -243,6 +243,16 @@ user      Instruction (rendered template) + output format
 
 ## 6. Connectors (direct APIs, tokens in Keychain)
 
+Settings → Connectors (`src/connections`) lists every service:
+- Anthropic, which is always required
+- the six source connectors
+- Notion, for the Dev queue
+- GitHub, through `gh`
+
+Each row has a live status, and each service has a numbered setup with deep links and an animation per step. A pasted token is tested against the service before it reaches the Keychain, so a rejected token is never saved. A service the open project uses but can't reach shows as a warning chip in the title bar.
+
+Guides play a dropped-in `assets/connectors/<id>/guide.riv`, through a `Guide` state machine with a numeric `step` input. Failing that, they play per-step GIFs or MP4s, and failing that, a coded mock of the provider's screen.
+
 | Connector | How | Gives |
 |---|---|---|
 | Files / images / transcripts / paste / links | drag-drop, ⌘V, URL fetch + readability + OG image | ContextItems + thumbnails |

@@ -1,0 +1,16 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  min-height: var(--control-xs);
+  margin-right: var(--sp-8);
+  padding: 0 var(--sp-10);
+  border-radius: var(--r-pill);
+  background: rgba(var(--rgb-warn), 0.12);
+  color: var(--signal-warn);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.chip:hover { background: rgba(var(--rgb-warn), 0.2); }
+.chip:focus-visible { outline: none; box-shadow: var(--focus-ring); }

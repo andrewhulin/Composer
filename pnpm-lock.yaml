@@ -62,6 +62,12 @@ importers:
       '@remotion/player':
         specifier: 4.0.540
         version: 4.0.540(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@rive-app/canvas':
+        specifier: 2.49.2
+        version: 2.49.2
+      '@rive-app/react-canvas':
+        specifier: ^4.38.1
+        version: 4.38.1(react@19.3.1)
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
@@ -800,6 +806,14 @@ packages:
 
   '@remotion/zod-types@4.0.540':
     resolution: {integrity: sha512-mdlll7O4cthctYH4Ft9Ys6rnpQEN3I6sNeYD5G2LCcH0gVeuHy+v89uhq+oA6IAQUp3BiQ92iHbasjB1+96jRw==}
+
+  '@rive-app/canvas@2.49.2':
+    resolution: {integrity: sha512-ydm1cxcJ1gck1SXh3fCS3DyHEY/cy7L/6pT6jUb/j8doHNxZ45i6u0LIvfp9lrkkcQGiloqRUIBs9D204hlB7g==}
+
+  '@rive-app/react-canvas@4.38.1':
+    resolution: {integrity: sha512-dXTcWeIMbi6LKelJjoZNO4Fh3dmGMxaBy169j4y3M8il5fRSIz9vfl+8+TilxJDJVoM54Pz67MAYyQUIrngShg==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0
 
   '@rolldown/binding-android-arm-eabi@1.2.16':
     resolution: {integrity: sha512-ia3DwAs0OsMGS7+IConptSiyk9pEXkOx/AbJ2n/lAGxH3QkWQus1t8d7gnAT38FCU2sQu8lUbeR6AiZFv4JxaA==}
@@ -3368,6 +3382,13 @@ snapshots:
     transitivePeerDependencies:
       - react
       - react-dom
+
+  '@rive-app/canvas@2.49.2': {}
+
+  '@rive-app/react-canvas@4.38.1(react@19.3.1)':
+    dependencies:
+      '@rive-app/canvas': 2.49.2
+      react: 19.3.1
 
   '@rolldown/binding-android-arm-eabi@1.2.16':
     optional: true

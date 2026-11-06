@@ -32,6 +32,8 @@ if (gallery) {
       await loadCraft();
       await loadComments();
       await initTutorial();
+    // Check the connectors this project needs, so the title bar can flag a missing or broken one.
+    void import("./store/connections").then((c) => c.checkAll(c.requiredNow()));
       // Requests saved offline or before Notion was connected go out at launch.
       void flushRequests().catch(() => undefined);
     })

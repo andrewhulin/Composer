@@ -1,0 +1,43 @@
+.frame { position: relative; aspect-ratio: 16 / 10; width: 100%; overflow: hidden; border-radius: var(--r-lg); background: var(--bg-canvas); border: 1px solid var(--border-subtle); }
+.rive, .media { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+/* The coded stand-in: a small window, its rows, and a cursor that travels to the row to click. */
+.window { position: absolute; inset: var(--sp-24) var(--sp-32); display: flex; flex-direction: column; border-radius: var(--r-md); background: var(--bg-raised); border: 1px solid var(--border-strong); box-shadow: var(--shadow-2); overflow: hidden; }
+.chrome { display: flex; align-items: center; gap: var(--sp-12); height: var(--control-sm); padding: 0 var(--sp-10); border-bottom: 1px solid var(--border-subtle); background: var(--bg-hover); }
+.lights { display: inline-flex; gap: var(--sp-4); }
+.lights i { width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); }
+.screen { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.body { --row: 34px; position: relative; flex: 1; display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-12); }
+.item { display: flex; align-items: center; height: var(--row); padding: 0 var(--sp-10); border-radius: var(--r-sm); font-size: var(--fs-small); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hot { color: var(--text-primary); animation: hot 3.2s var(--ease-out) infinite; }
+.fieldRow { display: flex; gap: var(--sp-8); }
+.fakeField { flex: 1; display: flex; align-items: center; height: var(--row); padding: 0 var(--sp-10); border-radius: var(--r-sm); border: 1px solid var(--border-strong); background: var(--bg-panel); font-family: var(--font-mono); font-size: var(--fs-small); color: var(--text-muted); }
+.fakeButton { display: inline-flex; align-items: center; padding: 0 var(--sp-12); border-radius: var(--r-sm); background: var(--text-primary); color: var(--text-inverse); font-size: var(--fs-small); font-weight: 500; }
+
+/* Lands on the target row's left third, then presses. */
+.cursor {
+  position: absolute;
+  left: 34%;
+  top: calc(var(--sp-12) + var(--target) * (var(--row) + var(--sp-2)) + var(--row) / 2 - 2px);
+  color: var(--text-primary);
+  filter: drop-shadow(0 2px 4px rgba(var(--rgb-black), 0.6));
+  animation: travel 3.2s var(--ease-out) infinite;
+}
+@keyframes travel {
+  0% { transform: translate(140px, 90px); opacity: 0; }
+  12% { opacity: 1; }
+  45% { transform: translate(0, 0); }
+  52% { transform: translate(0, 0) scale(0.86); }
+  60%, 88% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(0, 0); opacity: 0; }
+}
+@keyframes hot {
+  0%, 44% { background: transparent; box-shadow: none; }
+  52%, 90% { background: rgba(var(--phase-rgb, var(--rgb-ink)), 0.16); box-shadow: inset 0 0 0 1px rgba(var(--phase-rgb, var(--rgb-ink)), 0.5); }
+  100% { background: transparent; box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cursor { animation: none; }
+  .hot { animation: none; background: rgba(var(--phase-rgb, var(--rgb-ink)), 0.16); box-shadow: inset 0 0 0 1px rgba(var(--phase-rgb, var(--rgb-ink)), 0.5); }
+}

@@ -10,7 +10,7 @@ import { Sidebar } from "../sidebar/Sidebar";
 import { Canvas } from "../canvas/Canvas";
 import { Inspector } from "../inspector/Inspector";
 import { HistoryBar } from "../history/HistoryBar";
-import { SettingsDialog } from "../settings/SettingsDialog";
+import { Settings } from "../settings/Settings";
 import { RequestSheet } from "../requests/RequestSheet";
 import { FoundationsSheet } from "../foundations/FoundationsSheet";
 import { CommandPalette, KeyboardMap } from "../command/CommandPalette";
@@ -174,7 +174,6 @@ export function AppShell() {
   const guiding = useTutorial((s) => s.state?.status === "active");
   const panels = useUi((s) => s.panels);
   const settingsOpen = useUi((s) => s.settingsOpen);
-  const setSettingsOpen = useUi((s) => s.setSettingsOpen);
   const [hasKey, setHasKey] = useState(true);
   const view = useProjects((s) => s.view);
   useShortcuts();
@@ -186,7 +185,7 @@ export function AppShell() {
     return (
       <>
         <Home />
-        <SettingsDialog />
+        <Settings />
         <RequestSheet />
         <CommandPalette />
         <KeyboardMap />
@@ -207,7 +206,7 @@ export function AppShell() {
       {ready ? <Canvas /> : session.status === "error" ? <BootError message={session.message} /> : <main className={styles.loading} />}
       {panels.right && <Inspector />}
       {panels.bottom && <HistoryBar />}
-      <SettingsDialog />
+      <Settings />
       <RequestSheet />
       <FoundationsSheet />
       <CommandPalette />
@@ -215,7 +214,7 @@ export function AppShell() {
       <KeyboardMap />
       <CompareView />
       <Toasts />
-      {ready && !hasKey && !settingsOpen && !guiding && !(import.meta.env.DEV && location.search.includes("fake")) && <KeyBanner onAdd={() => setSettingsOpen(true)} />}
+      {ready && !hasKey && !settingsOpen && !guiding && !(import.meta.env.DEV && location.search.includes("fake")) && <KeyBanner onAdd={() => useUi.getState().openSettings("connectors", "anthropic")} />}
     </div>
   );
 }

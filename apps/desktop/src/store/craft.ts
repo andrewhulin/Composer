@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { RECIPES, pickedPhases, type PickedPair, applyDrift, detectDrift, foundationsFor, parseDesignSystem, parsePhilosophy, reflectGroups, reflectRequest, strengthFor, tokenSet, type BuildLint, type DesignSystem, type DriftProposal, type LintResult, type Philosophy, type Principle, type ReflectAnswer, type ScoredRun, type TokenSet } from "@composer/engine";
+import { briefForRun, keepBrief, useSkills } from "./skills";
 import { PHASES, type Phase, type TextArtifact } from "@composer/core";
 import type { CraftRuleRow, FoundationRow, ProposalRow, Repo } from "@composer/data";
 import { craftHooks, llmClient, toast, useProject } from "./project";
@@ -57,12 +58,13 @@ const repo = (): Repo => {
   return r;
 };
 
-/** Every run's env: foundation versions and its phase's rule ids. Changing either marks work stale_env. */
-function syncEnv() {
+/** Every run's env: foundation versions (the Craft Brief's too) and its phase's rule ids. Changing any marks work stale_env. */
+export function syncEnv() {
   const { ds, philosophy, rules } = get();
+  const brief = useSkills.getState().brief;
   const byPhase: Partial<Record<Phase, string[]>> = {};
   for (const p of PHASES) byPhase[p] = rules.filter((r) => r.phase === p).map((r) => r.id);
-  useProject.setState({ env: { foundations: [ds?.row.id, philosophy?.row.id].filter((x): x is string => !!x), rules: byPhase } });
+  useProject.setState({ env: { foundations: [ds?.row.id, philosophy?.row.id, brief?.row.id].filter((x): x is string => !!x), rules: byPhase } });
 }
 
 export async function loadCraft() {
@@ -84,7 +86,11 @@ export async function loadCraft() {
   syncEnv();
 }
 
-craftHooks.foundations = () => foundationsFor(get().ds?.content ?? null, get().philosophy?.content ?? null);
+craftHooks.foundations = (phase) => {
+  const brief = briefForRun(phase);
+  return foundationsFor(get().ds?.content ?? null, get().philosophy?.content ?? null, brief ? { version: brief.version, principles: brief.principles } : undefined);
+};
+craftHooks.skillIds = (phase) => briefForRun(phase)?.skillIds ?? [];
 craftHooks.rules = (phase) => get().rules.filter((r) => r.phase === phase).map((r) => ({ id: `R${r.id.slice(-4)}`, text: r.body }));
 craftHooks.afterVerdict = () => void reflect({ auto: true });
 
@@ -152,6 +158,7 @@ const principleLabel = (n: number) => String(n).padStart(2, "0");
 
 export async function accept(p: ProposalRow, editedValue?: string) {
   const r = repo();
+  if (p.targetKind === "craft_brief") return keepBrief(p);
   if (p.targetKind === "design_system") {
     const ds = get().ds;
     if (!ds) return;

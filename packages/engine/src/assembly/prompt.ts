@@ -28,6 +28,15 @@ export const IMAGE_TOKENS = 1100;
 export interface Foundations {
   designSystem?: { version: string; digest: string };
   philosophy?: { rev: number; principles: { n: number; text: string; strength: string }[]; doc?: string };
+  /** The approved Craft Brief's principles for this phase. Raw skill text never goes in. */
+  brief?: { version: string; principles: { text: string; sources: string[] }[] };
+}
+
+/** The Craft Brief block: numbered principles, each naming the skills it came from. */
+export function briefBlock(brief: NonNullable<Foundations["brief"]>): string {
+  return `<craft_brief version="${esc(brief.version)}">\nCompiled from the designer's skills. The philosophy and the design system win wherever this disagrees with them.\n${brief.principles
+    .map((p, i) => `${String(i + 1).padStart(2, "0")}. ${p.text} [${p.sources.join(", ")}]`)
+    .join("\n")}\n</craft_brief>`;
 }
 
 export interface ProjectMemory {
@@ -124,6 +133,7 @@ export function foundationsBlock(f: Foundations): string {
     );
   }
   if (f.designSystem) parts.push(`<design_system version="${esc(f.designSystem.version)}">\n${f.designSystem.digest}\n</design_system>`);
+  if (f.brief?.principles.length) parts.push(briefBlock(f.brief));
   return parts.length
     ? `Always-on foundations. Follow the design philosophy; build only with the design system.\n\n${parts.join("\n\n")}`
     : "No design system or design philosophy is slotted yet.";

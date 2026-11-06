@@ -36,6 +36,48 @@ export interface ProjectRow {
   archivedAt: string | null;
 }
 
+export type SkillKindName = "craft" | "motion" | "systems" | "audit" | "exploration" | "router";
+
+/** A design skill in the library. Its SKILL.md body and reference files live in the blob table. */
+export interface SkillRow {
+  id: Id;
+  name: string;
+  description: string;
+  author: string | null;
+  /** Where it came from: folder:…, git:owner/repo/path, or catalog:owner/name. Unique. */
+  source: string;
+  kind: SkillKindName;
+  mode: "always" | "on_demand";
+  /** Bumps when an update brings different content. */
+  version: number;
+  bodyHash: Hash;
+  files: { path: string; hash: Hash }[];
+  tokens: number;
+  /** The global switch; each project can override it. */
+  enabled: boolean;
+  /** Empty means every phase. */
+  phases: Phase[];
+  /** The commit or URL it was pinned at, for third-party skills. */
+  ref: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SkillInput {
+  name: string;
+  description: string;
+  author?: string | null;
+  source: string;
+  kind: SkillKindName;
+  mode: "always" | "on_demand";
+  body: string;
+  files?: { path: string; content: string }[];
+  tokens: number;
+  enabled?: boolean;
+  phases?: Phase[];
+  ref?: string | null;
+}
+
 /** What a Home card shows about a project beyond its row. */
 export interface ProjectCover {
   /** The newest locked key output, any phase. */
@@ -107,7 +149,7 @@ export interface RunRow {
 }
 
 
-export type FoundationSlot = "design_system" | "philosophy";
+export type FoundationSlot = "design_system" | "philosophy" | "craft_brief";
 
 export interface FoundationRow {
   id: Id;
@@ -120,7 +162,7 @@ export interface FoundationRow {
   createdAt: string;
 }
 
-export type ProposalTarget = "design_system" | "philosophy" | "rule";
+export type ProposalTarget = "design_system" | "philosophy" | "rule" | "craft_brief";
 export type ProposalStatus = "pending" | "accepted" | "rejected" | "deferred";
 
 export interface ProposalRow<D = unknown> {
@@ -835,6 +877,80 @@ export class Repo {
     return r ? (JSON.parse(str(r.value)) as T) : undefined;
   }
 
+  // ── design skills ────────────────────────────────────────────────────────
+
+  /**
+   * Adds a skill, or updates the one already imported from the same source. Its version bumps
+   * only when the content changed; switches, mode and phases are kept across updates.
+   */
+  async saveSkill(input: SkillInput): Promise<{ skill: SkillRow; changed: boolean }> {
+    const body = await this.putBlob(input.body, "skill");
+    const files = [];
+    for (const f of input.files ?? []) files.push({ path: f.path, hash: await this.putBlob(f.content, "skill_file") });
+    const filesJson = JSON.stringify(files);
+    const now = this.clock.now();
+    const [existing] = await this.db.all("SELECT * FROM skill WHERE source = ?", [input.source]);
+    if (existing) {
+      const prev = toSkill(existing);
+      if (prev.bodyHash === body && JSON.stringify(prev.files) === filesJson) return { skill: prev, changed: false };
+      const version = prev.version + 1;
+      await this.db.tx([
+        { sql: "UPDATE skill SET name = ?, description = ?, author = ?, version = ?, body_hash = ?, files = ?, tokens = ?, ref = ?, updated_at = ? WHERE id = ?", params: [input.name, input.description, input.author ?? null, version, body, filesJson, input.tokens, input.ref ?? null, now, prev.id] },
+        { sql: "INSERT INTO skill_version (skill_id, version, body_hash, files, ref, created_at) VALUES (?, ?, ?, ?, ?, ?)", params: [prev.id, version, body, filesJson, input.ref ?? null, now] },
+      ]);
+      return { skill: (await this.getSkill(prev.id))!, changed: true };
+    }
+    const base = input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "skill";
+    let id = base;
+    for (let n = 2; await this.getSkill(id); n++) id = `${base}-${n}`;
+    await this.db.tx([
+      {
+        sql: "INSERT INTO skill (id, name, description, author, source, kind, mode, version, body_hash, files, tokens, enabled, phases, ref, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)",
+        params: [id, input.name, input.description, input.author ?? null, input.source, input.kind, input.mode, body, filesJson, input.tokens, input.enabled === false ? 0 : 1, JSON.stringify(input.phases ?? []), input.ref ?? null, now, now],
+      },
+      { sql: "INSERT INTO skill_version (skill_id, version, body_hash, files, ref, created_at) VALUES (?, 1, ?, ?, ?, ?)", params: [id, body, filesJson, input.ref ?? null, now] },
+    ]);
+    return { skill: (await this.getSkill(id))!, changed: true };
+  }
+
+  async getSkill(id: Id): Promise<SkillRow | undefined> {
+    const [r] = await this.db.all("SELECT * FROM skill WHERE id = ?", [id]);
+    return r ? toSkill(r) : undefined;
+  }
+
+  async listSkills(): Promise<SkillRow[]> {
+    return (await this.db.all("SELECT * FROM skill ORDER BY created_at, id")).map(toSkill);
+  }
+
+  /** The SKILL.md body at a version (the current one by default). */
+  async skillBody(id: Id, version?: number): Promise<string | undefined> {
+    const s = await this.getSkill(id);
+    if (!s) return undefined;
+    if (version === undefined || version === s.version) return this.getBlob<string>(s.bodyHash);
+    const [v] = await this.db.all("SELECT body_hash FROM skill_version WHERE skill_id = ? AND version = ?", [id, version]);
+    return v ? this.getBlob<string>(str(v.body_hash)) : undefined;
+  }
+
+  async updateSkill(id: Id, patch: Partial<Pick<SkillRow, "enabled" | "mode" | "kind" | "phases">>): Promise<void> {
+    const fields: [string, SqlValue | undefined][] = [
+      ["enabled", patch.enabled === undefined ? undefined : patch.enabled ? 1 : 0],
+      ["mode", patch.mode],
+      ["kind", patch.kind],
+      ["phases", patch.phases ? JSON.stringify(patch.phases) : undefined],
+    ];
+    const set = fields.filter(([, v]) => v !== undefined) as [string, SqlValue][];
+    if (!set.length) return;
+    await this.db.run(`UPDATE skill SET ${set.map(([c]) => `${c} = ?`).join(", ")}, updated_at = ? WHERE id = ?`, [...set.map(([, v]) => v), this.clock.now(), id]);
+  }
+
+  /** Takes a skill out of the library. Runs that used it keep their record of it. */
+  async removeSkill(id: Id): Promise<void> {
+    await this.db.tx([
+      { sql: "DELETE FROM skill_version WHERE skill_id = ?", params: [id] },
+      { sql: "DELETE FROM skill WHERE id = ?", params: [id] },
+    ]);
+  }
+
   async setSetting(key: string, value: unknown): Promise<void> {
     await this.db.run("INSERT OR REPLACE INTO setting (key, value) VALUES (?, ?)", [key, JSON.stringify(value)]);
   }
@@ -852,6 +968,27 @@ function toProject(r: Row): ProjectRow {
     createdAt: str(r.created_at),
     updatedAt: str(r.updated_at),
     archivedAt: strOrNull(r.archived_at),
+  };
+}
+
+function toSkill(r: Row): SkillRow {
+  return {
+    id: str(r.id),
+    name: str(r.name),
+    description: str(r.description),
+    author: strOrNull(r.author),
+    source: str(r.source),
+    kind: str(r.kind) as SkillKindName,
+    mode: str(r.mode) as SkillRow["mode"],
+    version: Number(r.version),
+    bodyHash: str(r.body_hash),
+    files: json(r.files, []),
+    tokens: Number(r.tokens),
+    enabled: Number(r.enabled) === 1,
+    phases: json(r.phases, []),
+    ref: strOrNull(r.ref),
+    createdAt: str(r.created_at),
+    updatedAt: str(r.updated_at),
   };
 }
 

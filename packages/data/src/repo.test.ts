@@ -17,7 +17,7 @@ const g1 = (): Graph => graphOf([source("s"), claude("c")], [wire("s", "c", "con
 describe("migrations", () => {
   it("apply once and are idempotent", async () => {
     const { db } = setup();
-    expect(await migrate(db)).toEqual([1, 2, 3]);
+    expect(await migrate(db)).toEqual([1, 2, 3, 4]);
     expect(await migrate(db)).toEqual([]);
   });
 });
@@ -316,5 +316,41 @@ describe("projects on Home", () => {
     const covers = await repo.projectCovers();
     expect(covers[a.id]).toEqual({ latest: { phase: "define", contentHash: later.contentHash, createdAt: expect.any(String) }, prototypeHash: "proto-new" });
     expect(covers[b.id]).toBeUndefined();
+  });
+});
+
+describe("design skills", () => {
+  const input = { name: "Tight spacing", description: "Dense layouts", source: "folder:/skills/tight", kind: "craft" as const, mode: "always" as const, body: "Use an 8px grid.", files: [{ path: "references/grid.md", content: "8, 16, 24" }], tokens: 6 };
+
+  it("imports a skill with its files and reads its body back", async () => {
+    const { db, repo } = setup();
+    await migrate(db);
+    const { skill, changed } = await repo.saveSkill(input);
+    expect(changed).toBe(true);
+    expect(skill).toMatchObject({ id: "tight-spacing", version: 1, enabled: true, phases: [], kind: "craft", mode: "always" });
+    expect(skill.files.map((f) => f.path)).toEqual(["references/grid.md"]);
+    expect(await repo.skillBody(skill.id)).toBe("Use an 8px grid.");
+  });
+
+  it("bumps the version only when an update brings new content, and keeps the switches", async () => {
+    const { db, repo } = setup();
+    await migrate(db);
+    const { skill } = await repo.saveSkill(input);
+    await repo.updateSkill(skill.id, { enabled: false, phases: ["build"], mode: "on_demand" });
+    expect((await repo.saveSkill(input)).changed).toBe(false);
+    const { skill: next } = await repo.saveSkill({ ...input, body: "Use a 4px grid." });
+    expect(next).toMatchObject({ version: 2, enabled: false, phases: ["build"], mode: "on_demand" });
+    expect(await repo.skillBody(skill.id, 1)).toBe("Use an 8px grid.");
+    expect(await repo.skillBody(skill.id)).toBe("Use a 4px grid.");
+  });
+
+  it("gives skills with the same name from different sources their own ids, and removes one", async () => {
+    const { db, repo } = setup();
+    await migrate(db);
+    await repo.saveSkill(input);
+    const { skill: other } = await repo.saveSkill({ ...input, source: "git:someone/skills/tight" });
+    expect(other.id).toBe("tight-spacing-2");
+    await repo.removeSkill(other.id);
+    expect((await repo.listSkills()).map((s) => s.id)).toEqual(["tight-spacing"]);
   });
 });

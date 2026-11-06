@@ -315,6 +315,20 @@ Guides play a dropped-in `assets/connectors/<id>/guide.riv`, through a `Guide` s
 
 ## 9. Foundations and improvement loop
 
+**Design skills and the Craft Brief** (`engine/skills.ts`, `store/skills.ts`, Settings → Skills):
+- **The library:** Agent Skills folders (a SKILL.md plus reference files) are imported from a folder, from GitHub (`owner/repo` or `npx skills add …`, pinned to a commit), or from the UI Skills catalog.
+  - Each skill is stored with a version that bumps when its content changes. Third-party skills show a diff before updating.
+- **Switches:** each skill has a global switch, a per-project override, and an optional phase scope.
+- **Modes:**
+  - **Always on:** the skill feeds the brief.
+  - **On demand:** the skill is an action, such as a review run against a node. Reviews answer in a fixed shape, and "What's off" can be pinned as notes.
+- **Compile:** Claude folds every always-on skill into one **Craft Brief** under the philosophy and the design system.
+  - The brief is deduped, cited principles, grouped by phase.
+  - Where skills disagree, it lists conflicts. Skills that contradict the philosophy are flagged and left out.
+  - Resolutions (pick one, split by phase, or keep both as a tradeoff) are saved and reused on recompile.
+- **Going live:** a resolved brief becomes a `craft_brief` proposal that replays the golden set before it can be kept. The kept brief is a `craft_brief` foundation version, and its id joins every run's env.
+- **In prompts:** runs carry the brief's principles for their phase in the cached foundations block, never raw skill text. Each run records `skill:<id>@<version>` in `foundation_ids`, so scores can be sliced by skill.
+
 - **Design system slot:**
   - Versioned and read-only to Composer.
   - It imports from `tokens.json` or `.md` (Sundial seed) and shows tokens, components, type styles and "Build output on-system %".

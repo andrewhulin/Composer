@@ -76,6 +76,20 @@ export async function pickVideo(): Promise<string | null> {
   return typeof picked === "string" ? picked : null;
 }
 
+/** The native open panel, for a folder of design skills. */
+export async function pickFolder(title: string): Promise<string | null> {
+  if (!inTauri()) throw new Error("The folder picker needs the desktop app. In the browser preview, drop the folder instead.");
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const picked = await open({ multiple: false, directory: true, title });
+  return typeof picked === "string" ? picked : null;
+}
+
+/** A picked folder's text files, with paths relative to it. */
+export async function readFolder(path: string): Promise<{ path: string; content: string }[]> {
+  if (!inTauri()) throw new Error("Reading a folder by path needs the desktop app.");
+  return invoke<{ path: string; content: string }[]>("read_folder", { path });
+}
+
 /** Finds a video's cuts and pulls stills from it with Remotion's ffmpeg. */
 export async function referenceFrames(video: string, rendererDir: string): Promise<ReferenceInfo> {
   if (!inTauri()) throw desktopOnly();

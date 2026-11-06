@@ -207,10 +207,11 @@ export function digest(ds: DesignSystem): string {
   return lines.join("\n").trim();
 }
 
-export function foundationsFor(ds: DesignSystem | null, ph: Philosophy | null): Foundations {
+export function foundationsFor(ds: DesignSystem | null, ph: Philosophy | null, brief?: Foundations["brief"]): Foundations {
   return {
     ...(ds ? { designSystem: { version: `${ds.name} v${ds.version}`, digest: digest(ds) } } : {}),
     ...(ph ? { philosophy: { rev: ph.rev, principles: ph.principles.map((p) => ({ n: p.n, text: p.text, strength: p.strength })), doc: ph.doc } } : {}),
+    ...(brief?.principles.length ? { brief } : {}),
   };
 }
 

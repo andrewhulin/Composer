@@ -24,6 +24,7 @@ const StoryView = lazy(() => import("./ShareViews").then((m) => ({ default: m.St
 const PrView = lazy(() => import("./ShareViews").then((m) => ({ default: m.PrView })));
 import { NodeTab } from "./NodeTab";
 import { RunEvals } from "./RunEvals";
+import { SkillReview } from "./SkillReview";
 import { PromptTab } from "./PromptTab";
 import { countKey, partialField } from "./partial";
 import styles from "./Inspector.module.css";
@@ -225,6 +226,7 @@ function Preview({ node, graph }: { node: GraphNode | undefined; graph: Graph })
         <>
           <ScoreRun runId={s.lastRuns[claude.id]!.id} />
           <RunEvals key={s.lastRuns[claude.id]!.id} claude={claude} runId={s.lastRuns[claude.id]!.id} />
+          <SkillReview claude={claude} runId={s.lastRuns[claude.id]!.id} />
         </>
       )}
     </section>

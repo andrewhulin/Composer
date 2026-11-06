@@ -150,10 +150,12 @@ export const llmClient = (): LlmClient => llm;
  * every run carries the current slots and its phase's rules.
  */
 export const craftHooks: {
-  foundations: () => Foundations;
+  foundations: (phase: Phase) => Foundations;
   rules: (phase: Phase) => { id: string; text: string }[];
+  /** The skills (skill:id@version) behind the brief a phase's runs carry, recorded on each run. */
+  skillIds: (phase: Phase) => string[];
   afterVerdict: (verdict: string) => void;
-} = { foundations: () => ({}), rules: () => [], afterVerdict: () => {} };
+} = { foundations: () => ({}), rules: () => [], skillIds: () => [], afterVerdict: () => {} };
 
 // ── persistence ────────────────────────────────────────────────────────────
 
@@ -359,7 +361,7 @@ export function runDeps(phase: Phase): RunDeps {
     llm,
     readBlob: (h) => s.blobs.get(h),
     env: s.env,
-    foundations: craftHooks.foundations(),
+    foundations: craftHooks.foundations(phase),
     rules: craftHooks.rules(phase),
     memory: memoryFor(phase, s.loop),
     block: (id) => s.hypotheses[id],
@@ -1090,7 +1092,7 @@ async function runOne(id: Id, signal: AbortSignal): Promise<void> {
     effort: node.effort,
     templateVersionId: node.templateVersionId,
     ruleIds: env.rules[node.phase] ?? [],
-    foundationIds: env.foundations,
+    foundationIds: [...env.foundations, ...craftHooks.skillIds(node.phase)],
     startedSeq: (get().project?.seq ?? 0) + 1,
   });
   try {

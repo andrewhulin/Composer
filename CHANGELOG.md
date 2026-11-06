@@ -2,6 +2,55 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## Design skills and the Craft Brief (DC-4) · 2026-11-06
+
+### Added
+- **Settings → Skills,** a library of design skills in the Agent Skills format (a folder with a SKILL.md plus optional reference files). You can add skills by:
+  - dropping a folder, or using Choose folder…
+  - pasting `owner/repo`, a GitHub link, or an `npx skills add owner/repo --skill name` line (Composer lists every SKILL.md in the repo and pins the commit)
+  - browsing and searching the **UI Skills catalog** (its public registry) and installing in one click
+- **Each skill records:**
+  - **Origin:** its source, its author, and a pinned version.
+  - **Updates:** Check for update shows a side-by-side diff before you update.
+  - **Kind:** inferred as craft, motion, systems, audit, exploration or router.
+  - **Token cost.**
+  - **Evidence:** the average score of runs with it, beside runs without it.
+- **Toggles:** a global switch, a per-project override (Default, On or Off) and an optional phase scope.
+  - **Always on** skills feed the brief; **On demand** skills are actions.
+  - Reviewers and generators default to On demand. Routers come in switched off, because Composer's compile and phase scoping already do their job.
+- **The Craft Brief:** Compile has Claude fold every always-on skill into one short list of principles.
+  - Duplicates are merged, and every principle cites the skills it came from.
+  - Principles are grouped as everywhere or per phase, under the philosophy and then the design system.
+  - **Conflicts** between skills are listed side by side. You can use one, split them by phase, or keep both as a stated tradeoff. The brief changes at once, and the choice is reused on every recompile.
+  - **A skill that contradicts the philosophy** is flagged and left out.
+- **Versioning:** a resolved brief is proposed as `craft_brief` and replays past briefs side by side.
+  - **Keep** unlocks only once the replay has run, or straight away when there's nothing to replay yet.
+  - Toggling or updating a skill marks the brief stale and offers Recompile.
+- **In prompts:** the kept brief's principles for a run's phase go into the cached Foundations block (`<craft_brief version="v1">`, each principle with its sources). Raw skill text never goes in.
+  - Every run records the brief version (in its env) and `skill:<id>@<version>` for each skill behind it.
+  - Turning a skill off in a project drops it from that project's runs.
+- **On-demand reviews:** "Review with…" in a Claude node's Preview runs an on-demand skill against the latest output.
+  - The answer comes back as a card in Shift Nudge's shape: Summary, What's off, Questions to push it, One thing to try, Working well.
+  - **Pin what's off as notes** turns each issue into a note the next run answers.
+- **⌘K entries:** Skills library, Compile the Craft Brief, and a Turn on / Turn off entry for each skill.
+- **Data:** migration 4 adds `skill` and `skill_version`. Foundations gain a `craft_brief` slot, and proposals a `craft_brief` target. A `read_folder` command reads a picked skills folder (text files only, capped at 400 files or 4 MB).
+- **Tests (288 in total):**
+  - SKILL.md frontmatter, kind and mode defaults, finding skills in a folder or repo, `npx skills add` and GitHub links, the catalog registry
+  - global, project and phase scoping
+  - compile parsing: merged duplicates, honest citations, phase groups, stable conflict keys, philosophy flags
+  - each kind of resolution, and its reuse on recompile
+  - brief diffs and staleness
+  - the brief in the prompt without raw text, and in replay
+  - the store: import with picking, switches that persist per project, compile, resolve, propose and keep, and runs recording only the skills that are on
+
+### Decisions
+- **The brief is cited and grouped by phase, and stays text.** Each run gets the general principles plus its phase's, so the cached prefix stays stable per phase.
+- **Conflicts block proposing, not compiling.** You see the whole brief while you resolve. A brief can't be proposed with open conflicts.
+- **Resolutions are keyed by the two skills and the topic,** sorted, so the same disagreement is recognized whichever way round Claude lists it.
+- **Replay gates Keep.** When there are no past briefs to replay, Keep says so instead of blocking forever.
+- **On-demand skills run as explicit actions, not tool calls.** Runs use structured output, so "Claude asks for a skill mid-run" waits for a tool-using recipe. Recipes still get only their phase's principles.
+- **Third-party skills are pinned** (a commit for GitHub, the file URL for the catalog). An update is a new version you approve after reading the diff.
+
 ## Settings and Connectors, with setup guides (DC-3) · 2026-11-06
 
 ### Added

@@ -112,7 +112,25 @@ ${card}
       rules: [{ phase: "define", text: "Quote people verbatim and name who said it; never paraphrase the problem.", why: "Every high-scored statement quoted a participant; every low one summarized.", evidence: ["high runs", "low runs"] }],
       principles: [{ change: "sharpened", n: 2, text: "Apply the essentialism test, and in Define keep the raw quote over the summary.", why: "You kept raw quotes over summaries in three statements." }],
     };
-    const answer = schemaText.includes('"principles"') ? reflection : schemaText.includes('"voiceover"') ? story : schemaText.includes('"before"') ? pr : schemaText.includes('"decision_rule"') ? strategy : schemaText.includes('"findings"') ? verdict : schemaText.includes('"html"') ? proto : schemaText.includes("insights")
+    // Skills: a compile cites the skills it was given and finds one disagreement; a review answers in Shift Nudge's shape.
+    const skillIds = [...all.matchAll(/<skill id=\\"([^\\"]+)\\"/g)].map((m) => m[1]!);
+    const compile = {
+      principles: [
+        ...skillIds.slice(0, 1).map((id) => ({ text: "Use an 8px spacing grid; related items sit closer than unrelated ones.", sources: skillIds.slice(0, 2).length ? skillIds.slice(0, 2) : [id], phase: null })),
+        ...skillIds.slice(0, 1).map((id) => ({ text: "One primary action per screen, in the strongest color.", sources: [id], phase: null })),
+        ...skillIds.slice(-1).map((id) => ({ text: "Animate state changes with springs, 200–300ms, never linear.", sources: [id], phase: "build" })),
+      ],
+      conflicts: skillIds.length >= 2 ? [{ topic: "Row density", a_skill: skillIds[0], a_says: "Keep list rows dense: 4px apart.", b_skill: skillIds[1], b_says: "Give list rows room: 12px apart." }] : [],
+      flagged: [],
+    };
+    const review = {
+      summary: "Clear hierarchy and one obvious action, but the recap competes with chat for attention.",
+      whats_off: ["The recap card and the chat input have equal weight; the recap should lead.", "Three font sizes within one card; two would do."],
+      questions: ["What does a returning user need to see in the first second?"],
+      one_thing: "Make the recap the only element above the fold on return.",
+      working_well: ["Real quotes from the evidence instead of lorem ipsum."],
+    };
+    const answer = schemaText.includes('"flagged"') ? compile : schemaText.includes('"whats_off"') ? review : schemaText.includes('"principles"') ? reflection : schemaText.includes('"voiceover"') ? story : schemaText.includes('"before"') ? pr : schemaText.includes('"decision_rule"') ? strategy : schemaText.includes('"findings"') ? verdict : schemaText.includes('"html"') ? proto : schemaText.includes("insights")
       ? {
           summary: `Returning people lose the thread between sessions and want proof of progress, not a transcript. (${heavy} heavy sources)`,
           insights: [

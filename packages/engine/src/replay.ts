@@ -1,6 +1,6 @@
 import type { BetaMessageParam, BetaTextBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import type { Effort, Phase, RecipeId, TextArtifact } from "@composer/core";
-import { rulesBlock } from "./assembly/prompt";
+import { briefBlock, rulesBlock } from "./assembly/prompt";
 import type { LlmClient, LlmRequest } from "./llm";
 import { recipe } from "./recipes";
 
@@ -31,7 +31,8 @@ export type ReplayPick = "baseline" | "candidate" | "same";
 /** The candidate change a replay tests. Design system proposals don't replay; they lint instead. */
 export type ReplayCandidate =
   | { kind: "rule"; phase: Phase; id: string; text: string }
-  | { kind: "principle"; change: "sharpened" | "added" | "retired" | "reworded"; n: number | null; text: string };
+  | { kind: "principle"; change: "sharpened" | "added" | "retired" | "reworded"; n: number | null; text: string }
+  | { kind: "brief"; version: string; principles: { text: string; sources: string[] }[] };
 
 const RULES_INDEX = 2;
 const FOUNDATIONS_INDEX = 1;
@@ -76,8 +77,18 @@ export function withCandidatePrinciple(p: StoredPrompt, change: Extract<ReplayCa
   return replaceBlock(p, FOUNDATIONS_INDEX, block.replace(m[0], replaced));
 }
 
+/** The same prompt with the Craft Brief swapped for a candidate (or added, if it had none). */
+export function withCandidateBrief(p: StoredPrompt, c: Extract<ReplayCandidate, { kind: "brief" }>): StoredPrompt {
+  const block = p.system[FOUNDATIONS_INDEX]?.text ?? "";
+  const next = briefBlock({ version: c.version, principles: c.principles });
+  const existing = /<craft_brief[^>]*>[\s\S]*?<\/craft_brief>/.exec(block);
+  if (existing) return replaceBlock(p, FOUNDATIONS_INDEX, block.replace(existing[0], next));
+  const text = block.startsWith("No design system") ? `Always-on foundations. Follow the design philosophy; build only with the design system.\n\n${next}` : `${block}\n\n${next}`;
+  return replaceBlock(p, FOUNDATIONS_INDEX, text);
+}
+
 export function withCandidate(p: StoredPrompt, c: ReplayCandidate): StoredPrompt {
-  return c.kind === "rule" ? withCandidateRule(p, c.phase, c) : withCandidatePrinciple(p, c);
+  return c.kind === "rule" ? withCandidateRule(p, c.phase, c) : c.kind === "brief" ? withCandidateBrief(p, c) : withCandidatePrinciple(p, c);
 }
 
 /** The request that reruns a stored prompt, with the recipe's schema so the output renders the same way. */

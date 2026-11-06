@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { IntegrationId } from "../connections/registry";
 
-export type SettingsSection = "general" | "model" | "connectors" | "foundations" | "updates" | "requests";
+export type SettingsSection = "general" | "model" | "connectors" | "skills" | "foundations" | "updates" | "requests";
 
 export type InspectorTab = "preview" | "prompt" | "node";
 export type CanvasTool = "select" | "pan" | "comment";

@@ -246,6 +246,40 @@ CREATE INDEX replay_result_proposal ON replay_result(proposal_id);
 ALTER TABLE project ADD COLUMN archived_at TEXT;
 `,
   },
+  {
+    id: 4,
+    name: "skills",
+    sql: `
+CREATE TABLE skill (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  author TEXT,
+  source TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  mode TEXT NOT NULL,
+  version INTEGER NOT NULL,
+  body_hash TEXT NOT NULL,
+  files TEXT NOT NULL DEFAULT '[]',
+  tokens INTEGER NOT NULL DEFAULT 0,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  phases TEXT NOT NULL DEFAULT '[]',
+  ref TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX skill_source ON skill(source);
+CREATE TABLE skill_version (
+  skill_id TEXT NOT NULL REFERENCES skill(id),
+  version INTEGER NOT NULL,
+  body_hash TEXT NOT NULL,
+  files TEXT NOT NULL DEFAULT '[]',
+  ref TEXT,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (skill_id, version)
+);
+`,
+  },
 ];
 
 /** Applies pending migrations. Each migration runs in one transaction. */

@@ -8,6 +8,7 @@ import { actions, loadProject, useProject } from "./store/project";
 import { storyProps } from "./share/story";
 import * as craft from "./store/craft";
 import { loadCraft } from "./store/craft";
+import { loadSkills } from "./store/skills";
 import { loadComments } from "./store/comments";
 import { initTutorial, tutorial as tutorialApi, useTutorial } from "./tutorial/store";
 import { flushRequests } from "./requests/store";
@@ -30,6 +31,7 @@ if (gallery) {
       useSession.setState({ status: "ready", booted });
       await loadProject(booted);
       await loadCraft();
+    await loadSkills();
       await loadComments();
       await initTutorial();
     // Check the connectors this project needs, so the title bar can flag a missing or broken one.
@@ -49,4 +51,4 @@ if (gallery) {
 }
 
 // Dev builds expose the store for scripted UI checks from the console.
-if (import.meta.env.DEV) Object.assign(window, { __composer: { actions, useProject, storyProps, craft, tutorial: { ...tutorialApi, useTutorial }, updates } });
+if (import.meta.env.DEV) void import("./store/skills").then((skills) => Object.assign(window, { __composer: { actions, useProject, storyProps, craft, skills, tutorial: { ...tutorialApi, useTutorial }, updates } }));

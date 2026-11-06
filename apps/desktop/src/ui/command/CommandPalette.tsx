@@ -7,6 +7,7 @@ import { openFoundations, reflect } from "../../store/craft";
 import { tutorial, useTutorial } from "../../tutorial/store";
 import { updateCommand } from "../../store/updates";
 import { goHome, openProject, refreshHome, useProjects } from "../../store/projects";
+import { compileBrief, setGlobal, useSkills } from "../../store/skills";
 import { cx } from "../primitives/cx";
 import { Button } from "../primitives/Button";
 import { Dot } from "../primitives/Dot";
@@ -15,7 +16,7 @@ import styles from "./CommandPalette.module.css";
 
 interface Item {
   id: string;
-  group: "Actions" | "Projects" | "Nodes" | "Memory" | "Snapshots";
+  group: "Actions" | "Projects" | "Skills" | "Nodes" | "Memory" | "Snapshots";
   label: string;
   hint?: string;
   keys?: string;
@@ -36,6 +37,7 @@ function useItems(open: boolean): Item[] {
   const current = useProject((s) => s.project?.id);
   const view = useProjects((s) => s.view);
   const projects = useProjects((s) => s.list);
+  const skills = useSkills((s) => s.skills);
   useEffect(() => {
     if (open && useProject.getState().repo) void refreshHome().catch(() => undefined);
   }, [open]);
@@ -45,6 +47,11 @@ function useItems(open: boolean): Item[] {
     const switchTo: Item[] = projects
       .filter((c) => c.project.id !== current || view === "home")
       .map((c) => ({ id: `project:${c.project.id}`, group: "Projects", label: c.project.name, hint: `${c.project.id === current ? "open · " : ""}${PHASE_INFO[c.project.activePhase].name} · loop ${c.project.loop}`, phase: c.project.activePhase, run: () => void openProject(c.project.id) }));
+    const skillItems: Item[] = [
+      { id: "skills", group: "Skills", label: "Skills library", hint: "toggle skills, compile the Craft Brief", run: () => ui.openSettings("skills") },
+      { id: "compile", group: "Skills", label: "Compile the Craft Brief", hint: "from every Always-on skill", run: () => void compileBrief().then(() => ui.openSettings("skills")) },
+      ...skills.map((s) => ({ id: `skill:${s.id}`, group: "Skills" as const, label: `${s.enabled ? "Turn off" : "Turn on"} ${s.name}`, hint: `${s.mode === "always" ? "always on" : "on demand"} · everywhere`, run: () => void setGlobal(s.id, !s.enabled) })),
+    ];
     const app: Item[] = [
       { id: "settings", group: "Actions", label: "Settings", keys: "⌘,", run: () => ui.setSettingsOpen(true) },
       { id: "request", group: "Actions", label: "Request a feature", hint: "adds it to the Dev queue in Notion", run: () => ui.setRequestOpen(true) },
@@ -52,7 +59,7 @@ function useItems(open: boolean): Item[] {
       { id: "keys", group: "Actions", label: "Keyboard shortcuts", keys: "?", run: () => ui.setKeysOpen(true) },
     ];
     if (view === "home") {
-      return [{ id: "new-project", group: "Actions", label: "New project", keys: "⌘N", run: () => useProjects.setState({ creating: true }) }, ...app, ...switchTo];
+      return [{ id: "new-project", group: "Actions", label: "New project", keys: "⌘N", run: () => useProjects.setState({ creating: true }) }, ...app, ...switchTo, ...skillItems];
     }
     const selected = selection ? graph.nodes[selection] : undefined;
     const go = (phase: Phase, id?: string) => {
@@ -101,9 +108,9 @@ function useItems(open: boolean): Item[] {
       if (!label) continue;
       items.push({ id: `snap:${s.id}`, group: "Snapshots", label, hint: `${marked.has(s.id) ? "bookmark · " : ""}snapshot ${s.seq}`, phase: s.phase, run: () => void playback.open(s.id) });
     }
-    items.push(...switchTo);
+    items.push(...switchTo, ...skillItems);
     return items;
-  }, [open, graph, loop, selection, hypotheses, versions, snapshots, bookmarks, current, view, projects]);
+  }, [open, graph, loop, selection, hypotheses, versions, snapshots, bookmarks, current, view, projects, skills]);
 }
 
 /** Every word must appear; earlier and word-start matches rank first. */

@@ -274,3 +274,51 @@ pub fn read_text_file(path: String) -> Result<String, String> {
     }
     std::fs::read_to_string(&expanded).map_err(|e| e.to_string())
 }
+
+#[derive(Serialize)]
+pub struct FolderFile {
+    path: String,
+    content: String,
+}
+
+/// Reads a skills folder the designer picked: its text files (md, txt, json, yaml), relative
+/// paths, skipping hidden folders and node_modules. Capped so a stray pick can't load a disk.
+#[tauri::command]
+pub fn read_folder(path: String) -> Result<Vec<FolderFile>, String> {
+    const MAX_FILES: usize = 400;
+    const MAX_BYTES: u64 = 4_000_000;
+    let root = PathBuf::from(&path);
+    if !root.is_dir() {
+        return Err("That isn't a folder.".into());
+    }
+    let mut out = Vec::new();
+    let mut total = 0u64;
+    let mut stack = vec![root.clone()];
+    while let Some(dir) = stack.pop() {
+        let entries = std::fs::read_dir(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+        for entry in entries.flatten() {
+            let p = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with('.') || name == "node_modules" {
+                continue;
+            }
+            if p.is_dir() {
+                stack.push(p);
+                continue;
+            }
+            let text = p.extension().and_then(|e| e.to_str()).is_some_and(|e| matches!(e.to_ascii_lowercase().as_str(), "md" | "markdown" | "txt" | "json" | "yaml" | "yml"));
+            if !text {
+                continue;
+            }
+            let len = entry.metadata().map(|m| m.len()).unwrap_or(0);
+            if out.len() >= MAX_FILES || total + len > MAX_BYTES {
+                return Err("That folder holds more text than a skills folder should (400 files or 4 MB).".into());
+            }
+            total += len;
+            let content = std::fs::read_to_string(&p).unwrap_or_default();
+            let rel = p.strip_prefix(&root).map(|r| r.to_string_lossy().to_string()).unwrap_or(name);
+            out.push(FolderFile { path: rel, content });
+        }
+    }
+    Ok(out)
+}

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { hashOf, type Phase, type RecipeId, type TextArtifact } from "@composer/core";
-import { RECIPES, replayOne, tallyReplay, withCandidate, type ReplayCandidate, type ReplayTally, type StoredPrompt } from "@composer/engine";
+import { RECIPES, briefFor, replayOne, tallyReplay, withCandidate, type CraftBrief, type ReplayCandidate, type ReplayTally, type StoredPrompt } from "@composer/engine";
 import type { ProposalRow, ReplayCaseRow, ReplayResultRow, Repo } from "@composer/data";
 import { llmClient, toast, useProject } from "./project";
 import type { PrincipleDiff, RuleDiff } from "./craft";
@@ -48,7 +48,11 @@ function patch(id: string, p: Partial<ReplayState>) {
 }
 
 /** The change a proposal would make, as replay applies it. Design-system proposals lint instead. */
-export function candidateOf(p: ProposalRow): ReplayCandidate | undefined {
+export function candidateOf(p: ProposalRow, phase?: Phase): ReplayCandidate | undefined {
+  if (p.targetKind === "craft_brief") {
+    const d = p.diff as { version: string; brief: CraftBrief };
+    return { kind: "brief", version: d.version, principles: phase ? briefFor(d.brief, phase) : d.brief.general };
+  }
   if (p.targetKind === "rule") {
     const d = p.diff as RuleDiff;
     return { kind: "rule", phase: d.phase, id: "R-new", text: d.text };
@@ -128,7 +132,7 @@ export async function runReplay(p: ProposalRow) {
     try {
       if (!prompt?.system) throw new Error("The stored prompt is missing.");
       const model = (await r.getRun(c.runId))?.model ?? "claude-opus-5-5";
-      const art = await replayOne(llmClient(), withCandidate(prompt, candidate), c.recipe as RecipeId, model, signal);
+      const art = await replayOne(llmClient(), withCandidate(prompt, candidateOf(p, c.phase as Phase) ?? candidate), c.recipe as RecipeId, model, signal);
       const hash = hashOf(art);
       const result = await r.saveReplayResult({ proposalId: p.id, caseId: c.id, outputHash: hash, status: "done" }, [{ hash, value: art, kind: "artifact" }]);
       row = { ...row, result, candidate: art };

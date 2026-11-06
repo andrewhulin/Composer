@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { BookOpen, Cpu, Download, Inbox, Plug, SlidersHorizontal, TriangleAlert, type LucideIcon } from "lucide-react";
+import { BookOpen, Cpu, Download, Inbox, Plug, Puzzle, SlidersHorizontal, TriangleAlert, type LucideIcon } from "lucide-react";
 import { INTEGRATIONS } from "../../connections/registry";
 import { isProblem, isRequired, statusLabel } from "../../connections/status";
 import { useConnections } from "../../store/connections";
@@ -12,6 +12,7 @@ import { Badge, Button, Icon, Input } from "../primitives";
 import { cx } from "../primitives/cx";
 import { ConnectorsSection } from "./ConnectorsSection";
 import { RequestsSection } from "./RequestsSection";
+import { SkillsSection } from "./SkillsSection";
 import { UpdatesSection } from "./UpdatesSection";
 import styles from "./Settings.module.css";
 
@@ -19,6 +20,7 @@ const NAV: { id: SettingsSection; label: string; icon: LucideIcon }[] = [
   { id: "general", label: "General", icon: SlidersHorizontal },
   { id: "model", label: "Model and API", icon: Cpu },
   { id: "connectors", label: "Connectors", icon: Plug },
+  { id: "skills", label: "Skills", icon: Puzzle },
   { id: "foundations", label: "Foundations", icon: BookOpen },
   { id: "updates", label: "Updates", icon: Download },
   { id: "requests", label: "Requests", icon: Inbox },
@@ -70,6 +72,7 @@ export function Settings() {
           {section === "general" && <GeneralSection />}
           {section === "model" && <ModelSection />}
           {section === "connectors" && <ConnectorsSection />}
+          {section === "skills" && <SkillsSection />}
           {section === "foundations" && <FoundationsSection />}
           {section === "updates" && <UpdatesSection />}
           {section === "requests" && <RequestsSection />}

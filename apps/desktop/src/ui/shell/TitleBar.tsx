@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { PHASE_INFO } from "@composer/core";
 import { actions, useProject } from "../../store/project";
+import { goHome } from "../../store/projects";
 import { useSession } from "../../store/session";
 import { GuidePill } from "../tutorial/Coach";
 import { PanelToggles } from "./PanelToggles";
@@ -16,6 +17,8 @@ export function TitleBar() {
   const running = useProject((s) => Object.values(s.live).some((r) => r.status === "running"));
   const session = useSession();
   const [editing, setEditing] = useState(false);
+  // One click goes Home; a double-click renames. The click waits a beat so a double-click can cancel it.
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const status =
     session.status === "error"
@@ -51,7 +54,20 @@ export function TitleBar() {
             }}
           />
         ) : (
-          <button type="button" className={styles.project} onDoubleClick={() => setEditing(true)} title="Double-click to rename" data-tour="project-name">
+          <button
+            type="button"
+            className={styles.project}
+            onClick={(e) => {
+              clearTimeout(clickTimer.current);
+              if (e.detail <= 1) clickTimer.current = setTimeout(goHome, 220);
+            }}
+            onDoubleClick={() => {
+              clearTimeout(clickTimer.current);
+              setEditing(true);
+            }}
+            title="All projects (⇧⌘H) · double-click to rename"
+            data-tour="project-name"
+          >
             {project?.name ?? "Design Composer"}
           </button>
         )}

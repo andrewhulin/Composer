@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import type { Graph, Weight } from "@composer/core";
 import { claude, graphOf, hypothesis, output, source, wire } from "@composer/core/testing";
-import { allStatuses, blastRadius, claudeStatus, emptyEnv, envKeyFor, localKey, outputLockState, type KeyEnv } from "./keys";
+import { allStatuses, blastRadius, carryFreshness, claudeStatus, emptyEnv, envKeyFor, localKey, outputLockState, type KeyEnv } from "./keys";
 import { updateNode } from "./graph-ops";
 
 /** Marks every Claude node as freshly run against the current graph. */
@@ -92,5 +92,25 @@ describe("blast radius", () => {
       ),
       { numRuns: 150 },
     );
+  });
+});
+
+describe("carryFreshness", () => {
+  const inlet = (versionId: string) => output("in", { mode: "inlet", familyId: "fam", versionId, phase: "define" });
+  const before = runAll(graphOf([inlet("v1"), hypothesis("h", { blockId: "b1" }), claude("a"), claude("b")], [wire("in", "a", "context"), wire("h", "a", "hypothesis"), wire("a", "b", "context")]));
+  const swap = (g: Graph): Graph => ({ ...g, nodes: { ...g.nodes, in: inlet("v2"), h: hypothesis("h", { blockId: "b2" }) } });
+
+  it("keeps fresh nodes fresh when the ids they depend on are swapped", () => {
+    expect(claudeStatus(swap(before), "a", emptyEnv)).toBe("stale");
+    const after = carryFreshness(before, swap(before));
+    expect(claudeStatus(after, "a", emptyEnv)).toBe("fresh");
+    expect(claudeStatus(after, "b", emptyEnv)).toBe("fresh");
+  });
+
+  it("leaves stale nodes stale", () => {
+    const edited = updateNode(before, "a", { instruction: "Say it differently" });
+    expect(claudeStatus(edited, "a", emptyEnv)).toBe("stale");
+    const after = carryFreshness(edited, swap(edited));
+    expect(claudeStatus(after, "a", emptyEnv)).toBe("stale");
   });
 });

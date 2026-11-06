@@ -68,7 +68,7 @@ Three rules everything else depends on:
 The only mutable columns are branch head and state, proposal status and hypothesis status. Each change to one of them also writes a `decision` row. Reverting creates a new version that points at the old content. Ids are ULIDs. Ordering uses a per-project monotonic `seq`, never wall-clock time.
 
 Entities (illustrative; final names live in `packages/data/migrations`):
-- **Project:** id, name ("Recap after a session"), active_phase, loop_index, branch_id, head_snapshot_id.
+- **Project:** id, name ("Recap after a session"), active_phase, loop_index, branch_id, head_snapshot_id, archived_at. Archiving hides a project from Home and deletes nothing.
 - **Node:** id, project_id, phase, kind, subtype, title, position, size, config_hash, weight, pinned, weight_note, alias.
   - kind is one of `source | claude | hypothesis | output`.
   - subtype is a source kind or a Claude recipe.
@@ -325,6 +325,15 @@ user      Instruction (rendered template) + output format
   - Memory health shows the latest learned rule.
 
 ## 10. UI build-out (match Figma closely)
+
+**Home** opens at launch: every project as a card, newest edit first. Each card shows:
+- its phase and loop
+- when it was last edited
+- a cover: the newest prototype, live; otherwise the newest locked output on paper
+
+From a card you can rename, duplicate or archive the project. Behind Home, the last project is already loaded, so Esc returns to it. ⇧⌘H, the title-bar project name and ⌘K → Go home all lead back to Home.
+
+Switching projects saves what's pending and stops the old project's runs. It then clears its undo, streams, playback and transient panels before the next project loads. A duplicate copies the current state (graph, locked outputs, hypotheses, runs) with fresh ids. History and eval evidence stay with the original, and nodes that were fresh stay fresh.
 
 Since DC-1 the UI runs on its own design system: 15px body type, a spacing scale, shared components and Lucide icons, all described in [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md). The sizes below are the current ones. They're about 1.25× the Figma frames, which were drawn at 12px, so check layout and hierarchy against Figma, not pixel sizes.
 

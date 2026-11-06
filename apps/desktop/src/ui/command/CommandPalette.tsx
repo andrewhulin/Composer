@@ -6,6 +6,7 @@ import { playback } from "../../store/playback";
 import { openFoundations, reflect } from "../../store/craft";
 import { tutorial, useTutorial } from "../../tutorial/store";
 import { updateCommand } from "../../store/updates";
+import { goHome, openProject, refreshHome, useProjects } from "../../store/projects";
 import { cx } from "../primitives/cx";
 import { Button } from "../primitives/Button";
 import { Dot } from "../primitives/Dot";
@@ -14,7 +15,7 @@ import styles from "./CommandPalette.module.css";
 
 interface Item {
   id: string;
-  group: "Actions" | "Nodes" | "Memory" | "Snapshots";
+  group: "Actions" | "Projects" | "Nodes" | "Memory" | "Snapshots";
   label: string;
   hint?: string;
   keys?: string;
@@ -32,14 +33,34 @@ function useItems(open: boolean): Item[] {
   const versions = useProject((s) => s.versions);
   const snapshots = useProject((s) => s.snapshots);
   const bookmarks = useProject((s) => s.bookmarks);
+  const current = useProject((s) => s.project?.id);
+  const view = useProjects((s) => s.view);
+  const projects = useProjects((s) => s.list);
+  useEffect(() => {
+    if (open && useProject.getState().repo) void refreshHome().catch(() => undefined);
+  }, [open]);
   return useMemo(() => {
     if (!open) return [];
     const ui = useUi.getState();
+    const switchTo: Item[] = projects
+      .filter((c) => c.project.id !== current || view === "home")
+      .map((c) => ({ id: `project:${c.project.id}`, group: "Projects", label: c.project.name, hint: `${c.project.id === current ? "open · " : ""}${PHASE_INFO[c.project.activePhase].name} · loop ${c.project.loop}`, phase: c.project.activePhase, run: () => void openProject(c.project.id) }));
+    const app: Item[] = [
+      { id: "settings", group: "Actions", label: "Settings", keys: "⌘,", run: () => ui.setSettingsOpen(true) },
+      { id: "request", group: "Actions", label: "Request a feature", hint: "adds it to the Dev queue in Notion", run: () => ui.setRequestOpen(true) },
+      { id: "update", group: "Actions", ...updateCommand() },
+      { id: "keys", group: "Actions", label: "Keyboard shortcuts", keys: "?", run: () => ui.setKeysOpen(true) },
+    ];
+    if (view === "home") {
+      return [{ id: "new-project", group: "Actions", label: "New project", keys: "⌘N", run: () => useProjects.setState({ creating: true }) }, ...app, ...switchTo];
+    }
     const selected = selection ? graph.nodes[selection] : undefined;
     const go = (phase: Phase, id?: string) => {
       void actions.setActivePhase(phase).then(() => id && actions.select(id));
     };
     const items: Item[] = [
+      { id: "home", group: "Actions", label: "Go home", hint: "all projects", keys: "⇧⌘H", run: goHome },
+      { id: "switch", group: "Actions", label: "Switch project…", hint: "opens Home", run: goHome },
       ...PHASES.map((p, i) => ({ id: `phase:${p}`, group: "Actions" as const, label: `Go to ${PHASE_INFO[p].name}`, keys: `⌘${i + 1}`, phase: p, run: () => go(p) })),
       ...(selected?.kind === "claude" ? [{ id: "run", group: "Actions" as const, label: `Run ${selected.title}`, keys: "⌘↵", run: () => actions.run(selected.id) }] : []),
       { id: "add", group: "Actions", label: "Add node", keys: "N", run: () => ui.setAddMenuOpen(true) },
@@ -56,10 +77,7 @@ function useItems(open: boolean): Item[] {
       { id: "compare", group: "Actions", label: "Compare snapshots", run: () => ui.setCompareOpen(true) },
       { id: "foundations", group: "Actions", label: "Open Foundations", hint: "design system, philosophy, learned rules", run: () => openFoundations() },
       { id: "reflect", group: "Actions", label: "Reflect now", hint: "draft rules from scored runs", run: () => void reflect() },
-      { id: "settings", group: "Actions", label: "Settings", keys: "⌘,", run: () => ui.setSettingsOpen(true) },
-      { id: "request", group: "Actions", label: "Request a feature", hint: "adds it to the Dev queue in Notion", run: () => ui.setRequestOpen(true) },
-      { id: "update", group: "Actions", ...updateCommand() },
-      { id: "keys", group: "Actions", label: "Keyboard shortcuts", keys: "?", run: () => ui.setKeysOpen(true) },
+      ...app,
       ...(useTutorial.getState().state?.status === "paused" ? [{ id: "guide-resume", group: "Actions" as const, label: "Tutorial: resume the guide", hint: "pick up where you left off", run: () => tutorial.resume() }] : []),
       { id: "guide-restart", group: "Actions", label: "Tutorial: start from the beginning", hint: "setup and your first loop", run: () => tutorial.restart() },
     ];
@@ -83,14 +101,15 @@ function useItems(open: boolean): Item[] {
       if (!label) continue;
       items.push({ id: `snap:${s.id}`, group: "Snapshots", label, hint: `${marked.has(s.id) ? "bookmark · " : ""}snapshot ${s.seq}`, phase: s.phase, run: () => void playback.open(s.id) });
     }
+    items.push(...switchTo);
     return items;
-  }, [open, graph, loop, selection, hypotheses, versions, snapshots, bookmarks]);
+  }, [open, graph, loop, selection, hypotheses, versions, snapshots, bookmarks, current, view, projects]);
 }
 
 /** Every word must appear; earlier and word-start matches rank first. */
 function rank(items: Item[], query: string): Item[] {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-  if (!words.length) return items.filter((i) => i.group === "Actions").concat(items.filter((i) => i.group === "Nodes").slice(0, 8));
+  if (!words.length) return items.filter((i) => i.group === "Actions").concat(items.filter((i) => i.group === "Projects").slice(0, 5), items.filter((i) => i.group === "Nodes").slice(0, 8));
   return items
     .map((item) => {
       const hay = `${item.label} ${item.hint ?? ""}`.toLowerCase();
@@ -187,7 +206,7 @@ const MAP: { group: string; keys: [string, string][] }[] = [
   { group: "Canvas", keys: [["V", "Select"], ["H", "Pan"], ["C", "Comment"], ["N", "Add node"], ["W", "Cycle weight: mute, light, normal, heavy"], ["P", "Pin or unpin"], ["⌥ drag", "Drop without snapping"], ["⌘1–5", "Go to a phase"], ["G", "Define and Validate: workspace or graph"], ["B", "Build: variants board"], ["⌘L", "Lock the key node"]] },
   { group: "History", keys: [["⌘Z / ⇧⌘Z", "Undo and redo (never deletes runs)"], ["⇧← / ⇧→", "Previous or next bookmark"], ["← / →", "Step through playback"], ["Space", "Play or pause playback"], ["Esc", "Leave playback"]] },
   { group: "Panels", keys: [["⌥⌘←", "Show or hide the sidebar"], ["⌥⌘→", "Show or hide the inspector"], ["⌥⌘↓", "Show or hide the history bar"], ["⌘\\", "Hide every panel, or bring them all back"]] },
-  { group: "App", keys: [["⌘K", "Search everything"], ["⌘,", "Settings"], ["?", "This list"]] },
+  { group: "App", keys: [["⇧⌘H", "Home: every project"], ["⌘N", "On Home: start a project"], ["⌘K", "Search everything"], ["⌘,", "Settings"], ["?", "This list"]] },
 ];
 
 export function KeyboardMap() {

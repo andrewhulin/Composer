@@ -19,6 +19,8 @@ import { useTutorial } from "../../tutorial/store";
 import { KeyBanner, Toasts } from "../feedback/Toasts";
 import { CompareView } from "../history/CompareView";
 import { playback, usePlayback } from "../../store/playback";
+import { goHome, leaveHome, useProjects } from "../../store/projects";
+import { Home } from "../home/Home";
 import { Button } from "../primitives/Button";
 import styles from "./AppShell.module.css";
 
@@ -44,6 +46,23 @@ function useShortcuts() {
       }
       if (e.key === "Escape" && ui.compareOpen) {
         ui.setCompareOpen(false);
+        return;
+      }
+      // ⇧⌘H: Home, from anywhere. On Home only the app-wide keys apply.
+      if (e.metaKey && e.shiftKey && e.key.toLowerCase() === "h") {
+        e.preventDefault();
+        goHome();
+        return;
+      }
+      if (useProjects.getState().view === "home") {
+        if (e.metaKey && e.key.toLowerCase() === "k") {
+          e.preventDefault();
+          ui.setPaletteOpen(!ui.paletteOpen);
+        } else if (e.metaKey && e.key === ",") {
+          e.preventDefault();
+          ui.setSettingsOpen(true);
+        } else if (e.key === "?" && !typing(e.target)) ui.setKeysOpen(!ui.keysOpen);
+        else if (e.key === "Escape" && !typing(e.target) && !ui.paletteOpen && !ui.keysOpen) leaveHome();
         return;
       }
       const inPlayback = usePlayback.getState().active;
@@ -157,10 +176,24 @@ export function AppShell() {
   const settingsOpen = useUi((s) => s.settingsOpen);
   const setSettingsOpen = useUi((s) => s.setSettingsOpen);
   const [hasKey, setHasKey] = useState(true);
+  const view = useProjects((s) => s.view);
   useShortcuts();
   useEffect(() => {
     if (!settingsOpen) void getSecret(SECRET.anthropic).then((k) => setHasKey(!!k));
   }, [settingsOpen]);
+
+  if (view === "home" && session.status !== "error") {
+    return (
+      <>
+        <Home />
+        <SettingsDialog />
+        <RequestSheet />
+        <CommandPalette />
+        <KeyboardMap />
+        <Toasts />
+      </>
+    );
+  }
 
   return (
     <div

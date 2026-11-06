@@ -1,5 +1,6 @@
 import {
   canonicalJson,
+  emptyGraph,
   fromManifest,
   hashOf,
   toManifest,
@@ -31,6 +32,24 @@ export interface ProjectRow {
   workingManifest: Hash | null;
   createdAt: string;
   updatedAt: string;
+  /** Set when archived from Home. Archived projects keep everything and can be restored. */
+  archivedAt: string | null;
+}
+
+/** What a Home card shows about a project beyond its row. */
+export interface ProjectCover {
+  /** The newest locked key output, any phase. */
+  latest?: { phase: Phase; contentHash: Hash; createdAt: string };
+  /** The newest prototype a Build run produced, locked or not. */
+  prototypeHash?: Hash;
+}
+
+/** Old id to new id, for the rows a duplicate copies. */
+interface IdMaps {
+  family: Map<Id, Id>;
+  version: Map<Id, Id>;
+  block: Map<Id, Id>;
+  run: Map<Id, Id>;
 }
 
 export type SnapshotKind = "run" | "lock" | "swap" | "fork" | "manual" | "init";
@@ -236,8 +255,85 @@ export class Repo {
     return r ? toProject(r) : undefined;
   }
 
-  async listProjects(): Promise<ProjectRow[]> {
-    return (await this.db.all("SELECT * FROM project ORDER BY updated_at DESC")).map(toProject);
+  /** Most recently edited first. Archived projects only when asked for. */
+  async listProjects(opts: { archived?: boolean } = {}): Promise<ProjectRow[]> {
+    const where = opts.archived ? "archived_at IS NOT NULL" : "archived_at IS NULL";
+    return (await this.db.all(`SELECT * FROM project WHERE ${where} ORDER BY updated_at DESC`)).map(toProject);
+  }
+
+  /** Hides a project from Home. Nothing is deleted, and it doesn't count as an edit. */
+  async archiveProject(id: Id): Promise<void> {
+    await this.db.run("UPDATE project SET archived_at = ? WHERE id = ?", [this.clock.now(), id]);
+  }
+
+  async restoreProject(id: Id): Promise<void> {
+    await this.db.run("UPDATE project SET archived_at = NULL WHERE id = ?", [id]);
+  }
+
+  /** For Home: each project's newest locked output and newest prototype. */
+  async projectCovers(): Promise<Record<Id, ProjectCover>> {
+    const out: Record<Id, ProjectCover> = {};
+    const latest = await this.db.all(
+      "SELECT v.project_id, v.phase, v.content_hash, v.created_at FROM output_version v WHERE v.created_at = (SELECT MAX(created_at) FROM output_version w WHERE w.project_id = v.project_id)",
+    );
+    for (const r of latest) out[str(r.project_id)] = { latest: { phase: str(r.phase) as Phase, contentHash: str(r.content_hash), createdAt: str(r.created_at) } };
+    const protos = await this.db.all(
+      "SELECT r.project_id, r.output_hash FROM run r WHERE r.recipe = 'prototype' AND r.status = 'succeeded' AND r.output_hash IS NOT NULL AND r.started_seq = (SELECT MAX(started_seq) FROM run q WHERE q.project_id = r.project_id AND q.recipe = 'prototype' AND q.status = 'succeeded' AND q.output_hash IS NOT NULL)",
+    );
+    for (const r of protos) (out[str(r.project_id)] ??= {}).prototypeHash = str(r.output_hash);
+    return out;
+  }
+
+  /**
+   * A new project holding a copy of another's current state: the working graph, its locked
+   * outputs, hypotheses and latest runs. History (snapshots, bookmarks, decisions) and eval
+   * evidence (scores, picks, replay cases) stay with the original, so nothing is counted twice.
+   * Copied rows get new ids; `rekey` lets the caller refresh node keys that depend on them.
+   */
+  async duplicateProject(sourceId: Id, name: string, rekey: (before: Graph, after: Graph) => Graph = (_b, a) => a): Promise<ProjectRow> {
+    const src = await this.getProject(sourceId);
+    if (!src) throw new Error(`No project ${sourceId}`);
+    const before = (await this.loadWorking(sourceId)) ?? emptyGraph();
+    const [versions, blocks, runs] = await Promise.all([
+      this.db.all("SELECT * FROM output_version WHERE project_id = ?", [sourceId]),
+      this.db.all("SELECT * FROM hypothesis_block WHERE project_id = ?", [sourceId]),
+      this.db.all("SELECT * FROM run WHERE project_id = ? AND status != 'running'", [sourceId]),
+    ]);
+    const maps: IdMaps = { family: new Map(), version: new Map(), block: new Map(), run: new Map() };
+    const fresh = (m: Map<Id, Id>, id: Id) => m.get(id) ?? (m.set(id, this.ids()), m.get(id)!);
+    for (const r of runs) fresh(maps.run, str(r.id));
+    for (const r of blocks) fresh(maps.block, str(r.id));
+    for (const r of versions) {
+      fresh(maps.version, str(r.id));
+      fresh(maps.family, str(r.family_id));
+    }
+    for (const n of Object.values(before.nodes)) if (n.kind === "output") fresh(maps.family, n.familyId);
+
+    const id = this.ids();
+    const branchId = this.ids();
+    const now = this.clock.now();
+    const mapped = (m: Map<Id, Id>, v: SqlValue | undefined) => (v == null ? null : (m.get(str(v)) ?? str(v)));
+    const insert = (table: string, row: Row): Statement => {
+      const cols = Object.keys(row);
+      return { sql: `INSERT INTO ${table} (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`, params: cols.map((c) => row[c] as SqlValue) };
+    };
+    const after = rekey(before, remapGraph(before, maps));
+    const { hash, statements } = this.graphStatements(after);
+    await this.db.tx([
+      ...statements,
+      {
+        sql: "INSERT INTO project (id, name, active_phase, loop, branch_id, working_manifest, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        params: [id, name, src.activePhase, src.loop, branchId, hash, now, now],
+      },
+      { sql: "INSERT INTO branch (id, project_id, name, created_at) VALUES (?, ?, ?, ?)", params: [branchId, id, "main", now] },
+      ...runs.map((r) => insert("run", { ...r, id: mapped(maps.run, r.id), project_id: id })),
+      ...blocks.map((r) => insert("hypothesis_block", { ...r, id: mapped(maps.block, r.id), project_id: id, parent_id: mapped(maps.block, r.parent_id), snapshot_id: null })),
+      ...versions.map((r) =>
+        insert("output_version", { ...r, id: mapped(maps.version, r.id), project_id: id, family_id: mapped(maps.family, r.family_id), run_id: mapped(maps.run, r.run_id), snapshot_id: null }),
+      ),
+    ]);
+    await this.snapshot({ projectId: id, graph: after, kind: "init", phase: src.activePhase, label: `Duplicated from ${src.name}` });
+    return (await this.getProject(id))!;
   }
 
   async updateProject(id: Id, patch: Partial<Pick<ProjectRow, "name" | "activePhase" | "loop" | "branchId">>): Promise<void> {
@@ -755,7 +851,23 @@ function toProject(r: Row): ProjectRow {
     workingManifest: strOrNull(r.working_manifest),
     createdAt: str(r.created_at),
     updatedAt: str(r.updated_at),
+    archivedAt: strOrNull(r.archived_at),
   };
+}
+
+/** The same graph with every id that points at a copied row swapped for the copy's id. */
+function remapGraph(graph: Graph, maps: IdMaps): Graph {
+  const to = (m: Map<Id, Id>, id: Id) => m.get(id) ?? id;
+  const nodes: Graph["nodes"] = {};
+  for (const [nid, n] of Object.entries(graph.nodes)) {
+    if (n.kind === "hypothesis") nodes[nid] = { ...n, blockId: to(maps.block, n.blockId) };
+    else if (n.kind === "output") nodes[nid] = { ...n, familyId: to(maps.family, n.familyId), ...(n.versionId ? { versionId: to(maps.version, n.versionId) } : {}) };
+    else if (n.kind === "claude" && n.notes?.length) nodes[nid] = { ...n, notes: n.notes.map((note) => ({ ...note, runId: to(maps.run, note.runId) })) };
+    else nodes[nid] = n;
+  }
+  const outputs: Graph["outputs"] = {};
+  for (const [nid, o] of Object.entries(graph.outputs)) outputs[nid] = { ...o, runId: to(maps.run, o.runId) };
+  return { ...graph, nodes, outputs };
 }
 
 function toSnapshot(r: Row): SnapshotRow {

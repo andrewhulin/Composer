@@ -76,6 +76,22 @@ export function localKey(graph: Graph, id: Id, memo: Memo = new Map()): Hash {
   return key;
 }
 
+/**
+ * A copy of a graph whose ids were swapped (a duplicated project) would read every node that
+ * depends on them as stale. This recomputes the stored key of each node that was fresh before,
+ * so it's fresh in the copy too. Nodes that were stale stay stale.
+ */
+export function carryFreshness(before: Graph, after: Graph): Graph {
+  const was = new Map<Id, Hash>();
+  const now = new Map<Id, Hash>();
+  const outputs = { ...after.outputs };
+  for (const [id, out] of Object.entries(after.outputs)) {
+    const prior = before.outputs[id];
+    if (prior && prior.localKey === localKey(before, id, was)) outputs[id] = { ...out, localKey: localKey(after, id, now) };
+  }
+  return { ...after, outputs };
+}
+
 export type NodeStatus = "never_run" | "fresh" | "stale" | "stale_env";
 
 /**

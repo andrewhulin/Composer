@@ -17,9 +17,24 @@ export const useComments = create<{ list: Comment[]; editing: string | null }>((
 
 const key = () => `comments:${useProject.getState().project?.id ?? "none"}`;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
+// The project a pending save belongs to, fixed when it's scheduled, so a switch can't redirect it.
+let pendingKey: string | undefined;
+function write() {
+  clearTimeout(saveTimer);
+  saveTimer = undefined;
+  const target = pendingKey;
+  pendingKey = undefined;
+  return target ? useProject.getState().repo?.setSetting(target, useComments.getState().list) : undefined;
+}
 function save() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => void useProject.getState().repo?.setSetting(key(), useComments.getState().list), 300);
+  pendingKey = key();
+  saveTimer = setTimeout(() => void write(), 300);
+}
+
+/** Writes a pending save now. Called before switching projects. */
+export async function flushComments() {
+  if (saveTimer !== undefined) await write();
 }
 
 export async function loadComments() {

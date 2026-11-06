@@ -12,7 +12,9 @@
 .right { justify-content: flex-end; gap: var(--sp-8); }
 .app { margin-left: var(--traffic-lights); white-space: nowrap; font-size: var(--fs-body); font-weight: 500; color: var(--text-secondary); }
 .crumbs { display: flex; align-items: center; gap: var(--sp-10); font-size: var(--fs-body); white-space: nowrap; }
-.project { font-weight: 500; color: var(--text-primary); }
+.project { margin: 0 calc(-1 * var(--sp-6)); padding: var(--sp-2) var(--sp-6); border-radius: var(--r-xs); font-weight: 500; color: var(--text-primary); }
+.project:hover { background: var(--bg-hover); }
+.project:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .slash { color: var(--text-muted); }
 .phase { color: var(--text-secondary); }
 .saved { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

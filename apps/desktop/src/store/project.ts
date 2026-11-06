@@ -112,7 +112,7 @@ interface ProjectState {
   canRedo: boolean;
 }
 
-export const useProject = create<ProjectState>(() => ({
+const initialState = (): Omit<ProjectState, "repo" | "project"> => ({
   ready: false,
   graph: emptyGraph(),
   blobs: new Map(),
@@ -132,7 +132,9 @@ export const useProject = create<ProjectState>(() => ({
   preview: null,
   canUndo: false,
   canRedo: false,
-}));
+});
+
+export const useProject = create<ProjectState>(() => initialState());
 
 const get = useProject.getState;
 const set = useProject.setState;
@@ -159,6 +161,7 @@ let saveTimer: ReturnType<typeof setTimeout> | undefined;
 function scheduleSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
+    saveTimer = undefined;
     const { repo, project, graph } = get();
     if (repo && project) repo.saveWorking(project.id, graph).catch((e) => toast(`Couldn't save: ${String(e)}`, "error"));
   }, 500);
@@ -224,6 +227,35 @@ async function takeSnapshot(kind: "run" | "lock" | "swap" | "manual", causeId?: 
   const snap = await repo.snapshot({ projectId: project.id, graph, kind, phase: activePhase, ...(causeId ? { causeId } : {}), ...(label ? { label } : {}) });
   await refreshHistory();
   return snap;
+}
+
+// ── switching projects ─────────────────────────────────────────────────────
+
+/** Writes a pending autosave now instead of in 500ms, so switching away never loses an edit. */
+export async function saveNow() {
+  if (saveTimer === undefined) return;
+  clearTimeout(saveTimer);
+  saveTimer = undefined;
+  const { repo, project, graph } = get();
+  if (repo && project) await repo.saveWorking(project.id, graph);
+}
+
+/**
+ * Puts the open project down before another loads: saves what's pending, stops its runs, and
+ * clears everything that belongs to it (undo, streams, selection, history) so nothing carries
+ * across. Returns how many runs were stopped. The repo stays; toasts stay on screen.
+ */
+export async function closeProject(): Promise<number> {
+  await saveNow();
+  const stopped = Object.values(get().live).filter((r) => r.status === "running").length;
+  scheduler.cancelAll();
+  undoStack.length = 0;
+  redoStack.length = 0;
+  buffers.clear();
+  const { repo, toasts } = get();
+  // Zustand merges, so the project has to be cleared by name.
+  set({ ...initialState(), project: undefined, ...(repo ? { repo } : {}), toasts });
+  return stopped;
 }
 
 // ── boot ───────────────────────────────────────────────────────────────────

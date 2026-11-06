@@ -239,6 +239,13 @@ CREATE TABLE replay_result (
 CREATE INDEX replay_result_proposal ON replay_result(proposal_id);
 `,
   },
+  {
+    id: 3,
+    name: "project_archive",
+    sql: `
+ALTER TABLE project ADD COLUMN archived_at TEXT;
+`,
+  },
 ];
 
 /** Applies pending migrations. Each migration runs in one transaction. */

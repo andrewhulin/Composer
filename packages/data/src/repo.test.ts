@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { diffGraphs, sequentialIds, type Graph, type Weight } from "@composer/core";
-import { claude, graphOf, source, wire } from "@composer/core/testing";
+import { claude, graphOf, hypothesis, output, source, wire } from "@composer/core/testing";
 import { migrate } from "./migrations";
 import { nodeSqliteDriver } from "./node-sqlite";
 import { Repo, type Clock } from "./repo";
@@ -17,7 +17,7 @@ const g1 = (): Graph => graphOf([source("s"), claude("c")], [wire("s", "c", "con
 describe("migrations", () => {
   it("apply once and are idempotent", async () => {
     const { db } = setup();
-    expect(await migrate(db)).toEqual([1, 2]);
+    expect(await migrate(db)).toEqual([1, 2, 3]);
     expect(await migrate(db)).toEqual([]);
   });
 });
@@ -223,5 +223,98 @@ describe("craft tier", () => {
 
     await repo.retireReplayCase(c.id);
     expect(await repo.listReplayCases()).toEqual([]);
+  });
+});
+
+describe("projects on Home", () => {
+  const runBase = (projectId: string) => ({ projectId, nodeId: "c", recipe: "synthesize_insights", localKey: "k", envKey: "e", inputManifestHash: null, model: "claude-opus-5-5", effort: "high", templateVersionId: null, ruleIds: [], foundationIds: [], startedSeq: 1 });
+
+  it("archives without counting as an edit, and restores", async () => {
+    const { db, repo } = setup();
+    await migrate(db);
+    const a = await repo.createProject("A");
+    const b = await repo.createProject("B");
+    await repo.archiveProject(a.id);
+    expect((await repo.listProjects()).map((p) => p.name)).toEqual(["B"]);
+    const [archived] = await repo.listProjects({ archived: true });
+    expect(archived?.name).toBe("A");
+    expect(archived?.archivedAt).not.toBeNull();
+    expect(archived?.updatedAt).toBe(a.updatedAt);
+    await repo.restoreProject(a.id);
+    expect((await repo.listProjects()).map((p) => p.name).sort()).toEqual(["A", "B"]);
+    expect((await repo.getProject(b.id))?.archivedAt).toBeNull();
+  });
+
+  it("duplicates the current state with fresh ids, and leaves history and evidence behind", async () => {
+    const { db, repo } = setup();
+    await migrate(db);
+    const p = await repo.createProject("Recap");
+    const h = await repo.createHypothesis({ projectId: p.id, label: "H1", statement: "Proof of progress", vars: [], status: "testing", confidence: 0.5 });
+    await repo.startRun({ ...runBase(p.id), id: "run1" });
+    await repo.finishRun("run1", { status: "succeeded", outputHash: "out1" });
+    await repo.score("run1", 4);
+    const v = await repo.lockOutput({ projectId: p.id, familyId: "fam", phase: "understand", loop: 1, content: { text: "insights" }, runId: "run1" });
+    const g = graphOf(
+      [source("s"), claude("c"), hypothesis("h", { blockId: h.id }), output("o", { familyId: "fam" }), output("in", { mode: "inlet", familyId: "fam", versionId: v.id, phase: "define" })],
+      [wire("s", "c", "context")],
+    );
+    g.outputs.c = { runId: "run1", hash: "out1", localKey: "lk", envKey: "ek" };
+    await repo.saveWorking(p.id, g);
+    await repo.snapshot({ projectId: p.id, graph: g, kind: "manual", phase: "understand" });
+    await repo.updateProject(p.id, { activePhase: "define" });
+
+    const copy = await repo.duplicateProject(p.id, "Recap copy");
+    expect(copy).toMatchObject({ name: "Recap copy", activePhase: "define", loop: 1, archivedAt: null });
+
+    const cg = (await repo.loadWorking(copy.id))!;
+    const [cv] = await repo.listVersions(copy.id);
+    const [ch] = await repo.listHypotheses(copy.id);
+    const [cr] = await repo.runsForProject(copy.id);
+    expect(cv!.id).not.toBe(v.id);
+    expect(cv!.familyId).not.toBe("fam");
+    expect(cv!.contentHash).toBe(v.contentHash);
+    expect(cv!.runId).toBe(cr!.id);
+    expect(ch!.id).not.toBe(h.id);
+    expect(cr!.id).not.toBe("run1");
+    expect(cr!.outputHash).toBe("out1");
+    // The graph points at the copies, not the originals.
+    expect(cg.nodes.h).toMatchObject({ blockId: ch!.id });
+    expect(cg.nodes.o).toMatchObject({ familyId: cv!.familyId });
+    expect(cg.nodes.in).toMatchObject({ familyId: cv!.familyId, versionId: cv!.id });
+    expect(cg.outputs.c?.runId).toBe(cr!.id);
+    // History restarts with one snapshot; scores stay with the original run.
+    const snaps = await repo.listSnapshots(copy.id);
+    expect(snaps.map((s) => [s.kind, s.label])).toEqual([["init", "Duplicated from Recap"]]);
+    expect(await repo.scoresForRun(cr!.id)).toEqual([]);
+    // The original is untouched.
+    expect((await repo.loadWorking(p.id))!.nodes.in).toMatchObject({ versionId: v.id });
+    expect(await repo.listSnapshots(p.id)).toHaveLength(1);
+  });
+
+  it("lets the caller rekey the copied graph", async () => {
+    const { db, repo } = setup();
+    await migrate(db);
+    const p = await repo.createProject("P");
+    await repo.saveWorking(p.id, g1());
+    const copy = await repo.duplicateProject(p.id, "P copy", (before, after) => ({ ...after, nodes: { ...after.nodes, c: { ...after.nodes.c!, title: `${before.nodes.c!.title} again` } } }));
+    expect((await repo.loadWorking(copy.id))!.nodes.c?.title).toMatch(/ again$/);
+  });
+
+  it("covers each project with its newest locked output and newest prototype", async () => {
+    const { db, repo } = setup();
+    await migrate(db);
+    const a = await repo.createProject("A");
+    const b = await repo.createProject("B");
+    await repo.lockOutput({ projectId: a.id, familyId: "f1", phase: "understand", loop: 1, content: { text: "one" } });
+    const later = await repo.lockOutput({ projectId: a.id, familyId: "f2", phase: "define", loop: 1, content: { text: "two" } });
+    await repo.startRun({ ...runBase(a.id), id: "p1", recipe: "prototype" });
+    await repo.finishRun("p1", { status: "succeeded", outputHash: "proto-old" });
+    await repo.startRun({ ...runBase(a.id), id: "p2", recipe: "prototype", startedSeq: 2 });
+    await repo.finishRun("p2", { status: "succeeded", outputHash: "proto-new" });
+    await repo.startRun({ ...runBase(a.id), id: "p3", recipe: "prototype", startedSeq: 3 });
+    await repo.finishRun("p3", { status: "failed" });
+    const covers = await repo.projectCovers();
+    expect(covers[a.id]).toEqual({ latest: { phase: "define", contentHash: later.contentHash, createdAt: expect.any(String) }, prototypeHash: "proto-new" });
+    expect(covers[b.id]).toBeUndefined();
   });
 });

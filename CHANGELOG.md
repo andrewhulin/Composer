@@ -2,6 +2,46 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## Home: pick or start a project (DC-2) · 2026-11-06
+
+### Added
+- **Home** opens at launch.
+  - **Cards:** every project as a card, most recently edited first. Each card shows the active phase in its color, the loop, when it was last edited, and a short project id in Geist Pixel.
+  - **Covers:** the newest prototype, live and scaled. Otherwise the newest locked output on paper, with statements and verdicts in Serif. Otherwise "Nothing locked yet".
+  - **New project** (⌘N): name it inline and it drops straight into Understand. Leaving the name empty makes "Untitled problem".
+  - **Card menu:** Rename (or double-click the name), Duplicate, Archive. Archived projects sit under "Archived" on Home, and Restore brings them back. Nothing is deleted.
+  - **Search** appears once there are more than eight projects.
+- **Home is one keystroke away:**
+  - ⇧⌘H from anywhere.
+  - Clicking the project name in the title bar (double-click still renames).
+  - ⌘K → Go home or Switch project, and every project is listed in the palette.
+  - On Home, Esc goes back to the open project.
+- **Composer remembers the last project** and has it loaded behind Home at launch, so returning to it is instant.
+- **Duplicate** copies a project's current state:
+  - **What comes along:** the graph, locked outputs, hypotheses, latest runs and canvas comments, each with fresh ids.
+  - **What stays with the original:** history, bookmarks, decisions and eval evidence, so scores aren't counted twice. The copy's history starts at "Duplicated from …".
+  - **Freshness:** nodes that were fresh stay fresh. The engine's `carryFreshness` recomputes their keys after the id swap.
+- **Tests (250 in total):**
+  - archive, restore, duplicate and covers in the data layer
+  - fresh nodes staying fresh
+  - switching in the store: no selection, undo, run or UI state carries across, and an edit made just before switching is saved
+  - comments staying with their project
+  - Home's actions and the card covers
+
+### Changed
+- **Migration 3** adds `project.archived_at`. `listProjects` leaves archived projects out unless asked.
+- **Switching projects** saves any pending autosave first, stops the old project's runs (with a toast saying how many), and closes playback. It also clears undo, stream buffers and the studio, variants and compare views.
+
+### Fixed
+- **A canvas comment edited just before a switch** could have been saved under the next project. Comment saves now stay with the project they were scheduled in, and are flushed before switching.
+
+### Decisions
+- **Launch shows Home with the last project already loaded.** "Back to the open project" (Esc) costs nothing, and a fresh project costs nothing either.
+- **Covers prefer a prototype** (locked or not, the newest Build run) because it's the most recognizable thing a project makes. Without one, the newest locked output's headline is shown.
+- **Duplicates don't open automatically.** They land first on Home, so you can rename them before starting.
+- **Archiving the open project closes it.** Home then offers no "back" until another project opens.
+- **Renaming counts as an edit,** so a renamed project moves to the front. Archiving and restoring don't.
+
 ## Composer's own design system (DC-1) · 2026-11-06
 
 ### Added

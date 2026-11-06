@@ -130,7 +130,9 @@ ${card}
       one_thing: "Make the recap the only element above the fold on return.",
       working_well: ["Real quotes from the evidence instead of lorem ipsum."],
     };
-    const answer = schemaText.includes('"flagged"') ? compile : schemaText.includes('"whats_off"') ? review : schemaText.includes('"principles"') ? reflection : schemaText.includes('"voiceover"') ? story : schemaText.includes('"before"') ? pr : schemaText.includes('"decision_rule"') ? strategy : schemaText.includes('"findings"') ? verdict : schemaText.includes('"html"') ? proto : schemaText.includes("insights")
+    // Opus judging a replay: the candidate scores a touch under the original, within the bar.
+    const judge = { a: { score: 4, reason: "Grounded in the quotes and in the required format." }, b: { score: 4, reason: "Close to the original, slightly less specific." } };
+    const answer = schemaText.includes('"reason"') ? judge : schemaText.includes('"flagged"') ? compile : schemaText.includes('"whats_off"') ? review : schemaText.includes('"principles"') ? reflection : schemaText.includes('"voiceover"') ? story : schemaText.includes('"before"') ? pr : schemaText.includes('"decision_rule"') ? strategy : schemaText.includes('"findings"') ? verdict : schemaText.includes('"html"') ? proto : schemaText.includes("insights")
       ? {
           summary: `Returning people lose the thread between sessions and want proof of progress, not a transcript. (${heavy} heavy sources)`,
           insights: [
@@ -162,6 +164,11 @@ ${card}
         };
     const json = JSON.stringify(answer);
     const deltas = json.match(/.{1,24}/g) ?? [json];
-    return { thinking: ["Weighing the heavy interviews first. ", "Holding it against the active hypothesis."], deltas, delayMs: 25 };
+    // Usage shaped like a real call: most of the prompt read from the cache after the first run.
+    const prompt = Math.ceil(JSON.stringify([req.system, req.messages]).length / 4);
+    const usage = { input: Math.ceil(prompt * 0.2), cacheRead: Math.floor(prompt * 0.8), cacheWrite: 0, output: 600 + json.length };
+    // Sonnet and Haiku runs consult Opus once; Opus 5.5 returns its advice encrypted.
+    const advisor = req.advisor ? [{ kind: "redacted" as const, stopReason: "end_turn" }] : undefined;
+    return { thinking: ["Weighing the heavy interviews first. ", "Holding it against the active hypothesis."], deltas, delayMs: 25, usage, ...(advisor ? { advisor } : {}) };
   });
 }

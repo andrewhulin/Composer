@@ -2,6 +2,60 @@
 
 Newest first. Every milestone adds an entry. A **Decisions** list records each default picked without asking, so it can be revisited.
 
+## Smart model routing (DC-5) · 2026-11-06
+
+### Added
+- **A router** (`packages/engine/src/router.ts`) picks the model for every Claude call from a table in Settings → Model and API:
+  - **Opus 5.5** keeps everything that decides: Define, test strategy, verdict, Craft Brief compile, on-demand reviews, Reflect and eval judging.
+  - **Sonnet 5.5** runs synthesis, Build prototypes and the release story.
+  - **Haiku 5.5** writes the PR description.
+  - Each row has a model and an advisor switch. Each node can pin its own model on its Node tab, or stay on **Auto** to follow the router.
+- **The advisor:** Sonnet and Haiku runs attach Opus 5.5 through the advisor tool (`advisor_20260301`, up to 3 consultations a run), and the prompt says when to consult.
+  - Every consultation is recorded on the run and listed in the inspector.
+  - When the advisor is unavailable (overloaded, rate limited and so on), the step reruns on Opus.
+- **Escalation, always logged** (a decision row, a toast, and `escalated_from` on the run):
+  - An answer that fails validation twice moves the run up a tier mid-run, Haiku → Sonnet → Opus. Every attempt is billed into the run's usage and cost.
+  - A score of 2 or lower, or the new **Wrong** button beside the score, moves the node up a tier for its next runs. The node shows "escalated", turns stale, and its Node tab offers to go back to the router.
+- **Budgets:** per run and per project, in dollars and in tokens.
+  - Before a run (or a chain of them) would go over, Composer estimates it from the assembled prompt on its routed model and asks: **Run anyway**, **Don't run**, or **Change budgets**.
+- **Cost everywhere:**
+  - Every run stores its model, cost (from usage at Nov 2026 list prices), advisor consultations and escalation.
+  - Each Claude node shows its model for the next run, and its last run's model, consultations, tokens and cost.
+  - The inspector gets run details: tokens in and out, cache read and written, cost.
+  - The history bar shows the project's spend, tokens and cache hit rate.
+  - Settings shows spend per model.
+- **Router changes need a golden-set replay.** The table is versioned as a foundation (`router` slot):
+  - Editing it creates a draft, and **Replay and propose** reruns up to 3 scored briefs per changed recipe on the new route.
+  - Opus scores each old and new output blind, 1–5. The proposal shows the score delta and the cost per run before and after (at uncached prices, so the original run's warm cache doesn't skew it), with each brief's outputs side by side.
+  - **Keep** unlocks only when every brief replayed and the judged average dropped by no more than 0.25.
+  - Changes that only move craft jobs (compile, review, reflect, judge) have no stored briefs, so they can be kept straight away.
+- **Keys:** a recipe the router moves off plain Opus adds its route to the node's environment key. Opus recipes keep their old keys, and a router change marks the nodes it moves "Foundations, rules or routing changed". Pinned and escalated nodes carry their model in their own key instead.
+- **Data:** migration 5 adds:
+  - `cost`, `advisor` and `escalated_from` to `run`
+  - `usage` and `model` to `replay_result`
+  - `router` as a foundation slot and a proposal target
+- **Tests (319 in total):**
+  - routing, pins, escalations and environment keys
+  - pricing, including Haiku's long-prompt rates and old runs priced from usage
+  - spend and cache hit rate
+  - every budget limit
+  - reading the advisor's results
+  - the advisor placed after the cached blocks, so a routed run's cached prefix matches an Opus run's
+  - blind judging and the replay pass bar
+  - migration 5
+  - the store, driven by the scripted model: each recipe on its model, pins that persist, a forced double failure escalating and logged, the advisor-unavailable fallback, low-score and wrong-mark escalation, the budget warning (no request until a yes), budgets that persist, and a router change refused without briefs then kept after a passing replay
+
+### Decisions
+- **Opus 5.5's advice is encrypted.** The API returns it as `advisor_redacted_result`, so Composer records and shows *that* a run consulted Opus, how many times, and any error, but not what was said.
+- **Advisor tokens aren't counted yet.** The executor's usage is priced exactly. The advisor's own Opus tokens are billed separately, and Composer doesn't add them to a run's cost yet, so Settings says so rather than guessing.
+- **Effort stays per node,** as before. The router picks the model and the advisor; effort is already part of each node's key and settings.
+- **No Haiku-only ingestion step exists as a Claude call.** Sources are trimmed deterministically, without an LLM, so Haiku's slot in the starting map is the PR description, with Opus as advisor.
+- **Escalation on a validation failure lasts one run.** The next run starts on the routed tier again, which keeps one model per cached prefix. A low score or a wrong mark lasts until you send the node back to the router.
+- **Spend counts node runs.** Compile, review, Reflect and replay calls are routed too, but aren't added to a project's spend.
+- **The server-side refusal fallback** stays on for Opus and Sonnet. It's off for Haiku 5.5, which doesn't offer it.
+- **Budgets are global settings** that apply per run and per project. A per-project override can come later if one project needs a different cap.
+- **The replay's score bar** is a judged drop of no more than 0.25 on average, and every brief must replay. Cost is shown but doesn't gate: cheaper is the point, and pricier still needs your Keep.
+
 ## Design skills and the Craft Brief (DC-4) · 2026-11-06
 
 ### Added

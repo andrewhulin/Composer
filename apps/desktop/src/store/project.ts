@@ -59,6 +59,36 @@ import {
   type DefineDraft,
   type Direction,
   type StatementData,
+  ADVISOR_UNAVAILABLE,
+  DEFAULT_BUDGET,
+  ESCALATE_AT_SCORE,
+  ESCALATION_TEXT,
+  MODEL_LABEL,
+  OPUS,
+  RETRIES_PER_TIER,
+  ZERO_USAGE,
+  addEstimates,
+  costOf,
+  effectiveRoute,
+  estimateRun,
+  isModelId,
+  nextTier,
+  overBudget,
+  spendOf,
+  sumUsage,
+  type AdvisorConsultation,
+  type Budget,
+  type EscalationReason,
+  type LlmUsage,
+  type ModelId,
+  type RouterTable,
+  type RunEstimate,
+  type RunPlan,
+  type Spend,
+  type Task,
+  type LlmRequest,
+  applyRoute,
+  routeFor,
 } from "@composer/engine";
 import type { BranchRow, ProjectRow, Repo, RunRow, SnapshotRow } from "@composer/data";
 import type { Booted } from "../app/boot";
@@ -77,6 +107,18 @@ export interface LiveRun {
   startedAt: number;
   error?: string;
   code?: string;
+  /** The model this attempt runs on, and the one it started on if it moved up. */
+  model?: string;
+  advisor?: boolean;
+  escalatedFrom?: string;
+}
+
+/** A run that would go over budget, waiting for the designer to say go or stop. */
+export interface BudgetWarning {
+  message: string;
+  estimate: RunEstimate;
+  count: number;
+  resolve: (go: boolean) => void;
 }
 
 export interface Toast {
@@ -110,6 +152,9 @@ interface ProjectState {
   preview: BlastRadius | null;
   canUndo: boolean;
   canRedo: boolean;
+  /** What this project's runs have cost so far. */
+  spend: Spend | null;
+  budgetWarning: BudgetWarning | null;
 }
 
 const initialState = (): Omit<ProjectState, "repo" | "project"> => ({
@@ -132,6 +177,8 @@ const initialState = (): Omit<ProjectState, "repo" | "project"> => ({
   preview: null,
   canUndo: false,
   canRedo: false,
+  spend: null,
+  budgetWarning: null,
 });
 
 export const useProject = create<ProjectState>(() => initialState());
@@ -156,6 +203,12 @@ export const craftHooks: {
   skillIds: (phase: Phase) => string[];
   afterVerdict: (verdict: string) => void;
 } = { foundations: () => ({}), rules: () => [], skillIds: () => [], afterVerdict: () => {} };
+
+/** The router table and budgets live in their own store and plug in here. */
+export const routerHooks: { table: () => RouterTable | null; budget: () => Budget } = { table: () => null, budget: () => DEFAULT_BUDGET };
+
+/** A craft call (compile, review, reflect, judge) sent on the model the router picks for it. */
+export const routedRequest = (task: Task, req: LlmRequest): LlmRequest => applyRoute(routeFor(routerHooks.table(), task), req);
 
 // ── persistence ────────────────────────────────────────────────────────────
 
@@ -250,6 +303,7 @@ export async function saveNow() {
 export async function closeProject(): Promise<number> {
   await saveNow();
   const stopped = Object.values(get().live).filter((r) => r.status === "running").length;
+  get().budgetWarning?.resolve(false);
   scheduler.cancelAll();
   undoStack.length = 0;
   redoStack.length = 0;
@@ -290,6 +344,7 @@ export async function loadProject(booted: Booted) {
     lastRuns,
     activePhase: project.activePhase,
     loop: project.loop,
+    spend: spendOf(runs),
   });
   await refreshHistory();
   set({ branches: await repo.listBranches(project.id) });
@@ -517,7 +572,7 @@ export const actions = {
     await takeSnapshot("swap", next.id, `Swapped ${block.label} → ${label}`);
     set({ branches: await repo.listBranches(project.id) });
     toast(`${block.label} retired · ${label} takes its place${radius.stale.length ? ` · rerunning ${radius.stale.length}` : ""}`, "success");
-    if (radius.stale.length) scheduler.execute(planPush(get().graph, radius.stale));
+    if (radius.stale.length) void runWithinBudget(planPush(get().graph, radius.stale));
   },
 
   /** Re-reads the working graph and branches after the branch changed underneath. */
@@ -683,7 +738,23 @@ export const actions = {
     const node = graph.nodes[id];
     if (node?.kind !== "claude") return;
     const plan = planPull(graph, id, statusesOf(graph, env));
-    scheduler.execute(plan);
+    void runWithinBudget(plan);
+  },
+
+  /** Answers the budget warning: run anyway, or don't. */
+  answerBudget(go: boolean) {
+    const w = get().budgetWarning;
+    set({ budgetWarning: null });
+    w?.resolve(go);
+  },
+
+  /** The node's model: "auto" follows the router; a model id pins it. Either clears an escalation. */
+  setModel(id: Id, model: string) {
+    const node = get().graph.nodes[id];
+    if (node?.kind !== "claude") return;
+    const { escalation: _drop, ...rest } = node;
+    const next: ClaudeNode = model === "auto" ? { ...rest, model: OPUS, modelPinned: false } : { ...rest, model, modelPinned: true };
+    setGraph({ ...get().graph, nodes: { ...get().graph.nodes, [id]: next } });
   },
 
   cancel(id: Id) {
@@ -1072,31 +1143,112 @@ function flushSoon() {
   });
 }
 
+/** The route a node runs on now: its pin, its escalation, or the router's pick for its recipe. */
+export function routeOf(node: ClaudeNode) {
+  return effectiveRoute(routerHooks.table(), node);
+}
+
+/** What a set of runs will likely cost, from each one's assembled prompt on its routed model. */
+export function estimatePlan(graph: Graph, ids: Id[]): RunEstimate {
+  let total: RunEstimate = { estimateUsd: 0, promptTokens: 0, tokens: 0 };
+  for (const id of ids) {
+    const node = graph.nodes[id];
+    if (node?.kind !== "claude") continue;
+    const tokens = previewPrompt(graph, id)?.report.total ?? 0;
+    total = addEstimates(total, estimateRun(routeOf(node).model, tokens, node.recipe));
+  }
+  return total;
+}
+
+/** Runs a plan, asking first when it would go over a per-run or per-project budget. */
+async function runWithinBudget(plan: RunPlan) {
+  const { graph, spend } = get();
+  const estimate = estimatePlan(graph, plan.order);
+  const message = overBudget(routerHooks.budget(), estimate, { usd: spend?.usd ?? 0, tokens: spend?.tokens ?? 0 });
+  if (message) {
+    get().budgetWarning?.resolve(false);
+    const go = await new Promise<boolean>((resolve) => set({ budgetWarning: { message, estimate, count: plan.order.length, resolve } }));
+    if (!go) return;
+  }
+  scheduler.execute(plan);
+}
+
+/** Moves a node up one tier for its next runs, and logs why. */
+export async function escalateNode(id: Id, reason: EscalationReason, runId?: Id) {
+  const { repo, project, graph } = get();
+  const node = graph.nodes[id];
+  if (!repo || !project || node?.kind !== "claude") return;
+  const from = routeOf(node).model;
+  const to = nextTier(from);
+  if (!to) {
+    toast(`${node.title} already runs on ${MODEL_LABEL[OPUS]}, so there's no tier to move it up to.`);
+    return;
+  }
+  setGraph({ ...graph, nodes: { ...graph.nodes, [id]: { ...node, escalation: { model: to, reason } } } });
+  await repo.decide(project.id, "escalation", `${node.title} moves from ${MODEL_LABEL[from]} to ${MODEL_LABEL[to]}: ${ESCALATION_TEXT[reason]}.`, { nodeId: id, from, to, reason, ...(runId ? { runId } : {}) });
+  toast(`${node.title} will run on ${MODEL_LABEL[to]} next: ${ESCALATION_TEXT[reason]}.`);
+}
+
+/** A score at or below the threshold, or a run marked wrong, moves its node up a tier. */
+export async function afterScore(runId: Id, value: number, wrong = false) {
+  const { repo, graph } = get();
+  const run = await repo?.getRun(runId);
+  if (!run || graph.nodes[run.nodeId]?.kind !== "claude") return;
+  if (wrong) await escalateNode(run.nodeId, "marked_wrong", runId);
+  else if (value <= ESCALATE_AT_SCORE) await escalateNode(run.nodeId, "low_score", runId);
+}
+
+async function refreshSpend() {
+  const { repo, project } = get();
+  if (repo && project) set({ spend: spendOf(await repo.runsForProject(project.id)) });
+}
+
 async function runOne(id: Id, signal: AbortSignal): Promise<void> {
   const { repo, project, graph, env } = get();
   const node = graph.nodes[id] as ClaudeNode | undefined;
   if (!repo || !project || node?.kind !== "claude") return;
   const runId = ulid();
   const startGraph = graph;
+  const route = routeOf(node);
+  const startModel: ModelId = route.model;
   buffers.set(id, { text: "", thinking: "" });
-  set((s) => ({ live: { ...s.live, [id]: { runId, status: "running", text: "", thinking: "", startedAt: Date.now() } } }));
+  set((s) => ({ live: { ...s.live, [id]: { runId, status: "running", text: "", thinking: "", startedAt: Date.now(), model: route.model, advisor: route.advisor } } }));
   await repo.startRun({
     id: runId,
     projectId: project.id,
     nodeId: id,
     recipe: node.recipe,
     localKey: localKey(startGraph, id),
-    envKey: envKeyFor(env, node.phase),
+    envKey: envKeyFor(env, node.phase, node),
     inputManifestHash: null,
-    model: node.model,
+    model: route.model,
     effort: node.effort,
     templateVersionId: node.templateVersionId,
     ruleIds: env.rules[node.phase] ?? [],
     foundationIds: [...env.foundations, ...craftHooks.skillIds(node.phase)],
     startedSeq: (get().project?.seq ?? 0) + 1,
   });
-  try {
-    const outcome = await runClaudeNode(startGraph, id, runId, runDeps(node.phase), {
+  // Every attempt is billed, so usage and cost add up across retries and escalations.
+  let usage: LlmUsage = ZERO_USAGE;
+  let cost = 0;
+  const consultations: AdvisorConsultation[] = [];
+  let model: ModelId = route.model;
+  let advisor = route.advisor;
+  const bill = (m: string, u: LlmUsage | undefined) => {
+    if (!u) return;
+    usage = sumUsage(usage, u);
+    cost += costOf(m, u);
+  };
+  const moveUp = async (to: ModelId, reason: EscalationReason) => {
+    await repo.decide(project.id, "escalation", `${node.title} moved from ${MODEL_LABEL[model]} to ${MODEL_LABEL[to]} mid-run: ${ESCALATION_TEXT[reason]}.`, { nodeId: id, runId, from: model, to, reason });
+    toast(`${node.title}: ${ESCALATION_TEXT[reason]}, so this run moved up to ${MODEL_LABEL[to]}.`);
+    model = to;
+    advisor = to !== OPUS && advisor;
+    buffers.set(id, { text: "", thinking: "" });
+    set((s) => ({ live: { ...s.live, [id]: { ...s.live[id]!, text: "", thinking: "", model: to, advisor, escalatedFrom: startModel } } }));
+  };
+  const attempt = () =>
+    runClaudeNode(startGraph, id, runId, { ...runDeps(node.phase), route: { model, advisor } }, {
       signal,
       onText: (d) => {
         buffers.get(id)!.text += d;
@@ -1107,6 +1259,32 @@ async function runOne(id: Id, signal: AbortSignal): Promise<void> {
         flushSoon();
       },
     });
+  try {
+    let failures = 0;
+    let outcome: Awaited<ReturnType<typeof runClaudeNode>> | undefined;
+    while (!outcome) {
+      try {
+        const o = await attempt();
+        bill(model, o.result.usage);
+        consultations.push(...(o.result.advisor ?? []));
+        // The advisor wasn't there to consult: the step reruns on Opus itself.
+        const missing = advisor && o.result.advisor?.some((c) => c.kind === "error" && ADVISOR_UNAVAILABLE.has(c.errorCode ?? ""));
+        if (missing && model !== OPUS) {
+          await moveUp(OPUS, "advisor_unavailable");
+          continue;
+        }
+        outcome = o;
+      } catch (e) {
+        if (e instanceof RunError && e.result) bill(model, e.result.usage);
+        if (!(e instanceof RunError) || e.code !== "bad_output" || signal.aborted) throw e;
+        failures++;
+        if (failures < RETRIES_PER_TIER) continue;
+        const up = nextTier(model);
+        if (!up) throw e;
+        failures = 0;
+        await moveUp(up, "invalid_output");
+      }
+    }
     const reportHash = hashOf(outcome.prompt.report);
     await repo.finishRun(
       runId,
@@ -1116,7 +1294,11 @@ async function runOne(id: Id, signal: AbortSignal): Promise<void> {
         promptHash: outcome.promptHash,
         reportHash,
         stopReason: outcome.result.stopReason,
-        usage: { ...outcome.result.usage },
+        usage: { ...usage },
+        model: isModelId(outcome.result.model) ? outcome.result.model : model,
+        cost,
+        advisor: consultations,
+        ...(model !== startModel ? { escalatedFrom: startModel } : {}),
       },
       [
         { hash: outcome.artifactHash, value: outcome.artifact, kind: "artifact" },
@@ -1139,7 +1321,7 @@ async function runOne(id: Id, signal: AbortSignal): Promise<void> {
   } catch (e) {
     const cancelled = e instanceof AbortError || signal.aborted;
     const message = e instanceof Error ? e.message : String(e);
-    await repo.finishRun(runId, { status: cancelled ? "cancelled" : "failed", error: message });
+    await repo.finishRun(runId, { status: cancelled ? "cancelled" : "failed", error: message, usage: { ...usage }, cost, model, advisor: consultations, ...(model !== startModel ? { escalatedFrom: startModel } : {}) });
     set((s) => ({
       live: {
         ...s.live,
@@ -1152,6 +1334,7 @@ async function runOne(id: Id, signal: AbortSignal): Promise<void> {
     }
   } finally {
     buffers.delete(id);
+    await refreshSpend();
   }
 }
 

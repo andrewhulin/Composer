@@ -1,8 +1,9 @@
 import type { BetaMessageParam, BetaTextBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import type { Effort, Phase, RecipeId, TextArtifact } from "@composer/core";
 import { briefBlock, rulesBlock } from "./assembly/prompt";
-import type { LlmClient, LlmRequest } from "./llm";
+import type { LlmClient, LlmRequest, LlmUsage } from "./llm";
 import { recipe } from "./recipes";
+import { ADVISOR_NUDGE, OPUS, type AdvisorConsultation } from "./router";
 
 /**
  * Replay: before a proposed rule or principle goes live, rerun past briefs with it and compare.
@@ -91,20 +92,88 @@ export function withCandidate(p: StoredPrompt, c: ReplayCandidate): StoredPrompt
   return c.kind === "rule" ? withCandidateRule(p, c.phase, c) : c.kind === "brief" ? withCandidateBrief(p, c) : withCandidatePrinciple(p, c);
 }
 
-/** The request that reruns a stored prompt, with the recipe's schema so the output renders the same way. */
-export function replayRequest(p: StoredPrompt, recipeId: RecipeId, model: string, effort: Effort = "high"): LlmRequest {
+/**
+ * The request that reruns a stored prompt, with the recipe's schema so the output renders the same
+ * way. With the advisor on, it adds the advisor tool and the nudge exactly as a live run does.
+ */
+export function replayRequest(p: StoredPrompt, recipeId: RecipeId, model: string, effort: Effort = "high", advisor = false): LlmRequest {
   const r = recipe(recipeId);
-  return { model, maxTokens: 64_000, effort, system: p.system, messages: p.messages, ...(r.schema ? { schema: r.schema } : {}) };
+  const withAdvisor = advisor && model !== OPUS;
+  return {
+    model,
+    maxTokens: 64_000,
+    effort,
+    system: withAdvisor ? [...p.system, { type: "text", text: ADVISOR_NUDGE }] : p.system,
+    messages: p.messages,
+    ...(r.schema ? { schema: r.schema } : {}),
+    ...(withAdvisor ? { advisor: { model: OPUS, maxUses: 3 } } : {}),
+  };
 }
 
-/** Runs one replay and returns the artifact it would have produced. */
-export async function replayOne(llm: LlmClient, p: StoredPrompt, recipeId: RecipeId, model: string, signal: AbortSignal): Promise<TextArtifact> {
+export interface ReplayRun {
+  artifact: TextArtifact;
+  usage: LlmUsage;
+  advisor: AdvisorConsultation[];
+}
+
+/** Runs one replay and returns the artifact it would have produced, with what it used. */
+export async function replayRun(llm: LlmClient, p: StoredPrompt, recipeId: RecipeId, model: string, signal: AbortSignal, opts: { advisor?: boolean; effort?: Effort } = {}): Promise<ReplayRun> {
   const r = recipe(recipeId);
-  const res = await llm.stream(replayRequest(p, recipeId, model), { signal });
+  const res = await llm.stream(replayRequest(p, recipeId, model, opts.effort ?? "high", opts.advisor ?? false), { signal });
   if (res.stopReason === "refusal") throw new Error(res.refusal ?? "Claude declined the replay.");
-  if (!r.schema) return { v: 1, kind: "text", artifact: r.artifact, text: res.text };
+  const extra = { usage: res.usage, advisor: res.advisor ?? [] };
+  if (!r.schema) return { artifact: { v: 1, kind: "text", artifact: r.artifact, text: res.text }, ...extra };
   const data = JSON.parse(res.text) as unknown;
-  return { v: 1, kind: "text", artifact: r.artifact, text: r.render ? r.render(data) : res.text, data };
+  return { artifact: { v: 1, kind: "text", artifact: r.artifact, text: r.render ? r.render(data) : res.text, data }, ...extra };
+}
+
+export async function replayOne(llm: LlmClient, p: StoredPrompt, recipeId: RecipeId, model: string, signal: AbortSignal): Promise<TextArtifact> {
+  return (await replayRun(llm, p, recipeId, model, signal)).artifact;
+}
+
+// ── judging: Opus scores two outputs for the same brief ─────────────────────
+
+const JUDGE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["a", "b"],
+  properties: {
+    a: { type: "object", additionalProperties: false, required: ["score", "reason"], properties: { score: { type: "integer", enum: [1, 2, 3, 4, 5] }, reason: { type: "string" } } },
+    b: { type: "object", additionalProperties: false, required: ["score", "reason"], properties: { score: { type: "integer", enum: [1, 2, 3, 4, 5] }, reason: { type: "string" } } },
+  },
+} as const;
+
+export interface Judgment {
+  baseline: { score: number; reason: string };
+  candidate: { score: number; reason: string };
+}
+
+const clipText = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}\n[… ${s.length - n} characters cut …]` : s);
+
+/** The brief the judge reads: the last user turn, which holds the instruction and the format. */
+function briefOf(p: StoredPrompt): string {
+  const last = [...p.messages].reverse().find((m) => m.role === "user");
+  const content = last?.content;
+  const text = typeof content === "string" ? content : (content ?? []).flatMap((b) => (b.type === "text" ? [b.text] : [])).at(-1) ?? "";
+  return clipText(text, 6_000);
+}
+
+/**
+ * Scores two outputs for one brief, blind. Which output is shown first is fixed by `flip`, so
+ * position doesn't favour either side across a set.
+ */
+export function judgeRequest(p: StoredPrompt, phase: Phase, baseline: string, candidate: string, model: string, flip: boolean): LlmRequest {
+  const [a, b] = flip ? [candidate, baseline] : [baseline, candidate];
+  const system =
+    `You judge two answers to the same ${phase} brief for a product designer. Score each from 1 (unusable) to 5 (ship it) on how well it does what the brief asks: ` +
+    "accuracy to the material, specificity, judgment, and following the required format. Judge each on its own merits; length is not quality. Give one short reason each.";
+  const user = `<brief>\n${briefOf(p)}\n</brief>\n\n<answer id="a">\n${clipText(a, 12_000)}\n</answer>\n\n<answer id="b">\n${clipText(b, 12_000)}\n</answer>`;
+  return { model, maxTokens: 4_000, effort: "medium", system: [{ type: "text", text: system }], messages: [{ role: "user", content: user }], schema: JUDGE_SCHEMA };
+}
+
+export function parseJudgment(text: string, flip: boolean): Judgment {
+  const d = JSON.parse(text) as { a: { score: number; reason: string }; b: { score: number; reason: string } };
+  return flip ? { baseline: d.b, candidate: d.a } : { baseline: d.a, candidate: d.b };
 }
 
 export interface ReplayTally {

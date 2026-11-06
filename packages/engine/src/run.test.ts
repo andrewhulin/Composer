@@ -4,7 +4,7 @@ import { claude, graphOf, hypothesis, source, wire } from "@composer/core/testin
 import { emptyEnv, localKey } from "./keys";
 import { updateNode } from "./graph-ops";
 import { AbortError, FakeLlm } from "./llm";
-import { buildPrompt, runClaudeNode, RunError, type RunDeps } from "./run";
+import { buildPrompt, runClaudeNode, type RunDeps } from "./run";
 
 const content: SourceContent = {
   v: 1,
@@ -64,7 +64,7 @@ describe("runClaudeNode", () => {
 
   it("surfaces a refusal with its explanation", async () => {
     const { g, deps } = setup(new FakeLlm([{ stopReason: "refusal", refusal: "Declined." }]));
-    await expect(runClaudeNode(g, "c", "r", deps, { signal: new AbortController().signal })).rejects.toEqual(new RunError("Declined.", "refusal"));
+    await expect(runClaudeNode(g, "c", "r", deps, { signal: new AbortController().signal })).rejects.toMatchObject({ name: "RunError", message: "Declined.", code: "refusal", result: { usage: { input: 100 } } });
   });
 
   it("stops when cancelled", async () => {

@@ -1,0 +1,8 @@
+.details { display: flex; flex-direction: column; gap: var(--sp-8); }
+.facts { display: grid; grid-template-columns: 72px 1fr; gap: var(--sp-6) var(--sp-12); margin: 0; font-size: var(--fs-small); }
+.facts dt { color: var(--text-muted); }
+.facts dd { margin: 0; font-family: var(--font-mono); font-size: var(--fs-meta); line-height: 1.6; color: var(--text-primary); }
+.moved { color: var(--signal-warn); }
+.consultations { display: flex; flex-direction: column; gap: var(--sp-4); margin: 0; padding-left: var(--sp-16); font-size: var(--fs-small); line-height: 1.5; color: var(--text-secondary); }
+.error { color: var(--signal-warn); }
+.advice { display: block; margin-top: var(--sp-2); color: var(--text-primary); quotes: none; }

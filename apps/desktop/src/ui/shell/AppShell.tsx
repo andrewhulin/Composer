@@ -17,6 +17,7 @@ import { CommandPalette, KeyboardMap } from "../command/CommandPalette";
 import { Coach } from "../tutorial/Coach";
 import { useTutorial } from "../../tutorial/store";
 import { KeyBanner, Toasts } from "../feedback/Toasts";
+import { BudgetWarning } from "./BudgetWarning";
 import { CompareView } from "../history/CompareView";
 import { playback, usePlayback } from "../../store/playback";
 import { goHome, leaveHome, useProjects } from "../../store/projects";
@@ -213,6 +214,7 @@ export function AppShell() {
       <Coach />
       <KeyboardMap />
       <CompareView />
+      <BudgetWarning />
       <Toasts />
       {ready && !hasKey && !settingsOpen && !guiding && !(import.meta.env.DEV && location.search.includes("fake")) && <KeyBanner onAdd={() => useUi.getState().openSettings("connectors", "anthropic")} />}
     </div>

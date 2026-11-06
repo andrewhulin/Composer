@@ -27,9 +27,10 @@ import {
   type SkillFile,
   type SkillMode,
   type SkillReview,
+  OPUS,
 } from "@composer/engine";
 import { http } from "../connectors/http";
-import { llmClient, toast, useProject, actions } from "./project";
+import { llmClient, routedRequest, toast, useProject, actions } from "./project";
 import { loadCraft, syncEnv, useCraft } from "./craft";
 
 export interface PendingImport {
@@ -311,7 +312,7 @@ export async function compileBrief() {
       const c = past.find((x) => x.key === key);
       return { key, topic: c?.topic ?? key.split("|").pop()!.replace(/-/g, " "), outcome: c ? describeResolution(c, res) : "resolved earlier" };
     });
-    const req = compileRequest({ skills, philosophy: philosophy?.content ?? null, designSystem: ds ? digest(ds.content) : null, resolved, model: "claude-opus-5-5" });
+    const req = routedRequest("compile", compileRequest({ skills, philosophy: philosophy?.content ?? null, designSystem: ds ? digest(ds.content) : null, resolved, model: OPUS }));
     const res = await llmClient().stream(req, { signal: new AbortController().signal });
     if (res.stopReason === "refusal") throw new Error(res.refusal ?? "Claude declined to compile.");
     const next = parseCompile(res.text, skills, resolutions);
@@ -402,7 +403,7 @@ export async function reviewNode(nodeId: Id, skillId: string) {
   try {
     const body = (await r.skillBody(skillId)) ?? "";
     const html = (art.data as { html?: string } | undefined)?.html;
-    const res = await llmClient().stream(reviewRequest({ name: skill.name, body }, { title: node.title, text: art.text, ...(html ? { html } : {}) }, "claude-opus-5-5"), { signal: new AbortController().signal });
+    const res = await llmClient().stream(routedRequest("review", reviewRequest({ name: skill.name, body }, { title: node.title, text: art.text, ...(html ? { html } : {}) }, OPUS)), { signal: new AbortController().signal });
     if (res.stopReason === "refusal") throw new Error(res.refusal ?? "Claude declined the review.");
     const review: NodeReview = { skillId, skillName: skill.name, runId: out.runId, review: JSON.parse(res.text) as SkillReview, at: new Date().toISOString() };
     await r.setSetting(reviewKey(nodeId), review);

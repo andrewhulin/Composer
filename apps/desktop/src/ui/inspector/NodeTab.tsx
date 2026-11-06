@@ -1,7 +1,7 @@
 import { WEIGHTS, type ClaudeNode, type Effort, type GraphNode, type HypothesisNode } from "@composer/core";
-import { FRAMES, recipe, type Frame } from "@composer/engine";
+import { ESCALATION_TEXT, FRAMES, MODEL_IDS, MODEL_LABEL, effectiveRoute, isPinned, recipe, routeFor, type EscalationReason, type Frame } from "@composer/engine";
 import { actions, useProject } from "../../store/project";
-import { MODELS } from "../../app/scaffold";
+import { useRouter } from "../../store/router";
 import { Button, Input, Select, Tabs, Textarea } from "../primitives";
 import { Toggle } from "../primitives/Toggle";
 import { formatTokens } from "../primitives/format";
@@ -94,6 +94,37 @@ export function NodeTab({ node }: { node: GraphNode }) {
   );
 }
 
+/** Auto follows the router for this recipe; a model pins it. An escalation shows until it's cleared. */
+function ModelField({ node }: { node: ClaudeNode }) {
+  const table = useRouter((s) => s.table);
+  const auto = routeFor(table, node.recipe);
+  const route = effectiveRoute(table, node);
+  return (
+    <>
+      <Field label="Model">
+        <Select value={isPinned(node) ? node.model : "auto"} onChange={(e) => actions.setModel(node.id, e.target.value)}>
+          <option value="auto">{`Auto · ${MODEL_LABEL[auto.model]}${auto.advisor ? " + advisor" : ""}`}</option>
+          {MODEL_IDS.map((m) => (
+            <option key={m} value={m}>
+              {`${MODEL_LABEL[m]}${m === "claude-opus-5-5" ? "" : " + advisor"}`}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      {route.source === "escalated" && node.escalation && (
+        <div className={styles.escalated}>
+          <span>
+            Runs on {MODEL_LABEL[route.model]} because {ESCALATION_TEXT[node.escalation.reason as EscalationReason] ?? "it moved up a tier"}.
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => actions.setModel(node.id, "auto")}>
+            Back to {MODEL_LABEL[auto.model]}
+          </Button>
+        </div>
+      )}
+    </>
+  );
+}
+
 function ClaudeFields({ node }: { node: ClaudeNode }) {
   const r = recipe(node.recipe);
   return (
@@ -112,15 +143,7 @@ function ClaudeFields({ node }: { node: ClaudeNode }) {
           </Select>
         </Field>
       )}
-      <Field label="Model">
-        <Select value={node.model} onChange={(e) => actions.update<ClaudeNode>(node.id, { model: e.target.value })}>
-          {MODELS.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
-          ))}
-        </Select>
-      </Field>
+      <ModelField node={node} />
       <Field label="Effort">
         <Tabs
           label="Effort"

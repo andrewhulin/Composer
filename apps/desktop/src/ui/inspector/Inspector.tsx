@@ -18,12 +18,13 @@ import { InsightsCard } from "./InsightsCard";
 import { StatementCard } from "./StatementCard";
 import { PrototypeView } from "./PrototypeView";
 import { StrategyView, VerdictView } from "./ValidateViews";
-import { openFoundations, score, useCraft } from "../../store/craft";
+import { markWrong, openFoundations, score, useCraft } from "../../store/craft";
 // Share pulls in Remotion; load it only when a release story or PR is on screen.
 const StoryView = lazy(() => import("./ShareViews").then((m) => ({ default: m.StoryView })));
 const PrView = lazy(() => import("./ShareViews").then((m) => ({ default: m.PrView })));
 import { NodeTab } from "./NodeTab";
 import { RunEvals } from "./RunEvals";
+import { RunDetails } from "./RunDetails";
 import { SkillReview } from "./SkillReview";
 import { PromptTab } from "./PromptTab";
 import { countKey, partialField } from "./partial";
@@ -124,7 +125,10 @@ function ScoreRun({ runId }: { runId: Id }) {
           {n}
         </button>
       ))}
-      <span className={styles.scoreHint}>{value ? "kept for the improvement loop" : "how close to what you'd ship?"}</span>
+      <button type="button" className={styles.wrong} onClick={() => void markWrong(runId)} title="Wrong, not just weak: scores it 1 and moves the node up a tier">
+        Wrong
+      </button>
+      <span className={styles.scoreHint}>{value ? (value <= 2 ? "Kept for the improvement loop. The next run moves up a tier." : "Kept for the improvement loop.") : "How close is this to what you'd ship?"}</span>
     </div>
   );
 }
@@ -225,6 +229,7 @@ function Preview({ node, graph }: { node: GraphNode | undefined; graph: Graph })
       {claude && !playing && s.lastRuns[claude.id]?.status === "succeeded" && live?.status !== "running" && (
         <>
           <ScoreRun runId={s.lastRuns[claude.id]!.id} />
+          <RunDetails run={s.lastRuns[claude.id]!} />
           <RunEvals key={s.lastRuns[claude.id]!.id} claude={claude} runId={s.lastRuns[claude.id]!.id} />
           <SkillReview claude={claude} runId={s.lastRuns[claude.id]!.id} />
         </>

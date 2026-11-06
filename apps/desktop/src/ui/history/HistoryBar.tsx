@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { PHASE_INFO } from "@composer/core";
+import { formatUsd } from "@composer/engine";
+import { formatTokens } from "../primitives/format";
 import { actions, useProject } from "../../store/project";
 import { branchLine, frames, playback, usePlayback, type Speed } from "../../store/playback";
 import { useUi } from "../../store/ui";
@@ -34,6 +36,7 @@ function Timeline() {
   const t = timelineFrom(line, bookmarks, activePhase);
   const last = line[line.length - 1];
   const others = branches.filter((b) => b.id !== project?.branchId && b.forkedFromSnapshotId);
+  const spend = useProject((s) => s.spend);
 
   return (
     <>
@@ -49,6 +52,11 @@ function Timeline() {
         <span className="caps">History</span>
         <span className={styles.position}>{line.length ? `Snapshot ${line.length} of ${line.length}` : "Every run is recorded"}</span>
         <span className={styles.when}>{last ? fmt(last.createdAt) : ""}</span>
+        {!!spend?.runs && (
+          <span className={styles.cost} title="What this project's runs have cost, at list prices">
+            {formatUsd(spend.usd)} · {formatTokens(spend.tokens)} tok{spend.cacheHitRate !== null ? ` · ${Math.round(spend.cacheHitRate * 100)}% cached` : ""}
+          </span>
+        )}
       </div>
 
       <div className={styles.actions}>

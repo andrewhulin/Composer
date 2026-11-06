@@ -88,6 +88,10 @@ export interface ClaudeNode extends NodeBase {
   options: Record<string, string>;
   /** Feedback pinned to a spot on this node's output. Present notes ride into the next run. */
   notes?: OutputNote[];
+  /** True when the designer chose the model by hand; otherwise the router picks it per recipe. */
+  modelPinned?: boolean;
+  /** The tier a low score or a wrong mark moved this node to, for its next runs. */
+  escalation?: { model: string; reason: string };
 }
 
 /** Where on an output a note is pinned. */

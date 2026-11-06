@@ -12,6 +12,7 @@ import { Badge, Button, Icon, Input } from "../primitives";
 import { cx } from "../primitives/cx";
 import { ConnectorsSection } from "./ConnectorsSection";
 import { RequestsSection } from "./RequestsSection";
+import { RouterSection } from "./RouterSection";
 import { SkillsSection } from "./SkillsSection";
 import { UpdatesSection } from "./UpdatesSection";
 import styles from "./Settings.module.css";
@@ -126,7 +127,7 @@ function ModelSection() {
           </Button>
         </div>
       </Group>
-      <Group title="Model" note="Every node runs on Claude Opus 5.5 with adaptive thinking. Effort is set per step, and each node can override it on its Node tab." />
+      <RouterSection Group={Group} />
     </>
   );
 }

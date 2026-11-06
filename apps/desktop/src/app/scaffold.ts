@@ -14,11 +14,6 @@ import {
 import { addNode, connect, DIRECTIONS, FIRST_ROUND, incoming, recipe, type Direction } from "@composer/engine";
 
 export const DEFAULT_MODEL = "claude-opus-5-5";
-export const MODELS = [
-  { id: "claude-opus-5-5", label: "Opus 5.5" },
-  { id: "claude-sonnet-5-5", label: "Sonnet 5.5" },
-  { id: "claude-haiku-5-5", label: "Haiku 5.5" },
-] as const;
 export const DEFAULT_BUDGET = 200_000;
 
 type NewNode<T extends GraphNode> = Omit<T, "createdSeq">;

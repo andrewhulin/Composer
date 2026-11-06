@@ -17,7 +17,7 @@ const g1 = (): Graph => graphOf([source("s"), claude("c")], [wire("s", "c", "con
 describe("migrations", () => {
   it("apply once and are idempotent", async () => {
     const { db } = setup();
-    expect(await migrate(db)).toEqual([1, 2, 3, 4]);
+    expect(await migrate(db)).toEqual([1, 2, 3, 4, 5]);
     expect(await migrate(db)).toEqual([]);
   });
 });
@@ -132,6 +132,25 @@ describe("Repo", () => {
     await repo.score("r1", 4, "raw quotes landed");
     await expect(repo.score("r1", 7)).rejects.toThrow();
     expect(await repo.scoresForRun("r1")).toEqual([{ value: 4, note: "raw quotes landed" }]);
+  });
+
+  it("records what a run cost, which model finished it, its advisor consultations and escalation", async () => {
+    const { db, repo } = setup();
+    await migrate(db);
+    const p = await repo.createProject("P");
+    const base = { projectId: p.id, nodeId: "c", recipe: "prototype", localKey: "k", envKey: "e", inputManifestHash: null, model: "claude-sonnet-5-5", effort: "high", templateVersionId: null, ruleIds: [], foundationIds: [], startedSeq: 1 };
+    await repo.startRun({ ...base, id: "r1" });
+    await repo.finishRun("r1", { status: "succeeded", model: "claude-opus-5-5", cost: 0.42, advisor: [{ kind: "redacted" }], escalatedFrom: "claude-sonnet-5-5", usage: { input: 10, output: 5 } });
+    await repo.startRun({ ...base, id: "r2" });
+    await repo.finishRun("r2", { status: "failed", error: "x", cost: 0.08 });
+    const [r1, r2] = await repo.runsForNode("c");
+    expect(r1).toMatchObject({ model: "claude-opus-5-5", cost: 0.42, advisor: [{ kind: "redacted" }], escalatedFrom: "claude-sonnet-5-5" });
+    expect(r2).toMatchObject({ model: "claude-sonnet-5-5", cost: 0.08, advisor: null, escalatedFrom: null });
+    expect(await repo.projectSpend(p.id)).toBeCloseTo(0.5);
+    const proposal = await repo.createProposal({ targetKind: "router", baseVersion: "r1", diff: {}, rationale: "", evidence: [] });
+    const c = await repo.keepReplayCase({ projectId: p.id, phase: "build", recipe: "prototype", runId: "r1", name: "n", promptHash: "ph", outputHash: "oh" });
+    await repo.saveReplayResult({ proposalId: proposal.id, caseId: c.id, status: "done", outputHash: "x", usage: { input: 3, output: 4 }, model: "claude-haiku-5-5" });
+    expect((await repo.replayResults(proposal.id))[0]).toMatchObject({ usage: { input: 3, output: 4 }, model: "claude-haiku-5-5" });
   });
 
   it("rolls back a transaction that fails halfway", async () => {

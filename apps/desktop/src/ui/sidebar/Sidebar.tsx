@@ -23,7 +23,7 @@ const HYP_DOT: Record<HypothesisBlock["status"], string> = {
 /** 248px left panel: search, sources, memory, foundations, memory health. */
 export function Sidebar() {
   const craft = useCraft();
-  const pending = craft.proposals.filter((p) => p.status === "pending").length;
+  const pending = craft.proposals.filter((p) => p.status === "pending" && p.targetKind !== "router").length;
   const dsPending = craft.proposals.filter((p) => p.status === "pending" && p.targetKind === "design_system").length;
   const latestRule = craft.rules.at(-1);
   const phase = useProject((s) => s.activePhase);

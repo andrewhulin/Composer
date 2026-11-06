@@ -20,6 +20,7 @@
 .play:disabled { opacity: 0.5; }
 .position { font-size: var(--fs-body); color: var(--text-primary); }
 .when { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
+.cost { padding-left: var(--sp-12); border-left: 1px solid var(--border-subtle); font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-secondary); }
 .actions { position: absolute; right: 20px; top: 16px; display: flex; gap: var(--sp-10); }
 .count { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--text-muted); }
 /* Button has no pressed look for text buttons, so an open menu's button keeps this one. */

@@ -1,10 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { AbortError, type LlmClient, type LlmRequest, type LlmResult, type StreamHandlers } from "@composer/engine";
+import { AbortError, HAIKU, readAdvisor, type LlmClient, type LlmRequest, type LlmResult, type StreamHandlers } from "@composer/engine";
 
 /**
  * Claude through the Anthropic SDK, from the webview. The key comes from Keychain at call time;
- * the CSP only lets the webview reach api.anthropic.com. Every request streams, uses adaptive
- * thinking with summaries shown, and opts into the server-side refusal fallback.
+ * the CSP only lets the webview reach api.anthropic.com. Every request streams and uses adaptive
+ * thinking with summaries shown. Opus and Sonnet opt into the server-side refusal fallback
+ * (Haiku 5.5 has none). Sonnet and Haiku runs can carry the advisor tool, consulting Opus.
  */
 export class AnthropicLlm implements LlmClient {
   constructor(private readonly apiKey: () => Promise<string | null>) {}
@@ -18,6 +19,7 @@ export class AnthropicLlm implements LlmClient {
   private params(req: LlmRequest) {
     return {
       model: req.model,
+      ...(req.advisor ? { tools: [{ type: "advisor_20260301" as const, name: "advisor" as const, model: req.advisor.model, ...(req.advisor.maxUses ? { max_uses: req.advisor.maxUses } : {}) }] } : {}),
       max_tokens: req.maxTokens,
       system: req.system,
       messages: req.messages,
@@ -32,10 +34,9 @@ export class AnthropicLlm implements LlmClient {
   async stream(req: LlmRequest, h: StreamHandlers): Promise<LlmResult> {
     const client = await this.client();
     if (h.signal.aborted) throw new AbortError();
-    const stream = client.beta.messages.stream(
-      { ...this.params(req), betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" },
-      { signal: h.signal },
-    );
+    const fallback = req.model !== HAIKU;
+    const betas = [...(fallback ? ["server-side-fallback-2026-07-01"] : []), ...(req.advisor ? ["advisor-tool-2026-03-01"] : [])];
+    const stream = client.beta.messages.stream({ ...this.params(req), ...(betas.length ? { betas } : {}), ...(fallback ? { fallbacks: "default" as const } : {}) }, { signal: h.signal });
     if (h.onText) stream.on("text", (d) => h.onText!(d));
     if (h.onThinking) stream.on("thinking", (d) => h.onThinking!(d));
     let msg;
@@ -45,9 +46,16 @@ export class AnthropicLlm implements LlmClient {
       if (h.signal.aborted || e instanceof Anthropic.APIUserAbortError) throw new AbortError();
       throw e;
     }
-    const text = msg.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
+    // With the advisor, the answer is the text after the last consultation; anything before it was thinking aloud.
+    const lastAdvice = msg.content.map((b) => b.type).lastIndexOf("advisor_tool_result");
+    const text = msg.content
+      .slice(lastAdvice + 1)
+      .flatMap((b) => (b.type === "text" ? [b.text] : []))
+      .join("");
+    const advisor = req.advisor ? readAdvisor(msg.content) : undefined;
     return {
       text,
+      ...(advisor ? { advisor } : {}),
       stopReason: msg.stop_reason,
       ...(msg.stop_reason === "refusal" && msg.stop_details?.explanation ? { refusal: msg.stop_details.explanation } : {}),
       usage: {
@@ -62,7 +70,7 @@ export class AnthropicLlm implements LlmClient {
 
   async countTokens(req: LlmRequest): Promise<number> {
     const client = await this.client();
-    const { max_tokens: _omit, ...params } = this.params(req);
+    const { max_tokens: _omit, tools: _tools, ...params } = this.params(req);
     const r = await client.beta.messages.countTokens(params);
     return r.input_tokens;
   }

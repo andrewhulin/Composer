@@ -146,10 +146,16 @@ export interface RunRow {
   endedSeq: number | null;
   startedAt: string;
   endedAt: string | null;
+  /** What it cost in USD, from its usage at the model's rates. */
+  cost: number | null;
+  /** Each advisor consultation: readable advice, encrypted advice, or an error. */
+  advisor: { kind: string; text?: string; errorCode?: string; stopReason?: string | null }[] | null;
+  /** The model it started on, when it moved up a tier. */
+  escalatedFrom: string | null;
 }
 
 
-export type FoundationSlot = "design_system" | "philosophy" | "craft_brief";
+export type FoundationSlot = "design_system" | "philosophy" | "craft_brief" | "router";
 
 export interface FoundationRow {
   id: Id;
@@ -162,7 +168,7 @@ export interface FoundationRow {
   createdAt: string;
 }
 
-export type ProposalTarget = "design_system" | "philosophy" | "rule" | "craft_brief";
+export type ProposalTarget = "design_system" | "philosophy" | "rule" | "craft_brief" | "router";
 export type ProposalStatus = "pending" | "accepted" | "rejected" | "deferred";
 
 export interface ProposalRow<D = unknown> {
@@ -228,6 +234,9 @@ export interface ReplayResultRow {
   error: string | null;
   pick: "baseline" | "candidate" | "same" | null;
   createdAt: string;
+  /** Tokens the replay used, and the model it ran on, for cost comparisons. */
+  usage: Record<string, number> | null;
+  model: string | null;
 }
 
 export interface ScoredRunRow {
@@ -525,7 +534,7 @@ export class Repo {
 
   // ── runs ─────────────────────────────────────────────────────────────────
 
-  async startRun(run: Omit<RunRow, "status" | "endedSeq" | "endedAt" | "outputHash" | "stopReason" | "usage" | "error" | "promptHash" | "reportHash" | "startedAt">): Promise<void> {
+  async startRun(run: Omit<RunRow, "status" | "endedSeq" | "endedAt" | "outputHash" | "stopReason" | "usage" | "error" | "promptHash" | "reportHash" | "startedAt" | "cost" | "advisor" | "escalatedFrom">): Promise<void> {
     await this.db.run(
       `INSERT INTO run (id, project_id, node_id, recipe, status, local_key, env_key, input_manifest_hash, model, effort, template_version_id, rule_ids, foundation_ids, started_seq, started_at)
        VALUES (?, ?, ?, ?, 'running', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -533,11 +542,35 @@ export class Repo {
     );
   }
 
-  finishRunStatement(id: Id, f: { status: RunStatus; outputHash?: Hash; promptHash?: Hash; reportHash?: Hash; stopReason?: string | null; usage?: Record<string, number>; error?: string; endedSeq?: number }): Statement {
+  finishRunStatement(
+    id: Id,
+    f: { status: RunStatus; outputHash?: Hash; promptHash?: Hash; reportHash?: Hash; stopReason?: string | null; usage?: Record<string, number>; error?: string; endedSeq?: number; model?: string; cost?: number; advisor?: RunRow["advisor"]; escalatedFrom?: string },
+  ): Statement {
     return {
-      sql: "UPDATE run SET status = ?, output_hash = ?, prompt_hash = ?, report_hash = ?, stop_reason = ?, usage = ?, error = ?, ended_seq = ?, ended_at = ? WHERE id = ?",
-      params: [f.status, f.outputHash ?? null, f.promptHash ?? null, f.reportHash ?? null, f.stopReason ?? null, f.usage ? JSON.stringify(f.usage) : null, f.error ?? null, f.endedSeq ?? null, this.clock.now(), id],
+      sql: "UPDATE run SET status = ?, output_hash = ?, prompt_hash = ?, report_hash = ?, stop_reason = ?, usage = ?, error = ?, ended_seq = ?, ended_at = ?, model = COALESCE(?, model), cost = ?, advisor = ?, escalated_from = ? WHERE id = ?",
+      params: [
+        f.status,
+        f.outputHash ?? null,
+        f.promptHash ?? null,
+        f.reportHash ?? null,
+        f.stopReason ?? null,
+        f.usage ? JSON.stringify(f.usage) : null,
+        f.error ?? null,
+        f.endedSeq ?? null,
+        this.clock.now(),
+        f.model ?? null,
+        f.cost ?? null,
+        f.advisor?.length ? JSON.stringify(f.advisor) : null,
+        f.escalatedFrom ?? null,
+        id,
+      ],
     };
+  }
+
+  /** What a project has spent on runs, in USD. */
+  async projectSpend(projectId: Id): Promise<number> {
+    const [r] = await this.db.all("SELECT COALESCE(SUM(cost), 0) AS total FROM run WHERE project_id = ?", [projectId]);
+    return Number(r?.total ?? 0);
   }
 
   async finishRun(id: Id, f: Parameters<Repo["finishRunStatement"]>[1], blobs: { hash: Hash; value: unknown; kind: string }[] = []): Promise<void> {
@@ -830,14 +863,17 @@ export class Repo {
     await this.db.run("UPDATE replay_case SET retired = 1 WHERE id = ?", [id]);
   }
 
-  async saveReplayResult(r: { proposalId: Id; caseId: Id; outputHash?: Hash | null; status: ReplayResultRow["status"]; error?: string }, blobs: { hash: Hash; value: unknown; kind: string }[] = []): Promise<ReplayResultRow> {
-    const row: ReplayResultRow = { id: this.ids(), proposalId: r.proposalId, caseId: r.caseId, outputHash: r.outputHash ?? null, status: r.status, error: r.error ?? null, pick: null, createdAt: this.clock.now() };
+  async saveReplayResult(
+    r: { proposalId: Id; caseId: Id; outputHash?: Hash | null; status: ReplayResultRow["status"]; error?: string; usage?: Record<string, number>; model?: string },
+    blobs: { hash: Hash; value: unknown; kind: string }[] = [],
+  ): Promise<ReplayResultRow> {
+    const row: ReplayResultRow = { id: this.ids(), proposalId: r.proposalId, caseId: r.caseId, outputHash: r.outputHash ?? null, status: r.status, error: r.error ?? null, pick: null, createdAt: this.clock.now(), usage: r.usage ?? null, model: r.model ?? null };
     await this.db.tx([
       ...this.blobStatements(blobs),
       { sql: "DELETE FROM replay_result WHERE proposal_id = ? AND case_id = ?", params: [row.proposalId, row.caseId] },
       {
-        sql: "INSERT INTO replay_result (id, proposal_id, case_id, output_hash, status, error, pick, created_at) VALUES (?, ?, ?, ?, ?, ?, NULL, ?)",
-        params: [row.id, row.proposalId, row.caseId, row.outputHash, row.status, row.error, row.createdAt],
+        sql: "INSERT INTO replay_result (id, proposal_id, case_id, output_hash, status, error, pick, created_at, usage, model) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)",
+        params: [row.id, row.proposalId, row.caseId, row.outputHash, row.status, row.error, row.createdAt, row.usage ? JSON.stringify(row.usage) : null, row.model],
       },
     ]);
     return row;
@@ -858,6 +894,8 @@ export class Repo {
       error: strOrNull(r.error),
       pick: (strOrNull(r.pick) as ReplayResultRow["pick"]) ?? null,
       createdAt: str(r.created_at),
+      usage: json(r.usage, null),
+      model: strOrNull(r.model),
     }));
   }
 
@@ -1060,6 +1098,9 @@ function toRun(r: Row): RunRow {
     endedSeq: r.ended_seq == null ? null : Number(r.ended_seq),
     startedAt: str(r.started_at),
     endedAt: strOrNull(r.ended_at),
+    cost: r.cost == null ? null : Number(r.cost),
+    advisor: json(r.advisor, null),
+    escalatedFrom: strOrNull(r.escalated_from),
   };
 }
 

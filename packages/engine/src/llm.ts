@@ -1,5 +1,6 @@
 import type { BetaMessageParam, BetaTextBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import type { Effort } from "@composer/core";
+import type { AdvisorConsultation } from "./router";
 
 export interface LlmRequest {
   model: string;
@@ -9,6 +10,8 @@ export interface LlmRequest {
   messages: BetaMessageParam[];
   /** JSON schema for structured output. */
   schema?: Record<string, unknown>;
+  /** Lets the model consult a stronger one through the advisor tool (Sonnet and Haiku runs). */
+  advisor?: { model: string; maxUses?: number };
 }
 
 export interface LlmUsage {
@@ -26,6 +29,8 @@ export interface LlmResult {
   usage: LlmUsage;
   /** The model that actually answered (differs after a server-side fallback). */
   model: string;
+  /** Each advisor consultation in the response, when the request allowed one. */
+  advisor?: AdvisorConsultation[];
 }
 
 export interface StreamHandlers {
@@ -56,6 +61,7 @@ export interface FakeTurn {
   stopReason?: string;
   refusal?: string;
   usage?: Partial<LlmUsage>;
+  advisor?: AdvisorConsultation[];
 }
 
 /** Scripted LLM for tests and offline demo: replays turns, honours cancellation. */
@@ -100,6 +106,7 @@ export class FakeLlm implements LlmClient {
       ...(turn.refusal ? { refusal: turn.refusal } : {}),
       usage: { input: 100, output: text.length, cacheRead: 0, cacheWrite: 0, ...turn.usage },
       model: req.model,
+      ...(turn.advisor ? { advisor: turn.advisor } : {}),
     };
   }
 

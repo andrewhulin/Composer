@@ -15,6 +15,7 @@ import type { Multipliers } from "./assembly/allocate";
 import { splitUnits } from "./assembly/units";
 import { incoming } from "./graph-ops";
 import { envKeyFor, localKey, type KeyEnv } from "./keys";
+import { ADVISOR_NUDGE, OPUS } from "./router";
 import type { LlmClient, LlmResult } from "./llm";
 import { DIRECTIONS } from "./kit";
 import { FIDELITIES, FRAMES, recipe, type PrototypeData } from "./recipes";
@@ -31,12 +32,16 @@ export interface RunDeps {
   /** Locked version content for inlets. */
   version: (versionId: Id) => { content: TextArtifact; label: string } | undefined;
   multipliers?: Multipliers;
+  /** The model the router picked, and whether it may consult Opus. Without it, the node's own model runs. */
+  route?: { model: string; advisor: boolean };
 }
 
 export class RunError extends Error {
   constructor(
     message: string,
     readonly code: "unknown_refs" | "over_budget" | "refusal" | "max_tokens" | "bad_output" | "missing",
+    /** The response that failed, when there was one, so its tokens still count. */
+    readonly result?: LlmResult,
   ) {
     super(message);
     this.name = "RunError";
@@ -185,13 +190,17 @@ export async function runClaudeNode(
     throw new RunError("Heavy and pinned context alone don't fit the budget. Lighten a weight or raise the budget.", "over_budget");
   }
   const r = recipe(node.recipe);
-  const keys = { localKey: localKey(graph, nodeId), envKey: envKeyFor(deps.env, node.phase) };
+  const keys = { localKey: localKey(graph, nodeId), envKey: envKeyFor(deps.env, node.phase, node) };
+  const model = deps.route?.model ?? node.model;
+  const advisor = deps.route?.advisor && model !== OPUS;
+  // The nudge goes last in the system prompt, after every cache breakpoint, so cached prefixes don't move.
+  const system = advisor ? [...prompt.system, { type: "text" as const, text: ADVISOR_NUDGE }] : prompt.system;
   const result = await deps.llm.stream(
-    { model: node.model, maxTokens: 64_000, effort: node.effort, system: prompt.system, messages: prompt.messages, ...(r.schema ? { schema: r.schema } : {}) },
+    { model, maxTokens: 64_000, effort: node.effort, system, messages: prompt.messages, ...(r.schema ? { schema: r.schema } : {}), ...(advisor ? { advisor: { model: OPUS, maxUses: 3 } } : {}) },
     { signal: io.signal, ...(io.onText ? { onText: io.onText } : {}), ...(io.onThinking ? { onThinking: io.onThinking } : {}) },
   );
-  if (result.stopReason === "refusal") throw new RunError(result.refusal ?? "Claude declined this request.", "refusal");
-  if (result.stopReason === "max_tokens") throw new RunError("The answer hit the output limit before it finished.", "max_tokens");
+  if (result.stopReason === "refusal") throw new RunError(result.refusal ?? "Claude declined this request.", "refusal", result);
+  if (result.stopReason === "max_tokens") throw new RunError("The answer hit the output limit before it finished.", "max_tokens", result);
 
   let data: unknown;
   let text = result.text;
@@ -199,7 +208,7 @@ export async function runClaudeNode(
     try {
       data = JSON.parse(result.text);
     } catch {
-      throw new RunError("Claude's structured answer didn't parse.", "bad_output");
+      throw new RunError("Claude's structured answer didn't parse.", "bad_output", result);
     }
     text = r.render ? r.render(data) : result.text;
   }

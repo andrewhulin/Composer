@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import { RECIPES, pickedPhases, type PickedPair, applyDrift, detectDrift, foundationsFor, parseDesignSystem, parsePhilosophy, reflectGroups, reflectRequest, strengthFor, tokenSet, type BuildLint, type DesignSystem, type DriftProposal, type LintResult, type Philosophy, type Principle, type ReflectAnswer, type ScoredRun, type TokenSet } from "@composer/engine";
+import { OPUS, RECIPES, pickedPhases, type PickedPair, applyDrift, detectDrift, foundationsFor, parseDesignSystem, parsePhilosophy, reflectGroups, reflectRequest, strengthFor, tokenSet, type BuildLint, type DesignSystem, type DriftProposal, type LintResult, type Philosophy, type Principle, type ReflectAnswer, type ScoredRun, type TokenSet } from "@composer/engine";
 import { briefForRun, keepBrief, useSkills } from "./skills";
 import { PHASES, type Phase, type TextArtifact } from "@composer/core";
 import type { CraftRuleRow, FoundationRow, ProposalRow, Repo } from "@composer/data";
-import { craftHooks, llmClient, toast, useProject } from "./project";
+import { afterScore, craftHooks, llmClient, routedRequest, toast, useProject } from "./project";
 
 export interface RuleDiff {
   phase: Phase;
@@ -64,7 +64,7 @@ export function syncEnv() {
   const brief = useSkills.getState().brief;
   const byPhase: Partial<Record<Phase, string[]>> = {};
   for (const p of PHASES) byPhase[p] = rules.filter((r) => r.phase === p).map((r) => r.id);
-  useProject.setState({ env: { foundations: [ds?.row.id, philosophy?.row.id, brief?.row.id].filter((x): x is string => !!x), rules: byPhase } });
+  useProject.setState((s) => ({ env: { ...s.env, foundations: [ds?.row.id, philosophy?.row.id, brief?.row.id].filter((x): x is string => !!x), rules: byPhase } }));
 }
 
 export async function loadCraft() {
@@ -238,6 +238,14 @@ export async function lockPrinciple(n: number) {
 export async function score(runId: string, value: number, note?: string) {
   await repo().score(runId, value, note);
   set((s) => ({ scores: { ...s.scores, [runId]: value }, scoredCount: s.scoredCount + (s.scores[runId] ? 0 : 1) }));
+  await afterScore(runId, value, note === WRONG_NOTE);
+}
+
+const WRONG_NOTE = "Marked wrong";
+
+/** The output is wrong, not just weak: scored 1 for the loop, and the node moves up a tier. */
+export async function markWrong(runId: string) {
+  await score(runId, 1, WRONG_NOTE);
 }
 
 /** How far each phase is from enough evidence to learn from: 5 high and 5 low, or 5 pairwise picks. */
@@ -305,7 +313,7 @@ export async function reflect(opts: { auto?: boolean } = {}) {
   }
   set({ reflecting: true });
   try {
-    const res = await llmClient().stream(reflectRequest(groups, get().philosophy?.content ?? null, decisions.map((d) => `${d.kind}: ${d.statement}`), "claude-opus-5-5", pairs), { signal: new AbortController().signal });
+    const res = await llmClient().stream(routedRequest("reflect", reflectRequest(groups, get().philosophy?.content ?? null, decisions.map((d) => `${d.kind}: ${d.statement}`), OPUS, pairs)), { signal: new AbortController().signal });
     const answer = JSON.parse(res.text) as ReflectAnswer;
     const pending = await r.listProposals("pending");
     const has = (text: string) => pending.some((p) => (p.diff as { text?: string }).text === text);

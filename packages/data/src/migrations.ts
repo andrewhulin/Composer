@@ -280,6 +280,17 @@ CREATE TABLE skill_version (
 );
 `,
   },
+  {
+    id: 5,
+    name: "routing",
+    sql: `
+ALTER TABLE run ADD COLUMN cost REAL;
+ALTER TABLE run ADD COLUMN advisor TEXT;
+ALTER TABLE run ADD COLUMN escalated_from TEXT;
+ALTER TABLE replay_result ADD COLUMN usage TEXT;
+ALTER TABLE replay_result ADD COLUMN model TEXT;
+`,
+  },
 ];
 
 /** Applies pending migrations. Each migration runs in one transaction. */

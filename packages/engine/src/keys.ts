@@ -1,18 +1,28 @@
 import { hashParts, type ClaudeNode, type Graph, type Hash, type Id, type Phase } from "@composer/core";
 import { descendants, incoming } from "./graph-ops";
+import { isPinned } from "./router";
 
-/** Things outside the graph that every prompt depends on: foundations and learned rules. */
+/** Things outside the graph that every prompt depends on: foundations, learned rules, the router. */
 export interface KeyEnv {
   /** Foundation version ids in force (design system, philosophy). */
   foundations: string[];
   /** Active craft rule ids per phase. */
   rules: Partial<Record<Phase, string[]>>;
+  /** The router's model for each recipe it moves off plain Opus (see routeTags). */
+  routes?: Partial<Record<string, string>>;
 }
 
 export const emptyEnv: KeyEnv = { foundations: [], rules: {} };
 
-export function envKeyFor(env: KeyEnv, phase: Phase): Hash {
-  return hashParts("env", [...env.foundations].sort(), [...(env.rules[phase] ?? [])].sort());
+/**
+ * A node's environment key. The router's choice counts only for nodes that follow it: a pin or
+ * an escalation is already part of the node's own key.
+ */
+export function envKeyFor(env: KeyEnv, phase: Phase, node?: Pick<ClaudeNode, "recipe" | "model" | "modelPinned" | "escalation">): Hash {
+  const route = node && !isPinned(node) && !node.escalation ? env.routes?.[node.recipe] : undefined;
+  const parts: unknown[] = [[...env.foundations].sort(), [...(env.rules[phase] ?? [])].sort()];
+  if (route) parts.push(route);
+  return hashParts("env", ...parts);
 }
 
 type Memo = Map<Id, Hash>;
@@ -49,6 +59,7 @@ function claudeEntry(node: ClaudeNode) {
     options: node.options,
     // Adding a note makes the node stale so the next run answers it. Absent notes leave old keys alone.
     ...(node.notes?.length ? { notes: node.notes.map((n) => [n.id, n.text]) } : {}),
+    ...(node.escalation ? { escalation: node.escalation.model } : {}),
   };
 }
 
@@ -114,7 +125,7 @@ export function claudeStatus(graph: Graph, id: Id, env: KeyEnv, memo: Memo = new
       const s = claudeStatus(graph, e.from, env, memo, seen);
       return s === "stale" || s === "never_run";
     });
-    status = upstreamStale ? "stale" : out.envKey !== envKeyFor(env, node.phase) ? "stale_env" : "fresh";
+    status = upstreamStale ? "stale" : out.envKey !== envKeyFor(env, node.phase, node) ? "stale_env" : "fresh";
   }
   seen.set(id, status);
   return status;

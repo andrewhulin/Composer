@@ -235,7 +235,7 @@ user      Instruction (rendered template) + output format
 
 ### Request settings
 
-- **Model and thinking:** `claude-opus-5-5`, adaptive thinking with `display: "summarized"` under a Thinking disclosure, so a run never looks stalled. Effort is set per recipe and is part of the cache key. `max_tokens` is 64000, always streaming.
+- **Model and thinking:** the router (section 13) picks the model per recipe. Thinking is adaptive, with `display: "summarized"` under a Thinking disclosure, so a run never looks stalled. Effort is set per recipe and is part of the cache key. `max_tokens` is 64000, always streaming.
 - **Refusals:** `fallbacks: "default"` with beta `server-side-fallback-2026-07-01`. `stop_reason` is recorded, and a refusal shows on the node with its explanation.
 - **Output format:**
   - Structured outputs (`output_config.format`) for Define, Validate and Share, with partial JSON streaming into the preview.
@@ -435,3 +435,23 @@ Since DC-1 the UI runs on its own design system: 15px body type, a spacing scale
   - Briefs are kept by hand ("Keep as replay brief" in the inspector) or, when none are kept for the phase, picked automatically from the highest-scored and picked runs.
   - The proposal card shows baseline and candidate side by side (prototypes render live), the designer judges each brief, and the tally reads "Candidate preferred on 3 of 4". Keeping stays the designer's call; replay is evidence, not a gate.
   - Design system proposals don't replay; they lint instead.
+
+## 13. Model routing and budgets
+
+- **The router** (`packages/engine/src/router.ts`) maps each task to a model and an advisor switch. Tasks are the seven recipes plus compile, review, reflect and judge.
+  - Opus 5.5 keeps every call that decides. Sonnet 5.5 and Haiku 5.5 runs attach Opus through the advisor tool (`advisor_20260301`, beta `advisor-tool-2026-03-01`).
+  - The advisor nudge goes last in the system prompt, after every cache breakpoint. Each route keeps one model and one tool list, so its cached prefix stays warm.
+- **Effective route** = a pinned model (`ClaudeNode.modelPinned`), else an escalation (`ClaudeNode.escalation`), else the table. Nodes from before routing that chose a non-Opus model count as pinned.
+- **Keys:** `KeyEnv.routes` holds a tag for each recipe the table moves off plain Opus, and `envKeyFor(env, phase, node)` adds it only for nodes that follow the router. A router change therefore reads as `stale_env` on exactly the nodes it moves. Escalations are part of the node's own key, so they read as `stale`.
+- **Escalation:**
+  - `bad_output` twice on one tier moves the run up a tier mid-run.
+  - An advisor error in `ADVISOR_UNAVAILABLE` reruns the step on Opus.
+  - A score ≤ 2 or a wrong mark sets the node's escalation.
+  - Each is a `decision` row of kind `escalation`.
+- **Cost:** `costOf(model, usage)` at list prices, with cache writes at the 1-hour rate and Haiku's over-100K rates. A run's cost and usage sum every attempt. `spendOf(runs)` totals a project and prices older runs from their usage.
+- **Budgets** (`budget` setting) apply per run and per project, in dollars and tokens. `runWithinBudget` estimates a plan from each node's assembled prompt on its routed model and waits on the designer before scheduling.
+- **Versioning:** the table is a foundation (`router` slot). A change is a `router` proposal.
+  - For each changed recipe, the store replays up to 3 kept or best-scored briefs on the candidate route (`replayRun`, with usage).
+  - Opus judges old and new outputs blind (`judgeRequest`, order fixed per case).
+  - `summarizeRouterReplay` gives the score and cost deltas. Keep needs every brief replayed and a judged drop of no more than `MAX_SCORE_DROP`.
+
